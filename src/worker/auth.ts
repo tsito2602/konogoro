@@ -18,6 +18,14 @@ export async function getCurrentUser(db: D1Database, sessionToken?: string, allo
   return user ? { id: user.id, displayName: user.display_name, role: user.role } : null;
 }
 
+export async function createSession(db: D1Database, userId: string): Promise<string> {
+  const session = randomToken();
+  const now = new Date();
+  await db.prepare("INSERT INTO sessions (token_hash, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)")
+    .bind(await hashToken(session), userId, new Date(now.getTime() + 30 * 86400000).toISOString(), now.toISOString()).run();
+  return session;
+}
+
 export function randomToken(bytes = 32): string {
   return bytesToBase64Url(crypto.getRandomValues(new Uint8Array(bytes)));
 }

@@ -1,5 +1,5 @@
 import { Bell, CalendarDays, CalendarPlus, ImagePlus, Images, Plus, Settings, Users } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, Navigate, NavLink, Outlet, useLocation, useOutletContext } from "react-router-dom";
 import type { CurrentUser } from "../../shared/types";
 import { canCreatePost, canInviteFamily, canManageEvent } from "../../shared/permissions";
@@ -29,25 +29,24 @@ export function AppLayout() {
   const hideNavigation = viewerPattern.test(pathname) || (pathname !== "/posts/new" && postDetailPattern.test(pathname));
   const hideAddButton = pathname === "/posts/new" || pathname === "/events/new" || /^\/events\/[^/]+\/edit$/.test(pathname);
 
-  const loadAuth = () => {
-    setAuthenticated(null);
-    setAuthError("");
+  const loadAuth = useCallback(() => {
     void api<CurrentUser>("/me")
-      .then((user) => { setCurrentUser(user); setAuthenticated(true); })
+      .then((user) => { setAuthError(""); setCurrentUser(user); setAuthenticated(true); })
       .catch((reason: Error) => {
-        if (reason.message === "ログインが必要です") setAuthenticated(false);
+        if (reason.message === "ログインが必要です") { setAuthError(""); setAuthenticated(false); }
         else setAuthError(reason.message);
       });
-  };
+  }, []);
 
   useEffect(() => {
-    if (!invite) void api<CurrentUser>("/me")
-      .then((user) => { setCurrentUser(user); setAuthenticated(true); })
-      .catch((reason: Error) => {
-        if (reason.message === "ログインが必要です") setAuthenticated(false);
-        else setAuthError(reason.message);
-      });
-  }, [invite]);
+    if (invite) return;
+    loadAuth();
+    const resumeAuth = () => {
+      if (document.visibilityState === "visible") loadAuth();
+    };
+    document.addEventListener("visibilitychange", resumeAuth);
+    return () => document.removeEventListener("visibilitychange", resumeAuth);
+  }, [invite, loadAuth]);
 
   if (invite) return <div className="app-shell"><Outlet /></div>;
   if (authenticated === null && !authError) return <div className="app-shell"><Loading /></div>;

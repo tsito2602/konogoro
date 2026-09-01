@@ -146,6 +146,20 @@ created_by
 created_at
 ```
 
+## line_login_requests
+
+LINE認証を開始したブラウザとCallbackを受け取るブラウザが異なる場合に備え、認証要求と完了ユーザーを10分間保持する。
+
+```text
+state_hash
+nonce
+verifier
+invite_token_hash
+completed_user_id
+expires_at
+created_at
+```
+
 ## notification_batches
 
 Phase 2。

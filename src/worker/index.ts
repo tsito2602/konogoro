@@ -17,7 +17,7 @@ import {
 import type { EventCoverMedia, EventDetail, EventSummary, UploadTarget } from "../shared/types";
 import { canCreatePost, canDeleteComment, canDeletePost, canInviteFamily, canManageEvent } from "../shared/permissions";
 import type { User } from "../shared/types";
-import { getCurrentUser, getLineFriendship, hashToken, hasLineConfig, pkceChallenge, randomToken, safeEqual, type LineSecrets } from "./auth";
+import { createSession, getCurrentUser, getLineFriendship, hashToken, hasLineConfig, pkceChallenge, randomToken, type LineSecrets } from "./auth";
 import { createPresignedUploadUrl, hasUploadCredentials } from "./r2";
 import { loadPosts, postSelect, type PostRow } from "./db";
 import { matchesUploadFiles, type ExistingMedia } from "./upload-request";
@@ -70,7 +70,21 @@ app.use("*", async (c, next) => {
   const publicAuth = c.req.path === "/api/auth/line" || c.req.path === "/api/auth/line/callback";
   const lineConfigured = hasLineConfig(c.env);
   const localDevelopment = !lineConfigured || new URL(c.env.APP_ORIGIN!).hostname === "localhost";
-  const user = await getCurrentUser(c.env.DB, lineConfigured ? getCookie(c, "family_session") : undefined, localDevelopment);
+  let user = await getCurrentUser(c.env.DB, lineConfigured ? getCookie(c, "family_session") : undefined, localDevelopment);
+  const pendingState = lineConfigured ? getCookie(c, "line_state") : undefined;
+  if (!user && pendingState) {
+    const completedLogin = await c.env.DB.prepare(`
+      DELETE FROM line_login_requests
+       WHERE state_hash = ? AND completed_user_id IS NOT NULL AND expires_at > ?
+       RETURNING completed_user_id
+    `).bind(await hashToken(pendingState), new Date().toISOString()).first<{ completed_user_id: string }>();
+    if (completedLogin) {
+      const session = await createSession(c.env.DB, completedLogin.completed_user_id);
+      setCookie(c, "family_session", session, { httpOnly: true, secure: true, sameSite: "Lax", maxAge: 30 * 86400, path: "/" });
+      deleteCookie(c, "line_state", { path: "/" });
+      user = await getCurrentUser(c.env.DB, session, false);
+    }
+  }
   if (!user && !publicAuth) return c.json({ error: "ログインが必要です" }, 401);
   if (user) c.set("currentUser", user);
   await next();
@@ -118,12 +132,16 @@ app.get("/auth/line", async (c) => {
   const state = randomToken();
   const nonce = randomToken();
   const verifier = randomToken(48);
-  const cookie = { httpOnly: true, secure: true, sameSite: "Lax" as const, maxAge: 600, path: "/api/auth/line/callback" };
-  setCookie(c, "line_state", state, cookie);
-  setCookie(c, "line_nonce", nonce, cookie);
-  setCookie(c, "line_verifier", verifier, cookie);
   const invite = c.req.query("invite");
-  if (invite) setCookie(c, "line_invite", invite, cookie);
+  const now = new Date();
+  await c.env.DB.batch([
+    c.env.DB.prepare("DELETE FROM line_login_requests WHERE expires_at <= ?").bind(now.toISOString()),
+    c.env.DB.prepare(`
+      INSERT INTO line_login_requests (state_hash, nonce, verifier, invite_token_hash, expires_at, created_at)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).bind(await hashToken(state), nonce, verifier, invite ? await hashToken(invite) : null, new Date(now.getTime() + 600000).toISOString(), now.toISOString()),
+  ]);
+  setCookie(c, "line_state", state, { httpOnly: true, secure: true, sameSite: "Lax", maxAge: 600, path: "/" });
   const callback = `${c.env.APP_ORIGIN}/api/auth/line/callback`;
   const url = new URL("https://access.line.me/oauth2/v2.1/authorize");
   url.search = new URLSearchParams({ response_type: "code", client_id: c.env.LINE_CHANNEL_ID, redirect_uri: callback, state, scope: "profile openid", nonce, bot_prompt: "aggressive", code_challenge: await pkceChallenge(verifier), code_challenge_method: "S256" }).toString();
@@ -132,25 +150,28 @@ app.get("/auth/line", async (c) => {
 
 app.get("/auth/line/callback", async (c) => {
   if (!hasLineConfig(c.env)) return c.json({ error: "LINE Loginが設定されていません" }, 503);
-  const state = getCookie(c, "line_state");
-  const nonce = getCookie(c, "line_nonce");
-  const verifier = getCookie(c, "line_verifier");
   const receivedState = c.req.query("state");
   const code = c.req.query("code");
-  if (!state || !nonce || !verifier || !receivedState || !safeEqual(state, receivedState) || !code) return c.json({ error: "ログイン要求を確認できません" }, 400);
+  if (!receivedState || !code) return c.json({ error: "ログイン要求を確認できません" }, 400);
+  const sameBrowser = getCookie(c, "line_state") === receivedState;
+  const loginRequest = await c.env.DB.prepare(`
+    SELECT nonce, verifier, invite_token_hash
+      FROM line_login_requests
+     WHERE state_hash = ? AND completed_user_id IS NULL AND expires_at > ?
+  `).bind(await hashToken(receivedState), new Date().toISOString()).first<{ nonce: string; verifier: string; invite_token_hash: string | null }>();
+  if (!loginRequest) return c.json({ error: "ログイン要求を確認できません" }, 400);
   const redirectUri = `${c.env.APP_ORIGIN}/api/auth/line/callback`;
-  const tokenResponse = await fetch("https://api.line.me/oauth2/v2.1/token", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ grant_type: "authorization_code", code, redirect_uri: redirectUri, client_id: c.env.LINE_CHANNEL_ID, client_secret: c.env.LINE_CHANNEL_SECRET, code_verifier: verifier }) });
+  const tokenResponse = await fetch("https://api.line.me/oauth2/v2.1/token", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ grant_type: "authorization_code", code, redirect_uri: redirectUri, client_id: c.env.LINE_CHANNEL_ID, client_secret: c.env.LINE_CHANNEL_SECRET, code_verifier: loginRequest.verifier }) });
   if (!tokenResponse.ok) return c.json({ error: "LINE Loginを完了できません" }, 502);
   const token = await tokenResponse.json<{ id_token: string; access_token: string }>();
-  const verifyResponse = await fetch("https://api.line.me/oauth2/v2.1/verify", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ id_token: token.id_token, client_id: c.env.LINE_CHANNEL_ID, nonce }) });
+  const verifyResponse = await fetch("https://api.line.me/oauth2/v2.1/verify", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ id_token: token.id_token, client_id: c.env.LINE_CHANNEL_ID, nonce: loginRequest.nonce }) });
   if (!verifyResponse.ok) return c.json({ error: "LINEアカウントを確認できません" }, 502);
   const profile = await verifyResponse.json<{ sub: string; name?: string; picture?: string }>();
   const lineFriend = await getLineFriendship(token.access_token);
   let user = await c.env.DB.prepare("SELECT id FROM users WHERE line_user_id = ?").bind(profile.sub).first<{ id: string }>();
   if (!user) {
-    const inviteToken = getCookie(c, "line_invite");
-    if (!inviteToken) return c.json({ error: "有効な招待が必要です" }, 403);
-    const invite = await c.env.DB.prepare("UPDATE invites SET use_count = use_count + 1 WHERE token_hash = ? AND expires_at > ? AND use_count < max_uses RETURNING role").bind(await hashToken(inviteToken), new Date().toISOString()).first<{ role: User["role"] }>();
+    if (!loginRequest.invite_token_hash) return c.json({ error: "有効な招待が必要です" }, 403);
+    const invite = await c.env.DB.prepare("UPDATE invites SET use_count = use_count + 1 WHERE token_hash = ? AND expires_at > ? AND use_count < max_uses RETURNING role").bind(loginRequest.invite_token_hash, new Date().toISOString()).first<{ role: User["role"] }>();
     if (!invite) return c.json({ error: "招待URLが無効または期限切れです" }, 403);
     user = { id: ulid() };
     const now = new Date().toISOString();
@@ -158,11 +179,39 @@ app.get("/auth/line/callback", async (c) => {
   } else if (lineFriend !== null) {
     await c.env.DB.prepare("UPDATE users SET line_friend_enabled = ?, notification_enabled = CASE WHEN ? = 0 THEN 0 ELSE notification_enabled END, updated_at = ? WHERE id = ?").bind(Number(lineFriend), Number(lineFriend), new Date().toISOString(), user.id).run();
   }
-  const session = randomToken();
-  const now = new Date();
-  await c.env.DB.prepare("INSERT INTO sessions (token_hash, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)").bind(await hashToken(session), user.id, new Date(now.getTime() + 30 * 86400000).toISOString(), now.toISOString()).run();
+  await c.env.DB.prepare(`
+    UPDATE line_login_requests
+       SET completed_user_id = ?, nonce = NULL, verifier = NULL
+     WHERE state_hash = ? AND completed_user_id IS NULL
+  `).bind(user.id, await hashToken(receivedState)).run();
+  if (!sameBrowser) {
+    c.header("Cache-Control", "no-store");
+    return c.html(`<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>ログイン完了 — このごろ</title>
+  <style>
+    :root { color: #1d1d1f; background: #f5f5f7; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    body { min-height: 100dvh; margin: 0; display: grid; place-items: center; }
+    main { max-width: 360px; padding: 32px 24px; text-align: center; }
+    img { width: 72px; height: 72px; border-radius: 16px; }
+    h1 { margin: 20px 0 10px; font-size: 24px; letter-spacing: -.02em; }
+    p { margin: 0; color: #707070; font-size: 16px; line-height: 1.6; }
+  </style>
+</head>
+<body><main>
+  <img src="/icons/icon-light-192.png" alt="">
+  <h1>ログインが完了しました</h1>
+  <p>この画面を閉じて、ホーム画面の<br>「このごろ」アプリに戻ってください。</p>
+</main></body>
+</html>`);
+  }
+  const session = await createSession(c.env.DB, user.id);
   setCookie(c, "family_session", session, { httpOnly: true, secure: true, sameSite: "Lax", maxAge: 30 * 86400, path: "/" });
   for (const name of ["line_state", "line_nonce", "line_verifier", "line_invite"]) deleteCookie(c, name, { path: "/api/auth/line/callback" });
+  deleteCookie(c, "line_state", { path: "/" });
   return c.redirect(c.env.APP_ORIGIN);
 });
 

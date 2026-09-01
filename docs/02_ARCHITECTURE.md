@@ -76,6 +76,8 @@ LINE Login ChannelとMessaging API Channelは同一LINE Provider配下を前提�
 
 SessionはHttpOnly + Secure Cookie。
 
+LINE認証のstate・nonce・PKCE verifierは有効期限10分でD1へ保存する。Safari PWAからLINEを経由して別ブラウザへ戻った場合は、認証結果をD1へ一時保存し、PWA再表示時に認証開始Cookieを使ってPWA側のSessionを発行する。
+
 Phase 1では仮ユーザーを利用し、後からLINE認証へ差し替えやすくする。
 
 ## コスト方針

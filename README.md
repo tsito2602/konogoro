@@ -32,7 +32,7 @@ npm run dev
 npx wrangler d1 migrations apply DB --remote
 ```
 
-`.dev.vars`へ`R2_ACCOUNT_ID`、`R2_ACCESS_KEY_ID`、`R2_SECRET_ACCESS_KEY`を設定する。`r2-cors.json`のoriginへ本番originを追加し、R2 bucketのCORSポリシーとして設定する。
+`.dev.vars`へ`R2_ACCOUNT_ID`、`R2_ACCESS_KEY_ID`、`R2_SECRET_ACCESS_KEY`を設定する。`r2-cors.json`のoriginへ本番originを追加し、R2 bucketのCORSポリシーとして設定する。`npm run deploy`でもこの設定を本番bucketへ反映する。
 
 ```sh
 npx wrangler r2 bucket cors set <R2_BUCKET_NAME> --file r2-cors.json

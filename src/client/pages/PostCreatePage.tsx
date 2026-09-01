@@ -33,6 +33,7 @@ export function PostCreatePage() {
   const [draftPostId, setDraftPostId] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
   const [busy, setBusy] = useState(false);
+  const [preparing, setPreparing] = useState(false);
   const [error, setError] = useState("");
   const [newSection, setNewSection] = useState("");
   const [showSectionForm, setShowSectionForm] = useState(false);
@@ -54,8 +55,10 @@ export function PostCreatePage() {
     if (invalid) { setError("JPEG・PNG・WebP・MP4・WebM・MOVを選択してください。写真25MB、動画500MBまでです。"); return; }
     if (files.length + chosen.length > 30) { setError("一度に選べる写真・動画は30件までです。"); return; }
     setError("");
+    setPreparing(true);
     try { const selected = await Promise.all(chosen.map(readFileMetadata)); setFiles((current) => [...current, ...selected]); }
     catch { setError("選択したメディアを読み込めませんでした"); }
+    finally { setPreparing(false); }
   };
 
   const removeFile = (index: number) => {
@@ -71,25 +74,37 @@ export function PostCreatePage() {
   };
 
   const uploadEntries = async (postId: string, entries: Array<{ item: SelectedFile; index: number; target: UploadTarget }>) => {
-    let completed = files.filter((item) => item.status === "uploaded").length;
-    const results = await Promise.allSettled(entries.map(async ({ item, index, target }) => {
-      updateFile(index, { status: "uploading", mediaId: target.id });
-      try {
-        await Promise.all([
-          uploadFile(target.uploadUrl, item.file),
-          uploadFile(target.thumbnailUploadUrl, item.thumbnail, "image/webp"),
-          ...(target.previewUploadUrl && item.optimizedPreview ? [uploadFile(target.previewUploadUrl, item.optimizedPreview, "image/webp")] : []),
-        ]);
-        await api(`/media/${target.id}/complete`, { method: "POST", body: JSON.stringify({ width: item.width, height: item.height }) });
-        updateFile(index, { status: "uploaded", mediaId: target.id });
-        completed += 1; setProgress(Math.round(completed / files.length * 100));
-      } catch (reason) {
-        updateFile(index, { status: "failed", mediaId: target.id });
-        await api(`/media/${target.id}/failed`, { method: "POST" }).catch(() => undefined);
-        throw reason;
+    const totalBytes = entries.reduce((total, { item, target }) => total + item.file.size + item.thumbnail.size + (target.previewUploadUrl && item.optimizedPreview ? item.optimizedPreview.size : 0), 0);
+    const loadedByRequest = new Map<string, number>();
+    let loadedBytes = 0;
+    let nextEntry = 0;
+    let failed = false;
+    const reportProgress = (key: string, loaded: number) => {
+      const previous = loadedByRequest.get(key) ?? 0;
+      loadedByRequest.set(key, loaded);
+      loadedBytes += loaded - previous;
+      setProgress(Math.round(loadedBytes / totalBytes * 100));
+    };
+    await Promise.all(Array.from({ length: Math.min(2, entries.length) }, async () => {
+      while (nextEntry < entries.length) {
+        const { item, index, target } = entries[nextEntry++];
+        updateFile(index, { status: "uploading", mediaId: target.id });
+        try {
+          await Promise.all([
+            uploadFile(target.uploadUrl, item.file, item.file.type, (loaded) => reportProgress(`${index}:original`, loaded)),
+            uploadFile(target.thumbnailUploadUrl, item.thumbnail, "image/webp", (loaded) => reportProgress(`${index}:thumbnail`, loaded)),
+            ...(target.previewUploadUrl && item.optimizedPreview ? [uploadFile(target.previewUploadUrl, item.optimizedPreview, "image/webp", (loaded) => reportProgress(`${index}:preview`, loaded))] : []),
+          ]);
+          await api(`/media/${target.id}/complete`, { method: "POST", body: JSON.stringify({ width: item.width, height: item.height }) });
+          updateFile(index, { status: "uploaded", mediaId: target.id });
+        } catch {
+          failed = true;
+          updateFile(index, { status: "failed", mediaId: target.id });
+          await api(`/media/${target.id}/failed`, { method: "POST" }).catch(() => undefined);
+        }
       }
     }));
-    if (results.some((result) => result.status === "rejected")) {
+    if (failed) {
       setError("一部のアップロードに失敗しました。失敗した項目だけ再試行できます。"); setBusy(false); return;
     }
     await api(`/posts/${postId}/publish`, { method: "POST" });
@@ -117,14 +132,14 @@ export function PostCreatePage() {
 
   const retryUploadSetup = async () => {
     if (!draftPostId) return;
-    setBusy(true); setError("");
+    setBusy(true); setError(""); setProgress(0);
     try { await requestUploads(draftPostId); }
     catch (reason) { setError((reason as Error).message); setBusy(false); }
   };
 
   const retryFailed = async () => {
     if (!draftPostId) return;
-    setBusy(true); setError("");
+    setBusy(true); setError(""); setProgress(0);
     try {
       const failed = files.map((item, index) => ({ item, index })).filter(({ item }) => item.status === "failed" && item.mediaId);
       const entries = await Promise.all(failed.map(async ({ item, index }) => ({ item, index, target: await api<UploadTarget>(`/media/${item.mediaId}/upload-url`, { method: "POST" }) })));
@@ -149,19 +164,20 @@ export function PostCreatePage() {
     <main className="form-page page-content"><form onSubmit={submit} className="form-stack">
       <section className="photo-picker"><div className="selected-photos">
         {files.map((item, index) => <div className={`selected-photo ${item.status}`} key={`${item.file.name}-${item.file.lastModified}-${index}`}><img src={item.previewUrl} alt="" />{item.file.type.startsWith("video/") && <span className="video-badge">動画</span>}{item.status === "failed" && <span className="failed-badge"><AlertCircle /></span>}{!draftPostId && <button type="button" onClick={() => removeFile(index)} aria-label={`${item.file.name}を外す`}><X /></button>}</div>)}
-        {!draftPostId && <label className="photo-add"><ImagePlus /><span>{files.length ? "さらに選択" : "写真・動画を選択"}</span><input type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime" multiple onChange={selectFiles} disabled={busy} /></label>}
+        {!draftPostId && <label className="photo-add"><ImagePlus /><span>{files.length ? "さらに選択" : "写真・動画を選択"}</span><input type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime" multiple onChange={selectFiles} disabled={busy || preparing} /></label>}
       </div>{files.length > 0 && <p className="selection-count">{[photos ? `写真${photos}枚` : "", videos ? `動画${videos}本` : ""].filter(Boolean).join(" · ")}</p>}</section>
       <label>イベント<select value={eventId} onChange={(event) => { setEventId(event.target.value); setSectionId(""); setSections([]); }} disabled={busy || !!draftPostId}><option value="">イベントなし</option>{events.map((item) => <option value={item.id} key={item.id}>{item.title}</option>)}</select></label>
       {eventId && <label>セクション<select value={sectionId} onChange={(event) => setSectionId(event.target.value)} disabled={busy || !!draftPostId}><option value="">セクションなし</option>{sections.map((item) => <option value={item.id} key={item.id}>{item.title}</option>)}</select></label>}
       {eventId && !draftPostId && (!showSectionForm ? <button className="text-button inline-action" type="button" onClick={() => setShowSectionForm(true)}><Plus />新しいセクション</button> : <div className="inline-form"><input value={newSection} onChange={(event) => setNewSection(event.target.value)} placeholder="例: Day 2 - シュトゥットガルト" maxLength={100} /><button type="button" className="outline-button" onClick={createSection}>作成</button></div>)}
       <label>投稿タイトル<input name="title" required maxLength={120} placeholder="例: ポルシェミュージアム" disabled={busy || !!draftPostId} /></label>
       <label>キャプション<textarea name="caption" rows={4} maxLength={2000} placeholder="思い出をひとこと" disabled={busy || !!draftPostId} /></label>
+      {preparing && <p className="muted" role="status">画像を準備中…</p>}
       {(busy || progress > 0) && <div className="upload-progress" role="status"><div><span>{progress === 100 ? "処理中" : "アップロード中"}</span><strong>{progress}%</strong></div><progress value={progress} max={100} /></div>}
       {error && <p className="form-error" role="alert">{error}</p>}
-      {files.some((item) => item.status === "failed") ? <button className="outline-button wide" type="button" onClick={retryFailed} disabled={busy}><RotateCcw />失敗した項目を再試行</button>
+      {busy ? null : files.some((item) => item.status === "failed") ? <button className="outline-button wide" type="button" onClick={retryFailed}><RotateCcw />失敗した項目を再試行</button>
         : draftPostId && files.every((item) => item.status === "uploaded") ? <button className="outline-button wide" type="button" onClick={retryPublish} disabled={busy}><RotateCcw />投稿を完了</button>
         : draftPostId ? <button className="outline-button wide" type="button" onClick={retryUploadSetup} disabled={busy}><RotateCcw />アップロードを再開</button>
-        : <button className="primary-button wide" disabled={busy || files.length === 0}>{busy ? "投稿しています…" : "投稿"}</button>}
+        : <button className="primary-button wide" disabled={preparing || files.length === 0}>投稿</button>}
     </form></main>
   </>;
 }
@@ -221,11 +237,15 @@ async function drawOptimizedImage(source: CanvasImageSource, width: number, heig
   return new Promise((resolve, reject) => canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("プレビュー画像を作成できません")), "image/webp", quality));
 }
 
-function uploadFile(url: string, body: Blob, contentType = body.type): Promise<void> {
+function uploadFile(url: string, body: Blob, contentType = body.type, onProgress?: (loaded: number) => void): Promise<void> {
   return new Promise((resolve, reject) => {
     const request = new XMLHttpRequest();
     request.open("PUT", url); request.setRequestHeader("Content-Type", contentType);
-    request.addEventListener("load", () => request.status >= 200 && request.status < 300 ? resolve() : reject(new Error("アップロードに失敗しました")));
+    request.upload.addEventListener("progress", (event) => onProgress?.(event.loaded));
+    request.addEventListener("load", () => {
+      if (request.status >= 200 && request.status < 300) { onProgress?.(body.size); resolve(); }
+      else reject(new Error("アップロードに失敗しました"));
+    });
     request.addEventListener("error", () => reject(new Error("アップロードに失敗しました")));
     request.send(body);
   });

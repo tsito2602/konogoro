@@ -1,9 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { commentInputSchema, eventInputSchema, uploadFilesSchema } from "./schemas";
+import { commentInputSchema, eventCoverInputSchema, eventInputSchema, uploadFilesSchema } from "./schemas";
 
 describe("API validation", () => {
   it("終了日が開始日より前のイベントを拒否する", () => {
     expect(eventInputSchema.safeParse({ title: "旅行", startDate: "2026-09-10", endDate: "2026-09-01" }).success).toBe(false);
+  });
+
+  it("accepts manual and automatic event covers", () => {
+    expect(eventCoverInputSchema.safeParse({ mediaId: "media-1" }).success).toBe(true);
+    expect(eventCoverInputSchema.safeParse({ mediaId: null }).success).toBe(true);
+    expect(eventCoverInputSchema.safeParse({}).success).toBe(false);
   });
 
   it("空コメントを拒否する", () => {

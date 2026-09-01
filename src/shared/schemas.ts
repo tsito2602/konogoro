@@ -14,6 +14,10 @@ export const sectionInputSchema = z.object({
   title: z.string().trim().min(1).max(100),
 });
 
+export const eventCoverInputSchema = z.object({
+  mediaId: z.string().min(1).nullable(),
+});
+
 export const postInputSchema = z.object({
   title: z.string().trim().min(1).max(120),
   caption: z.string().trim().max(2000).default(""),

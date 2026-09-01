@@ -1,4 +1,4 @@
-import { Plus } from "lucide-react";
+import { Pencil } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import type { EventDetail } from "../../shared/types";
@@ -18,11 +18,12 @@ export function EventDetailPage() {
   if (!detail) return null;
   const groups = [{ id: null, title: "", posts: detail.posts.filter((post) => !post.sectionId) }, ...detail.sections.map((section) => ({ ...section, posts: detail.posts.filter((post) => post.sectionId === section.id) }))].filter((group) => group.posts.length > 0);
   return <>
-    <PageHeader title={detail.title} back action={<Link className="icon-button" to={`/posts/new?event=${detail.id}`} aria-label="投稿を追加"><Plus /></Link>} />
+    <PageHeader title={detail.title} back action={<Link className="icon-button" to={`/events/${detail.id}/edit`} aria-label="イベントを編集"><Pencil /></Link>} />
     <main className="event-detail">
       <section className={`event-cover${detail.coverUrl ? "" : " no-cover"}`} style={detail.coverUrl ? { backgroundImage: `url(${detail.coverUrl})` } : undefined}>
         <div><p>{eventDate(detail.startDate, detail.endDate)}</p><h2>{detail.title}</h2><span>{eventCounts(detail.postCount, detail.photoCount, detail.videoCount)}</span></div>
       </section>
+      <div className="event-actions"><Link className="primary-button" to={`/posts/new?event=${detail.id}`}>投稿を追加</Link></div>
       {groups.length === 0 && <EmptyState title="まだ投稿がありません" body="このイベントの写真を追加できます。" action={<Link className="primary-button" to={`/posts/new?event=${detail.id}`}>写真を追加</Link>} />}
       {groups.map((group) => <section className="event-section" key={group.id ?? "none"}>
         {group.title && <h2>{group.title}</h2>}

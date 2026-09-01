@@ -58,10 +58,13 @@ export type EventSummary = {
   startDate: string | null;
   endDate: string | null;
   coverUrl: string | null;
+  coverSource: "auto" | "manual";
   postCount: number;
   photoCount: number;
   videoCount: number;
 };
+
+export type EventCoverMedia = Pick<Media, "id" | "kind" | "thumbnailUrl">;
 
 export type EventSection = {
   id: string;

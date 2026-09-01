@@ -3,13 +3,14 @@ import { ulid } from "ulid";
 import { ZodError } from "zod";
 import {
   eventInputSchema,
+  eventCoverInputSchema,
   commentInputSchema,
   mediaCompleteSchema,
   postInputSchema,
   sectionInputSchema,
   uploadFilesSchema,
 } from "../shared/schemas";
-import type { EventDetail, EventSummary, UploadTarget } from "../shared/types";
+import type { EventCoverMedia, EventDetail, EventSummary, UploadTarget } from "../shared/types";
 import { canCreatePost, canDeleteComment, canDeletePost, canManageEvent } from "../shared/permissions";
 import type { User } from "../shared/types";
 import { getCurrentUser } from "./auth";
@@ -25,6 +26,7 @@ type EventRow = {
   start_date: string | null;
   end_date: string | null;
   cover_media_id: string | null;
+  cover_source: "auto" | "manual";
   post_count: number;
   photo_count: number;
   video_count: number;
@@ -68,7 +70,7 @@ app.get("/timeline", async (c) => {
 
 app.get("/events", async (c) => {
   const result = await c.env.DB.prepare(`
-    SELECT e.id, e.title, e.description, e.start_date, e.end_date, e.cover_media_id,
+    SELECT e.id, e.title, e.description, e.start_date, e.end_date, e.cover_media_id, e.cover_source,
            COUNT(DISTINCT CASE WHEN p.status = 'published' THEN p.id END) AS post_count,
            COUNT(DISTINCT CASE WHEN p.status = 'published' AND m.status = 'uploaded' AND m.kind = 'image' THEN m.id END) AS photo_count,
            COUNT(DISTINCT CASE WHEN p.status = 'published' AND m.status = 'uploaded' AND m.kind = 'video' THEN m.id END) AS video_count
@@ -93,10 +95,32 @@ app.post("/events", async (c) => {
   return c.json({ id }, 201);
 });
 
+app.put("/events/:eventId", async (c) => {
+  if (!canManageEvent(c.var.currentUser)) return c.json({ error: "イベントを編集する権限がありません" }, 403);
+  const input = eventInputSchema.parse(await c.req.json());
+  const result = await c.env.DB.prepare("UPDATE events SET title = ?, description = ?, start_date = ?, end_date = ?, updated_at = ? WHERE id = ?")
+    .bind(input.title, input.description, input.startDate, input.endDate, new Date().toISOString(), c.req.param("eventId")).run();
+  if (!result.meta.changes) return c.json({ error: "イベントが見つかりません" }, 404);
+  return c.json({ id: c.req.param("eventId") });
+});
+
+app.delete("/events/:eventId", async (c) => {
+  if (!canManageEvent(c.var.currentUser)) return c.json({ error: "イベントを削除する権限がありません" }, 403);
+  const eventId = c.req.param("eventId");
+  const event = await c.env.DB.prepare("SELECT id FROM events WHERE id = ?").bind(eventId).first();
+  if (!event) return c.json({ error: "イベントが見つかりません" }, 404);
+  const [, result] = await c.env.DB.batch([
+    c.env.DB.prepare("UPDATE posts SET section_id = NULL WHERE event_id = ?").bind(eventId),
+    c.env.DB.prepare("DELETE FROM events WHERE id = ?").bind(eventId),
+  ]);
+  if (!result.meta.changes) return c.json({ error: "イベントが見つかりません" }, 404);
+  return c.json({ id: eventId });
+});
+
 app.get("/events/:eventId", async (c) => {
   const eventId = c.req.param("eventId");
   const event = await c.env.DB.prepare(`
-    SELECT e.id, e.title, e.description, e.start_date, e.end_date, e.cover_media_id,
+    SELECT e.id, e.title, e.description, e.start_date, e.end_date, e.cover_media_id, e.cover_source,
            COUNT(DISTINCT CASE WHEN p.status = 'published' THEN p.id END) AS post_count,
            COUNT(DISTINCT CASE WHEN p.status = 'published' AND m.status = 'uploaded' AND m.kind = 'image' THEN m.id END) AS photo_count,
            COUNT(DISTINCT CASE WHEN p.status = 'published' AND m.status = 'uploaded' AND m.kind = 'video' THEN m.id END) AS video_count
@@ -131,6 +155,58 @@ app.post("/events/:eventId/sections", async (c) => {
   await c.env.DB.prepare(`INSERT INTO event_sections (id, event_id, title, sort_order, created_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`)
     .bind(id, eventId, input.title, order?.value ?? 0, c.var.currentUser.id, now, now).run();
   return c.json({ id, title: input.title, sortOrder: order?.value ?? 0 }, 201);
+});
+
+app.put("/events/:eventId/sections/:sectionId", async (c) => {
+  if (!canManageEvent(c.var.currentUser)) return c.json({ error: "セクションを編集する権限がありません" }, 403);
+  const input = sectionInputSchema.parse(await c.req.json());
+  const result = await c.env.DB.prepare("UPDATE event_sections SET title = ?, updated_at = ? WHERE id = ? AND event_id = ?")
+    .bind(input.title, new Date().toISOString(), c.req.param("sectionId"), c.req.param("eventId")).run();
+  if (!result.meta.changes) return c.json({ error: "セクションが見つかりません" }, 404);
+  return c.json({ id: c.req.param("sectionId"), title: input.title });
+});
+
+app.delete("/events/:eventId/sections/:sectionId", async (c) => {
+  if (!canManageEvent(c.var.currentUser)) return c.json({ error: "セクションを削除する権限がありません" }, 403);
+  const used = await c.env.DB.prepare("SELECT id FROM posts WHERE section_id = ? LIMIT 1").bind(c.req.param("sectionId")).first();
+  if (used) return c.json({ error: "投稿があるセクションは削除できません" }, 409);
+  const result = await c.env.DB.prepare("DELETE FROM event_sections WHERE id = ? AND event_id = ?").bind(c.req.param("sectionId"), c.req.param("eventId")).run();
+  if (!result.meta.changes) return c.json({ error: "セクションが見つかりません" }, 404);
+  return c.json({ id: c.req.param("sectionId") });
+});
+
+app.get("/events/:eventId/cover-media", async (c) => {
+  const event = await c.env.DB.prepare("SELECT id FROM events WHERE id = ?").bind(c.req.param("eventId")).first();
+  if (!event) return c.json({ error: "イベントが見つかりません" }, 404);
+  const result = await c.env.DB.prepare(`
+    SELECT m.id, m.kind FROM media m JOIN posts p ON p.id = m.post_id
+     WHERE p.event_id = ? AND p.status = 'published' AND m.status = 'uploaded'
+     ORDER BY COALESCE(m.captured_at, p.captured_at, p.created_at), m.position, m.id
+  `).bind(c.req.param("eventId")).all<{ id: string; kind: "image" | "video" }>();
+  const media: EventCoverMedia[] = result.results.map((item) => ({ id: item.id, kind: item.kind, thumbnailUrl: `/api/media/${item.id}/content?variant=thumbnail` }));
+  return c.json({ media });
+});
+
+app.put("/events/:eventId/cover", async (c) => {
+  if (!canManageEvent(c.var.currentUser)) return c.json({ error: "カバーを変更する権限がありません" }, 403);
+  const body = eventCoverInputSchema.parse(await c.req.json());
+  const eventId = c.req.param("eventId");
+  const now = new Date().toISOString();
+  if (body.mediaId) {
+    const media = await c.env.DB.prepare(`SELECT m.id, m.original_object_key FROM media m JOIN posts p ON p.id = m.post_id WHERE m.id = ? AND p.event_id = ? AND p.status = 'published' AND m.status = 'uploaded'`)
+      .bind(body.mediaId, eventId).first<{ id: string; original_object_key: string }>();
+    if (!media) return c.json({ error: "カバーに設定できるメディアが見つかりません" }, 400);
+    await c.env.DB.prepare("UPDATE events SET cover_media_id = ?, cover_object_key = ?, cover_source = 'manual', updated_at = ? WHERE id = ?")
+      .bind(media.id, media.original_object_key, now, eventId).run();
+  } else {
+    const event = await c.env.DB.prepare("SELECT id FROM events WHERE id = ?").bind(eventId).first();
+    if (!event) return c.json({ error: "イベントが見つかりません" }, 404);
+    await c.env.DB.prepare(`UPDATE events SET
+      cover_media_id = (SELECT m.id FROM media m JOIN posts p ON p.id = m.post_id WHERE p.event_id = events.id AND p.status = 'published' AND m.status = 'uploaded' ORDER BY CASE WHEN m.kind = 'image' THEN 0 ELSE 1 END, COALESCE(m.captured_at, p.captured_at, p.created_at), m.position, m.id LIMIT 1),
+      cover_object_key = (SELECT m.original_object_key FROM media m JOIN posts p ON p.id = m.post_id WHERE p.event_id = events.id AND p.status = 'published' AND m.status = 'uploaded' ORDER BY CASE WHEN m.kind = 'image' THEN 0 ELSE 1 END, COALESCE(m.captured_at, p.captured_at, p.created_at), m.position, m.id LIMIT 1),
+      cover_source = 'auto', updated_at = ? WHERE id = ?`).bind(now, eventId).run();
+  }
+  return c.json({ id: eventId });
 });
 
 app.post("/posts", async (c) => {
@@ -355,6 +431,7 @@ function mapEvent(row: EventRow): EventSummary {
     startDate: row.start_date,
     endDate: row.end_date,
     coverUrl: row.cover_media_id ? `/api/media/${row.cover_media_id}/content?variant=thumbnail` : null,
+    coverSource: row.cover_source,
     postCount: Number(row.post_count),
     photoCount: Number(row.photo_count),
     videoCount: Number(row.video_count),

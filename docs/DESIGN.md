@@ -1,6 +1,8 @@
 # Apple — Style Reference
 > white room with a single blue switch.
 
+> **このごろ固有のoverride:** Apple Blueの指定はアプリアイコンの朝日`#FFD166`へ置き換える。黄色の上は`#1F2733`、白背景上のlink・outline・active stateは`#6B4B00`を使う。詳細は`docs/05_DESIGN_GUIDE.md`を参照する。
+
 **Theme:** light
 
 Apple's design language is a study in restraint: near-white canvas, generous breathing room, and one vivid blue accent that makes every action feel deliberate. Typography is the primary voice — SF Pro set with negative tracking that tightens as size grows, giving headlines architectural clarity without weight. The product IS the design: large product photography and lifestyle imagery dominate, while chrome recedes into thin borders, ghost navigation, and hairline rules. Sections alternate on a light gray canvas with full-bleed color washes for promotional blocks, creating rhythm through scale shifts rather than decoration.

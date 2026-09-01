@@ -1,10 +1,14 @@
 /* global self, caches, URL, fetch */
 
-const CACHE_NAME = "family-timeline-static-v1";
+const CACHE_NAME = "family-timeline-static-v2";
 const STATIC_PATHS = new Set([
   "/manifest.webmanifest",
-  "/icons/icon.svg",
-  "/icons/icon-maskable.svg",
+  "/favicon.ico",
+  "/favicon-32x32.png",
+  "/favicon-16x16.png",
+  "/icons/apple-touch-icon.png",
+  "/android-chrome-192x192.png",
+  "/android-chrome-512x512.png",
 ]);
 
 self.addEventListener("activate", (event) => {

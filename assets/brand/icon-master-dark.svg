@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">このごろ アプリアイコン（ダーク）</title>
+  <desc id="desc">空と丘のカーブ、丘から昇る朝日で、ひらがなの「こ」を抽象的に表したシンボル</desc>
+  <rect width="1024" height="1024" rx="224" fill="#1F2733"/>
+  <path
+    d="M292 342 C390 252 535 246 680 304"
+    fill="none"
+    stroke="#BFD6F6"
+    stroke-width="104"
+    stroke-linecap="round"
+  />
+  <circle cx="500" cy="704" r="104" fill="#FFD166"/>
+  <path
+    d="M220 646 C250 616 278 641 306 660 C374 706 443 721 512 708 C604 690 694 623 788 645 C824 654 836 687 819 718 C775 797 660 833 520 834 C378 836 267 795 207 710 C187 682 193 657 220 646 Z"
+    fill="#A6D2C2"
+  />
+</svg>

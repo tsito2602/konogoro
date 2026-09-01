@@ -33,3 +33,9 @@ const router = createBrowserRouter([{
 }]);
 
 createRoot(document.getElementById("root")!).render(<StrictMode><RouterProvider router={router} /></StrictMode>);
+
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    void navigator.serviceWorker.register("/service-worker.js");
+  });
+}

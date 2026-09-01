@@ -15,7 +15,10 @@ import { PostCreatePage } from "./pages/PostCreatePage";
 import { PostDetailPage } from "./pages/PostDetailPage";
 import { TimelinePage } from "./pages/TimelinePage";
 import { SettingsPage } from "./pages/SettingsPage";
+import { initializeTheme } from "./theme";
 import "./styles.css";
+
+initializeTheme();
 
 const router = createBrowserRouter([{
   element: <AppLayout />,

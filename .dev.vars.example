@@ -2,3 +2,8 @@
 R2_ACCOUNT_ID=your-cloudflare-account-id
 R2_ACCESS_KEY_ID=your-r2-access-key-id
 R2_SECRET_ACCESS_KEY=your-r2-secret-access-key
+
+# Phase 2のLINE Loginを有効にする場合のみ設定する。
+LINE_CHANNEL_ID=your-line-login-channel-id
+LINE_CHANNEL_SECRET=your-line-login-channel-secret
+APP_ORIGIN=http://localhost:5173

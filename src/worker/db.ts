@@ -41,6 +41,7 @@ type SeenRow = {
   post_id: string;
   user_id: string;
   display_name: string;
+  avatar_url: string | null;
 };
 
 export async function loadPosts(db: D1Database, rows: PostRow[], currentUser: User): Promise<Post[]> {
@@ -58,7 +59,7 @@ export async function loadPosts(db: D1Database, rows: PostRow[], currentUser: Us
       FROM comments c JOIN users u ON u.id = c.user_id
      WHERE c.post_id IN (${placeholders}) ORDER BY c.created_at, c.id
   `).bind(...rows.map(({ id }) => id)).all<CommentRow>(), db.prepare(`
-    SELECT v.post_id, v.user_id, u.display_name
+    SELECT v.post_id, v.user_id, u.display_name, u.avatar_url
       FROM view_histories v JOIN users u ON u.id = v.user_id
      WHERE v.post_id IN (${placeholders}) ORDER BY v.first_viewed_at, v.id
   `).bind(...rows.map(({ id }) => id)).all<SeenRow>()]);
@@ -96,7 +97,7 @@ export async function loadPosts(db: D1Database, rows: PostRow[], currentUser: Us
   const seenByPost = new Map<string, SeenUser[]>();
   for (const item of seenResult.results) {
     const list = seenByPost.get(item.post_id) ?? [];
-    list.push({ id: item.user_id, displayName: item.display_name });
+    list.push({ id: item.user_id, displayName: item.display_name, avatarUrl: item.avatar_url });
     seenByPost.set(item.post_id, list);
   }
 

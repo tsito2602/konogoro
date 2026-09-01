@@ -68,6 +68,7 @@ export type Comment = {
 export type SeenUser = {
   id: string;
   displayName: string;
+  avatarUrl: string | null;
 };
 
 export type Post = {

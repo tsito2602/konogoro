@@ -1,4 +1,4 @@
-import { Bell, BellOff, Copy, ExternalLink, Settings } from "lucide-react";
+import { Bell, BellOff, Copy, ExternalLink } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import type { CurrentUser, FamilyMember, User } from "../../shared/types";
@@ -61,7 +61,7 @@ export function FamilyPage() {
   };
 
   return <>
-    <PageHeader title="家族" action={<Link className="icon-button" to="/settings" aria-label="設定"><Settings /></Link>} />
+    <PageHeader title="家族" action={<Link className="header-link" to="/settings">設定</Link>} />
     <main className="page-content family-page">
       {error ? <ErrorState message={error} retry={load} /> : members === null ? <Loading /> : <>
         <section className="family-section">

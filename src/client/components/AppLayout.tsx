@@ -71,9 +71,10 @@ export function AppLayout() {
   );
 }
 
-function LoginScreen() {
+export function LoginScreen() {
   return <main className="login-page"><section>
-    <p className="login-eyebrow">Family Timeline</p>
+    <img className="login-icon" src="/icons/icon-light-192.png" alt="" />
+    <p className="login-eyebrow">このごろ</p>
     <h1>家族の思い出を、ひとつの場所に</h1>
     <p>写真や動画を家族だけで共有できます。</p>
     <a className="line-login-button" href="/api/auth/line">LINEでログイン</a>

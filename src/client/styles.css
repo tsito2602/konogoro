@@ -155,9 +155,10 @@ input:focus, select:focus, textarea:focus { border-color: var(--blue); box-shado
 .invite-page p { color: var(--ash); line-height: 1.6; }
 .login-page { min-height: 100dvh; display: grid; place-items: center; padding: 40px 24px; text-align: center; background: radial-gradient(circle at 50% 18%, #fff 0, var(--frost) 58%); }
 .login-page section { width: 100%; max-width: 420px; }
-.login-page h1 { margin: 10px 0 12px; font-size: clamp(28px, 8vw, 40px); line-height: 1.15; letter-spacing: -.035em; }
+.login-icon { width: 104px; height: 104px; margin: 0 auto 18px; border-radius: 23px; }
+.login-page h1 { margin: 12px 0; font-size: clamp(28px, 8vw, 40px); line-height: 1.15; letter-spacing: -.035em; }
 .login-page section > p:not(.login-eyebrow) { margin: 0; color: var(--ash); line-height: 1.6; }
-.login-eyebrow { margin: 0; color: var(--blue); font-size: 14px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+.login-eyebrow { margin: 0; color: var(--carbon); font-size: 17px; font-weight: 600; letter-spacing: .04em; }
 .line-login-button { min-height: 48px; margin-top: 20px; padding: 12px 20px; display: inline-flex; align-items: center; border-radius: var(--radius); color: white; background: #06c755; font-weight: 600; }
 .toggle-row, .setting-status { min-height: 60px; display: flex; flex-direction: row !important; align-items: center; justify-content: space-between; gap: 16px; }
 .toggle-row span { display: flex; flex-direction: column; }

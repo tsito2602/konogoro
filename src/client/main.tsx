@@ -20,7 +20,8 @@ import "./styles.css";
 const router = createBrowserRouter([{
   element: <AppLayout />,
   children: [
-    { path: "/", element: <ActivityPage /> },
+    { path: "/", element: <TimelinePage /> },
+    { path: "/activity", element: <ActivityPage /> },
     { path: "/timeline", element: <TimelinePage /> },
     { path: "/album", element: <AlbumPage /> },
     { path: "/events", element: <EventsPage /> },

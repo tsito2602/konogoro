@@ -47,7 +47,7 @@ type AlbumMediaRow = {
 };
 type ActivityRow = {
   activity_id: string;
-  kind: "post" | "comment" | "view";
+  kind: "post" | "comment";
   occurred_at: string;
   actor_id: string;
   actor_name: string;
@@ -55,6 +55,12 @@ type ActivityRow = {
   post_title: string;
   body: string | null;
   media_id: string | null;
+};
+type MemberLastViewedRow = {
+  id: string;
+  display_name: string;
+  avatar_url: string | null;
+  last_viewed_at: string | null;
 };
 
 type AppEnv = { Bindings: Bindings; Variables: { currentUser: User } };
@@ -279,11 +285,6 @@ app.get("/activity", async (c) => {
                u.id, u.display_name, p.id, p.title, c.body
           FROM comments c JOIN users u ON u.id = c.user_id JOIN posts p ON p.id = c.post_id
          WHERE p.status = 'published'
-        UNION ALL
-        SELECT 'view:' || v.id, 'view', v.first_viewed_at,
-               u.id, u.display_name, p.id, p.title, NULL
-          FROM view_histories v JOIN users u ON u.id = v.user_id JOIN posts p ON p.id = v.post_id
-         WHERE p.status = 'published'
       ) activity`;
   const statement = cursor
     ? c.env.DB.prepare(`${activitySelect} WHERE occurred_at < ? OR (occurred_at = ? AND activity_id < ?) ORDER BY occurred_at DESC, activity_id DESC LIMIT ?`).bind(cursor.capturedAt, cursor.capturedAt, cursor.id, limit + 1)
@@ -302,8 +303,21 @@ app.get("/activity", async (c) => {
     body: item.body,
     thumbnailUrl: item.media_id ? `/api/media/${item.media_id}/content?variant=thumbnail` : null,
   }));
+  const memberResult = await c.env.DB.prepare(`
+    SELECT u.id, u.display_name, u.avatar_url, MAX(v.last_viewed_at) AS last_viewed_at
+      FROM users u
+      LEFT JOIN view_histories v ON v.user_id = u.id
+     GROUP BY u.id, u.display_name, u.avatar_url, u.created_at
+     ORDER BY last_viewed_at IS NULL, last_viewed_at DESC, u.created_at, u.id
+  `).all<MemberLastViewedRow>();
+  const memberLastViewed = memberResult.results.map((member) => ({
+    id: member.id,
+    displayName: member.display_name,
+    avatarUrl: member.avatar_url,
+    lastViewedAt: member.last_viewed_at,
+  }));
   const last = rows.at(-1);
-  return c.json({ activities, nextCursor: hasMore && last ? `${last.occurred_at}|${last.activity_id}` : null });
+  return c.json({ activities, memberLastViewed, nextCursor: hasMore && last ? `${last.occurred_at}|${last.activity_id}` : null });
 });
 
 app.get("/events", async (c) => {

@@ -61,8 +61,8 @@ export function AppLayout() {
       <Outlet context={currentUser} />
       {!hideNavigation && (
         <nav className="tab-bar" aria-label="メインナビゲーション">
-          <NavItem to="/" label="近況" icon={<Bell />} end />
-          <NavItem to="/album" label="アルバム" icon={<Images />} />
+          <NavItem to="/" label="タイムライン" icon={<Images />} end />
+          <NavItem to="/activity" label="近況" icon={<Bell />} />
           <NavItem to="/events" label="イベント" icon={<CalendarDays />} />
           {canInviteFamily(currentUser)
             ? <NavItem to="/family" label="家族" icon={<Users />} />

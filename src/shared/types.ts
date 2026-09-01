@@ -41,7 +41,7 @@ export type AlbumMedia = Pick<Media, "id" | "kind" | "thumbnailUrl"> & {
 
 export type Activity = {
   id: string;
-  kind: "post" | "comment" | "view";
+  kind: "post" | "comment";
   occurredAt: string;
   actorId: string;
   actorName: string;
@@ -49,6 +49,11 @@ export type Activity = {
   postTitle: string;
   body: string | null;
   thumbnailUrl: string | null;
+};
+
+export type MemberLastViewed = Pick<User, "id" | "displayName"> & {
+  avatarUrl: string | null;
+  lastViewedAt: string | null;
 };
 
 export type Comment = {

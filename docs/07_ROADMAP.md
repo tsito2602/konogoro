@@ -41,11 +41,11 @@ Phase 1完成後、LINE連携前に実施。
 
 ## Phase 3 — Notification
 
-- LINE Messaging API
-- notification batch
-- Cron Trigger
-- per-user notification ON/OFF
-- 10分程度の投稿まとめ通知
+- [x] LINE Messaging API
+- [x] notification batch
+- [x] Cron Trigger
+- [x] per-user notification ON/OFF
+- [x] 10分程度の投稿まとめ通知
 
 ## Phase 4 — Hardening
 

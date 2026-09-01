@@ -32,6 +32,12 @@ export type Media = {
   downloadUrl: string;
 };
 
+export type AlbumMedia = Pick<Media, "id" | "kind" | "thumbnailUrl"> & {
+  postId: string;
+  postTitle: string;
+  capturedAt: string;
+};
+
 export type Comment = {
   id: string;
   body: string;

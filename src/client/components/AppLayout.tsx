@@ -1,4 +1,4 @@
-import { CalendarDays, CalendarPlus, House, ImagePlus, Plus, Settings, Users } from "lucide-react";
+import { CalendarDays, CalendarPlus, House, ImagePlus, Images, Plus, Settings, Users } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, Navigate, NavLink, Outlet, useLocation, useOutletContext } from "react-router-dom";
 import type { CurrentUser } from "../../shared/types";
@@ -62,6 +62,7 @@ export function AppLayout() {
       {!hideNavigation && (
         <nav className="tab-bar" aria-label="メインナビゲーション">
           <NavItem to="/" label="タイムライン" icon={<House />} end />
+          <NavItem to="/album" label="アルバム" icon={<Images />} />
           <NavItem to="/events" label="イベント" icon={<CalendarDays />} />
           {canInviteFamily(currentUser)
             ? <NavItem to="/family" label="家族" icon={<Users />} />

@@ -38,6 +38,13 @@ type EventRow = {
   photo_count: number;
   video_count: number;
 };
+type AlbumMediaRow = {
+  id: string;
+  post_id: string;
+  post_title: string;
+  kind: "image" | "video";
+  captured_at: string;
+};
 
 type AppEnv = { Bindings: Bindings; Variables: { currentUser: User } };
 export const app = new Hono<AppEnv>().basePath("/api");
@@ -213,6 +220,33 @@ app.get("/timeline", async (c) => {
   const posts = await loadPosts(c.env.DB, rows, c.var.currentUser);
   const last = rows.at(-1);
   return c.json({ posts, nextCursor: hasMore && last?.captured_at ? `${last.captured_at}|${last.id}` : null });
+});
+
+app.get("/album", async (c) => {
+  const cursor = parseCursor(c.req.query("cursor"));
+  const limit = 60;
+  const capturedAt = "COALESCE(m.captured_at, p.captured_at, p.published_at)";
+  const select = `
+    SELECT m.id, m.post_id, p.title AS post_title, m.kind, ${capturedAt} AS captured_at
+      FROM media m
+      JOIN posts p ON p.id = m.post_id
+     WHERE m.status = 'uploaded' AND p.status = 'published'`;
+  const statement = cursor
+    ? c.env.DB.prepare(`${select} AND (${capturedAt} < ? OR (${capturedAt} = ? AND m.id < ?)) ORDER BY captured_at DESC, m.id DESC LIMIT ?`).bind(cursor.capturedAt, cursor.capturedAt, cursor.id, limit + 1)
+    : c.env.DB.prepare(`${select} ORDER BY captured_at DESC, m.id DESC LIMIT ?`).bind(limit + 1);
+  const result = await statement.all<AlbumMediaRow>();
+  const hasMore = result.results.length > limit;
+  const rows = result.results.slice(0, limit);
+  const media = rows.map((item) => ({
+    id: item.id,
+    postId: item.post_id,
+    postTitle: item.post_title,
+    kind: item.kind,
+    capturedAt: item.captured_at,
+    thumbnailUrl: `/api/media/${item.id}/content?variant=thumbnail`,
+  }));
+  const last = rows.at(-1);
+  return c.json({ media, nextCursor: hasMore && last ? `${last.captured_at}|${last.id}` : null });
 });
 
 app.get("/events", async (c) => {

@@ -2,6 +2,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { AppLayout } from "./components/AppLayout";
+import { AlbumPage } from "./pages/AlbumPage";
 import { EventCreatePage } from "./pages/EventCreatePage";
 import { EventDetailPage } from "./pages/EventDetailPage";
 import { EventEditPage } from "./pages/EventEditPage";
@@ -19,6 +20,7 @@ const router = createBrowserRouter([{
   element: <AppLayout />,
   children: [
     { path: "/", element: <TimelinePage /> },
+    { path: "/album", element: <AlbumPage /> },
     { path: "/events", element: <EventsPage /> },
     { path: "/events/new", element: <EventCreatePage /> },
     { path: "/events/:eventId", element: <EventDetailPage /> },
@@ -34,7 +36,8 @@ const router = createBrowserRouter([{
 
 createRoot(document.getElementById("root")!).render(<StrictMode><RouterProvider router={router} /></StrictMode>);
 
-if ("serviceWorker" in navigator) {
+const localDevelopment = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+if (!localDevelopment && "serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     void navigator.serviceWorker.register("/service-worker.js");
   });

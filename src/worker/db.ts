@@ -77,7 +77,7 @@ export async function loadPosts(db: D1Database, rows: PostRow[], currentUser: Us
       durationSeconds: item.duration_seconds,
       capturedAt: item.captured_at,
       position: item.position,
-      contentUrl: `/api/media/${item.id}/content`,
+      contentUrl: `/api/media/${item.id}/content?variant=preview`,
       thumbnailUrl: `/api/media/${item.id}/content?variant=thumbnail`,
       downloadUrl: `/api/media/${item.id}/download`,
     };

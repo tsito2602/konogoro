@@ -400,57 +400,59 @@ app.post("/posts/:postId/media/upload-urls", async (c) => {
   }
 
   const existing = await c.env.DB.prepare(`
-    SELECT id, original_filename, mime_type, original_object_key, thumbnail_object_key,
+    SELECT id, original_filename, mime_type, original_object_key, preview_object_key, thumbnail_object_key,
            byte_size, captured_at, duration_seconds
       FROM media
      WHERE post_id = ?
      ORDER BY position, id
-  `).bind(postId).all<ExistingMedia & { id: string; original_object_key: string; thumbnail_object_key: string }>();
+  `).bind(postId).all<ExistingMedia & { id: string; original_object_key: string; preview_object_key: string | null; thumbnail_object_key: string }>();
   if (existing.results.length > 0) {
     if (!matchesUploadFiles(existing.results, input.files)) {
       return c.json({ error: "下書きの写真・動画が選択内容と一致しません" }, 409);
     }
     const targets = await Promise.all(existing.results.map(async (media) => {
-      const [uploadUrl, thumbnailUploadUrl] = await Promise.all([
+      const [uploadUrl, thumbnailUploadUrl, previewUploadUrl] = await Promise.all([
         createPresignedUploadUrl(c.env, media.original_object_key, media.mime_type),
         createPresignedUploadUrl(c.env, media.thumbnail_object_key, "image/webp"),
+        media.preview_object_key ? createPresignedUploadUrl(c.env, media.preview_object_key, "image/webp") : undefined,
       ]);
-      return { id: media.id, uploadUrl, thumbnailUploadUrl, contentType: media.mime_type } satisfies UploadTarget;
+      return { id: media.id, uploadUrl, thumbnailUploadUrl, previewUploadUrl, contentType: media.mime_type } satisfies UploadTarget;
     }));
     return c.json({ media: targets });
   }
 
   const lastPosition = await c.env.DB.prepare("SELECT COALESCE(MAX(position), -1) AS value FROM media WHERE post_id = ?").bind(postId).first<{ value: number }>();
   const now = new Date().toISOString();
-  const records: Array<{ id: string; key: string; thumbnailKey: string; kind: "image" | "video"; filename: string; mimeType: string; byteSize: number; capturedAt: string | null; durationSeconds: number | null; position: number; url: string; thumbnailUrl: string }> = [];
+  const records: Array<{ id: string; key: string; previewKey: string | null; thumbnailKey: string; kind: "image" | "video"; filename: string; mimeType: string; byteSize: number; capturedAt: string | null; durationSeconds: number | null; position: number; url: string; previewUrl?: string; thumbnailUrl: string }> = [];
 
   for (const [index, file] of input.files.entries()) {
     const id = ulid();
     const extension = extensionForMime(file.mimeType);
     const key = `media/${id}/original/original.${extension}`;
+    const previewKey = file.mimeType.startsWith("image/") ? `media/${id}/preview/preview.webp` : null;
     const thumbnailKey = `media/${id}/thumbnail/thumbnail.webp`;
-    const [url, thumbnailUrl] = await Promise.all([createPresignedUploadUrl(c.env, key, file.mimeType), createPresignedUploadUrl(c.env, thumbnailKey, "image/webp")]);
-    records.push({ id, key, thumbnailKey, kind: file.mimeType.startsWith("video/") ? "video" : "image", filename: file.filename, mimeType: file.mimeType, byteSize: file.byteSize, capturedAt: file.capturedAt, durationSeconds: file.durationSeconds, position: (lastPosition?.value ?? -1) + index + 1, url, thumbnailUrl });
+    const [url, previewUrl, thumbnailUrl] = await Promise.all([createPresignedUploadUrl(c.env, key, file.mimeType), previewKey ? createPresignedUploadUrl(c.env, previewKey, "image/webp") : undefined, createPresignedUploadUrl(c.env, thumbnailKey, "image/webp")]);
+    records.push({ id, key, previewKey, thumbnailKey, kind: file.mimeType.startsWith("video/") ? "video" : "image", filename: file.filename, mimeType: file.mimeType, byteSize: file.byteSize, capturedAt: file.capturedAt, durationSeconds: file.durationSeconds, position: (lastPosition?.value ?? -1) + index + 1, url, previewUrl, thumbnailUrl });
   }
 
   await c.env.DB.batch(records.map((record) => c.env.DB.prepare(`
-    INSERT INTO media (id, post_id, kind, original_filename, mime_type, original_object_key, thumbnail_object_key, byte_size, captured_at, duration_seconds, position, created_by, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).bind(record.id, postId, record.kind, record.filename, record.mimeType, record.key, record.thumbnailKey, record.byteSize, record.capturedAt, record.durationSeconds, record.position, c.var.currentUser.id, now)));
-  const targets: UploadTarget[] = records.map((record) => ({ id: record.id, uploadUrl: record.url, thumbnailUploadUrl: record.thumbnailUrl, contentType: record.mimeType }));
+    INSERT INTO media (id, post_id, kind, original_filename, mime_type, original_object_key, preview_object_key, thumbnail_object_key, byte_size, captured_at, duration_seconds, position, created_by, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).bind(record.id, postId, record.kind, record.filename, record.mimeType, record.key, record.previewKey, record.thumbnailKey, record.byteSize, record.capturedAt, record.durationSeconds, record.position, c.var.currentUser.id, now)));
+  const targets: UploadTarget[] = records.map((record) => ({ id: record.id, uploadUrl: record.url, previewUploadUrl: record.previewUrl, thumbnailUploadUrl: record.thumbnailUrl, contentType: record.mimeType }));
   return c.json({ media: targets }, 201);
 });
 
 app.post("/media/:mediaId/upload-url", async (c) => {
   const media = await c.env.DB.prepare(`
-    SELECT m.id, m.original_object_key, m.thumbnail_object_key, m.mime_type
+    SELECT m.id, m.original_object_key, m.preview_object_key, m.thumbnail_object_key, m.mime_type
       FROM media m JOIN posts p ON p.id = m.post_id
      WHERE m.id = ? AND m.created_by = ? AND p.status = 'draft' AND m.status IN ('pending', 'failed')
-  `).bind(c.req.param("mediaId"), c.var.currentUser.id).first<{ id: string; original_object_key: string; thumbnail_object_key: string; mime_type: string }>();
+  `).bind(c.req.param("mediaId"), c.var.currentUser.id).first<{ id: string; original_object_key: string; preview_object_key: string | null; thumbnail_object_key: string; mime_type: string }>();
   if (!media) return c.json({ error: "再試行できるメディアが見つかりません" }, 404);
-  const [uploadUrl, thumbnailUploadUrl] = await Promise.all([createPresignedUploadUrl(c.env, media.original_object_key, media.mime_type), createPresignedUploadUrl(c.env, media.thumbnail_object_key, "image/webp")]);
+  const [uploadUrl, thumbnailUploadUrl, previewUploadUrl] = await Promise.all([createPresignedUploadUrl(c.env, media.original_object_key, media.mime_type), createPresignedUploadUrl(c.env, media.thumbnail_object_key, "image/webp"), media.preview_object_key ? createPresignedUploadUrl(c.env, media.preview_object_key, "image/webp") : undefined]);
   await c.env.DB.prepare("UPDATE media SET status = 'pending' WHERE id = ?").bind(media.id).run();
-  return c.json({ id: media.id, uploadUrl, thumbnailUploadUrl, contentType: media.mime_type } satisfies UploadTarget);
+  return c.json({ id: media.id, uploadUrl, thumbnailUploadUrl, previewUploadUrl, contentType: media.mime_type } satisfies UploadTarget);
 });
 
 app.post("/media/:mediaId/failed", async (c) => {
@@ -462,11 +464,11 @@ app.post("/media/:mediaId/failed", async (c) => {
 app.post("/media/:mediaId/complete", async (c) => {
   const input = mediaCompleteSchema.parse(await c.req.json());
   const mediaId = c.req.param("mediaId");
-  const media = await c.env.DB.prepare("SELECT original_object_key, thumbnail_object_key, byte_size, status FROM media WHERE id = ? AND created_by = ?").bind(mediaId, c.var.currentUser.id).first<{ original_object_key: string; thumbnail_object_key: string; byte_size: number; status: string }>();
+  const media = await c.env.DB.prepare("SELECT original_object_key, preview_object_key, thumbnail_object_key, byte_size, status FROM media WHERE id = ? AND created_by = ?").bind(mediaId, c.var.currentUser.id).first<{ original_object_key: string; preview_object_key: string | null; thumbnail_object_key: string; byte_size: number; status: string }>();
   if (!media) return c.json({ error: "メディアが見つかりません" }, 404);
   if (media.status === "uploaded") return c.json({ id: mediaId, status: "uploaded" });
-  const [object, thumbnail] = await Promise.all([c.env.MEDIA.head(media.original_object_key), c.env.MEDIA.head(media.thumbnail_object_key)]);
-  if (!object || object.size !== media.byte_size || !thumbnail) return c.json({ error: "アップロードしたファイルを確認できません" }, 409);
+  const [object, preview, thumbnail] = await Promise.all([c.env.MEDIA.head(media.original_object_key), media.preview_object_key ? c.env.MEDIA.head(media.preview_object_key) : undefined, c.env.MEDIA.head(media.thumbnail_object_key)]);
+  if (!object || object.size !== media.byte_size || (media.preview_object_key && !preview) || !thumbnail) return c.json({ error: "アップロードしたファイルを確認できません" }, 409);
   await c.env.DB.prepare("UPDATE media SET status = 'uploaded', width = ?, height = ?, uploaded_at = ? WHERE id = ?")
     .bind(input.width, input.height, new Date().toISOString(), mediaId).run();
   return c.json({ id: mediaId, status: "uploaded" });
@@ -575,15 +577,16 @@ function parseCursor(value: string | undefined): { capturedAt: string; id: strin
 }
 
 async function serveMedia(c: Context<AppEnv>, download: boolean): Promise<Response> {
-  const media = await c.env.DB.prepare("SELECT original_object_key, thumbnail_object_key, mime_type, original_filename FROM media WHERE id = ? AND status = 'uploaded'").bind(c.req.param("mediaId")).first<{ original_object_key: string; thumbnail_object_key: string | null; mime_type: string; original_filename: string }>();
+  const media = await c.env.DB.prepare("SELECT original_object_key, preview_object_key, thumbnail_object_key, mime_type, original_filename FROM media WHERE id = ? AND status = 'uploaded'").bind(c.req.param("mediaId")).first<{ original_object_key: string; preview_object_key: string | null; thumbnail_object_key: string | null; mime_type: string; original_filename: string }>();
   if (!media) return c.json({ error: "メディアが見つかりません" }, 404);
   const thumbnail = !download && c.req.query("variant") === "thumbnail" && media.thumbnail_object_key;
-  const range = !thumbnail && !download && media.mime_type.startsWith("video/") ? c.req.header("Range") : undefined;
-  const object = await c.env.MEDIA.get(thumbnail ? media.thumbnail_object_key! : media.original_object_key, range ? { range: c.req.raw.headers } : undefined);
+  const preview = !download && c.req.query("variant") === "preview" && media.preview_object_key;
+  const range = !thumbnail && !preview && !download && media.mime_type.startsWith("video/") ? c.req.header("Range") : undefined;
+  const object = await c.env.MEDIA.get(thumbnail ? media.thumbnail_object_key! : preview ? media.preview_object_key! : media.original_object_key, range ? { range: c.req.raw.headers } : undefined);
   if (!object) return c.json({ error: "ファイルが見つかりません" }, 404);
   const headers = new Headers();
   object.writeHttpMetadata(headers);
-  headers.set("Content-Type", thumbnail ? "image/webp" : media.mime_type);
+  headers.set("Content-Type", thumbnail || preview ? "image/webp" : media.mime_type);
   headers.set("Cache-Control", "private, max-age=3600");
   headers.set("ETag", object.httpEtag);
   headers.set("Accept-Ranges", "bytes");

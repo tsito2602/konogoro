@@ -11,6 +11,7 @@ type SelectedFile = {
   file: File;
   previewUrl: string;
   thumbnail: Blob;
+  optimizedPreview?: Blob;
   capturedAt: string | null;
   width: number | null;
   height: number | null;
@@ -74,7 +75,11 @@ export function PostCreatePage() {
     const results = await Promise.allSettled(entries.map(async ({ item, index, target }) => {
       updateFile(index, { status: "uploading", mediaId: target.id });
       try {
-        await Promise.all([uploadFile(target.uploadUrl, item.file), uploadFile(target.thumbnailUploadUrl, item.thumbnail, "image/webp")]);
+        await Promise.all([
+          uploadFile(target.uploadUrl, item.file),
+          uploadFile(target.thumbnailUploadUrl, item.thumbnail, "image/webp"),
+          ...(target.previewUploadUrl && item.optimizedPreview ? [uploadFile(target.previewUploadUrl, item.optimizedPreview, "image/webp")] : []),
+        ]);
         await api(`/media/${target.id}/complete`, { method: "POST", body: JSON.stringify({ width: item.width, height: item.height }) });
         updateFile(index, { status: "uploaded", mediaId: target.id });
         completed += 1; setProgress(Math.round(completed / files.length * 100));
@@ -166,12 +171,15 @@ async function readFileMetadata(file: File): Promise<SelectedFile> {
   const capturedAt = await captureDate(file);
   if (file.type.startsWith("video/")) {
     const video = await loadVideo(previewUrl);
-    const thumbnail = await drawThumbnail(video, video.videoWidth, video.videoHeight);
+    const thumbnail = await drawOptimizedImage(video, video.videoWidth, video.videoHeight, 480, 0.78);
     return { file, previewUrl, thumbnail, capturedAt, width: video.videoWidth, height: video.videoHeight, durationSeconds: Number.isFinite(video.duration) ? video.duration : null, status: "ready" };
   }
   const bitmap = await createImageBitmap(file);
-  const thumbnail = await drawThumbnail(bitmap, bitmap.width, bitmap.height);
-  const result = { file, previewUrl, thumbnail, capturedAt, width: bitmap.width, height: bitmap.height, durationSeconds: null, status: "ready" as const };
+  const [thumbnail, optimizedPreview] = await Promise.all([
+    drawOptimizedImage(bitmap, bitmap.width, bitmap.height, 480, 0.78),
+    drawOptimizedImage(bitmap, bitmap.width, bitmap.height, 1800, 0.86),
+  ]);
+  const result = { file, previewUrl, thumbnail, optimizedPreview, capturedAt, width: bitmap.width, height: bitmap.height, durationSeconds: null, status: "ready" as const };
   bitmap.close();
   return result;
 }
@@ -205,13 +213,12 @@ function loadVideo(url: string): Promise<HTMLVideoElement> {
   });
 }
 
-async function drawThumbnail(source: CanvasImageSource, width: number, height: number): Promise<Blob> {
-  const max = 1200;
+async function drawOptimizedImage(source: CanvasImageSource, width: number, height: number, max: number, quality: number): Promise<Blob> {
   const scale = Math.min(1, max / Math.max(width, height));
   const canvas = document.createElement("canvas");
   canvas.width = Math.max(1, Math.round(width * scale)); canvas.height = Math.max(1, Math.round(height * scale));
   canvas.getContext("2d")?.drawImage(source, 0, 0, canvas.width, canvas.height);
-  return new Promise((resolve, reject) => canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("サムネイルを作成できません")), "image/webp", 0.82));
+  return new Promise((resolve, reject) => canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("プレビュー画像を作成できません")), "image/webp", quality));
 }
 
 function uploadFile(url: string, body: Blob, contentType = body.type): Promise<void> {

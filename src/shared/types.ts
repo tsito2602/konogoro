@@ -93,5 +93,6 @@ export type UploadTarget = {
   id: string;
   uploadUrl: string;
   thumbnailUploadUrl: string;
+  previewUploadUrl?: string;
   contentType: string;
 };

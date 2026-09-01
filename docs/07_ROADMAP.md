@@ -49,9 +49,9 @@ Phase 1完成後、LINE連携前に実施。
 
 ## Phase 4 — Hardening
 
-- PWA
-- thumbnail / preview最適化
-- video thumbnail
-- retry UX
+- [x] PWA
+- [x] thumbnail / preview最適化
+- [x] video thumbnail
+- [x] retry UX
 - [x] production monitoring
 - [x] backup / export検討

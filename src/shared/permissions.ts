@@ -8,12 +8,12 @@ export function canDeleteComment(user: User, authorId: string): boolean {
   return user.role === "owner" || user.id === authorId;
 }
 
-export function canDeletePost(user: User, authorId: string): boolean {
-  return user.role === "owner" || (user.role === "uploader" && user.id === authorId);
+export function canDeletePost(user: User): boolean {
+  return user.role === "owner" || user.role === "uploader";
 }
 
 export function canManageEvent(user: User): boolean {
-  return user.role === "owner";
+  return user.role === "owner" || user.role === "uploader";
 }
 
 export function canInviteFamily(user: User): boolean {

@@ -28,7 +28,7 @@ PCでも使用可能だが、スマホUIを無制限に横へ引き伸ばさな�
 家族
 ```
 
-「＋追加」はBottom Navigationから独立させ、そのすぐ上の画面右下へ固定表示する。ownerが押すと「写真・動画」と「イベント」を選択できる。uploaderはPost Createへ直接遷移し、viewerには表示しない。
+「＋追加」はBottom Navigationから独立させ、そのすぐ上の画面右下へ固定表示する。ownerとuploaderが押すと「写真・動画」と「イベント」を選択できる。viewerには表示しない。
 
 ---
 

@@ -7,9 +7,9 @@ const uploader: User = { id: "uploader", displayName: "Uploader", role: "uploade
 const viewer: User = { id: "viewer", displayName: "Viewer", role: "viewer" };
 
 describe("permissions", () => {
-  it("ownerだけがイベントを管理できる", () => {
+  it("ownerとuploaderがイベントを管理できる", () => {
     expect(canManageEvent(owner)).toBe(true);
-    expect(canManageEvent(uploader)).toBe(false);
+    expect(canManageEvent(uploader)).toBe(true);
     expect(canManageEvent(viewer)).toBe(false);
   });
 
@@ -31,10 +31,9 @@ describe("permissions", () => {
     expect(canDeleteComment(uploader, "viewer")).toBe(false);
   });
 
-  it("ownerは全投稿、uploaderは自分の投稿だけを削除できる", () => {
-    expect(canDeletePost(owner, "uploader")).toBe(true);
-    expect(canDeletePost(uploader, "uploader")).toBe(true);
-    expect(canDeletePost(uploader, "owner")).toBe(false);
-    expect(canDeletePost(viewer, "viewer")).toBe(false);
+  it("ownerとuploaderが全投稿を削除できる", () => {
+    expect(canDeletePost(owner)).toBe(true);
+    expect(canDeletePost(uploader)).toBe(true);
+    expect(canDeletePost(viewer)).toBe(false);
   });
 });

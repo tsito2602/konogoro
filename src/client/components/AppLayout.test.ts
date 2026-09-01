@@ -16,10 +16,10 @@ describe("canAccessPath", () => {
     expect(canAccessPath(viewer, pathname)).toBe(true);
   });
 
-  it("uploaderは投稿画面だけ利用できる", () => {
+  it("uploaderは投稿画面とイベント管理画面を利用できる", () => {
     expect(canAccessPath(uploader, "/posts/new")).toBe(true);
-    expect(canAccessPath(uploader, "/events/new")).toBe(false);
-    expect(canAccessPath(uploader, "/events/event-1/edit")).toBe(false);
+    expect(canAccessPath(uploader, "/events/new")).toBe(true);
+    expect(canAccessPath(uploader, "/events/event-1/edit")).toBe(true);
     expect(canAccessPath(uploader, "/family")).toBe(false);
   });
 });

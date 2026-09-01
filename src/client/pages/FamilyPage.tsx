@@ -86,7 +86,7 @@ export function FamilyPage() {
           {!inviteUrl ? <div className="form-stack"><fieldset className="role-guide">
             <legend>権限</legend>
             <label className={inviteRole === "viewer" ? "selected" : ""}><input type="radio" name="invite-role" value="viewer" checked={inviteRole === "viewer"} onChange={() => setInviteRole("viewer")} /><div><strong>閲覧者</strong><p>タイムライン・イベント・投稿の閲覧、コメント、自分のコメントの削除</p></div></label>
-            <label className={inviteRole === "uploader" ? "selected" : ""}><input type="radio" name="invite-role" value="uploader" checked={inviteRole === "uploader"} onChange={() => setInviteRole("uploader")} /><div><strong>投稿者</strong><p>投稿・閲覧・コメント、自分の投稿の削除</p></div></label>
+            <label className={inviteRole === "uploader" ? "selected" : ""}><input type="radio" name="invite-role" value="uploader" checked={inviteRole === "uploader"} onChange={() => setInviteRole("uploader")} /><div><strong>投稿者</strong><p>投稿・閲覧・コメント、イベント管理、すべての投稿の削除</p></div></label>
             <label className={inviteRole === "owner" ? "selected" : ""}><input type="radio" name="invite-role" value="owner" checked={inviteRole === "owner"} onChange={() => setInviteRole("owner")} /><div><strong>管理者</strong><p>投稿・閲覧・コメント、イベント管理、家族の招待、すべての投稿の削除</p></div></label>
           </fieldset><button className="primary-button wide" type="button" onClick={createInvite} disabled={creatingInvite}>{creatingInvite ? "発行中…" : "招待URLを発行"}</button></div> : <div className="invite-result">
             <input value={inviteUrl} readOnly aria-label="招待URL" />

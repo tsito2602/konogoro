@@ -489,9 +489,9 @@ app.get("/posts/:postId", async (c) => {
 
 app.delete("/posts/:postId", async (c) => {
   const postId = c.req.param("postId");
-  const post = await c.env.DB.prepare("SELECT created_by, event_id FROM posts WHERE id = ?").bind(postId).first<{ created_by: string; event_id: string | null }>();
+  const post = await c.env.DB.prepare("SELECT event_id FROM posts WHERE id = ?").bind(postId).first<{ event_id: string | null }>();
   if (!post) return c.json({ error: "投稿が見つかりません" }, 404);
-  if (!canDeletePost(c.var.currentUser, post.created_by)) return c.json({ error: "投稿を削除する権限がありません" }, 403);
+  if (!canDeletePost(c.var.currentUser)) return c.json({ error: "投稿を削除する権限がありません" }, 403);
 
   const media = await c.env.DB.prepare("SELECT original_object_key, preview_object_key, thumbnail_object_key FROM media WHERE post_id = ?").bind(postId).all<{ original_object_key: string; preview_object_key: string | null; thumbnail_object_key: string | null }>();
   const statements = [c.env.DB.prepare("DELETE FROM posts WHERE id = ?").bind(postId)];

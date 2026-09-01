@@ -1,7 +1,7 @@
 import { Bell, BellOff, Copy, ExternalLink, Settings } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import type { CurrentUser, FamilyMember } from "../../shared/types";
+import type { CurrentUser, FamilyMember, User } from "../../shared/types";
 import { api } from "../api";
 import { EmptyState, ErrorState, Loading } from "../components/AsyncState";
 import { PageHeader } from "../components/PageHeader";
@@ -13,6 +13,7 @@ export function FamilyPage() {
   const [inviteUrl, setInviteUrl] = useState("");
   const [inviteError, setInviteError] = useState("");
   const [creatingInvite, setCreatingInvite] = useState(false);
+  const [inviteRole, setInviteRole] = useState<User["role"]>("viewer");
 
   const load = () => {
     setError("");
@@ -30,7 +31,7 @@ export function FamilyPage() {
   const createInvite = async () => {
     setCreatingInvite(true); setInviteError("");
     try {
-      const result = await api<{ inviteUrl: string }>("/family/invites", { method: "POST", body: JSON.stringify({ role: "viewer" }) });
+      const result = await api<{ inviteUrl: string }>("/family/invites", { method: "POST", body: JSON.stringify({ role: inviteRole }) });
       setInviteUrl(result.inviteUrl);
     } catch (reason) { setInviteError((reason as Error).message); }
     finally { setCreatingInvite(false); }
@@ -57,9 +58,14 @@ export function FamilyPage() {
         </section>
         {currentUser?.role === "owner" && <section className="family-section invite-section">
           <h2>招待</h2><p>家族に送る参加用URLを発行します。</p>
-          {!inviteUrl ? <button className="primary-button" type="button" onClick={createInvite} disabled={creatingInvite}>{creatingInvite ? "発行中…" : "招待URLを発行"}</button> : <div className="invite-result">
+          {!inviteUrl ? <div className="form-stack"><label>権限<select value={inviteRole} onChange={(event) => setInviteRole(event.target.value as User["role"])}>
+            <option value="viewer">閲覧者</option>
+            <option value="uploader">投稿者</option>
+            <option value="owner">管理者</option>
+          </select></label><button className="primary-button" type="button" onClick={createInvite} disabled={creatingInvite}>{creatingInvite ? "発行中…" : "招待URLを発行"}</button></div> : <div className="invite-result">
             <input value={inviteUrl} readOnly aria-label="招待URL" />
             <div><button className="outline-button" type="button" onClick={copyInvite}><Copy />コピー</button><a className="primary-button" href={`https://line.me/R/msg/text/?${encodeURIComponent(inviteUrl)}`} target="_blank" rel="noreferrer"><ExternalLink />LINEで送る</a></div>
+            <button className="text-button" type="button" onClick={() => setInviteUrl("")}>別の招待URLを発行</button>
           </div>}
           {inviteError && <p className="form-error" role="alert">{inviteError}</p>}
         </section>}

@@ -39,7 +39,7 @@ type EventRow = {
 };
 
 type AppEnv = { Bindings: Bindings; Variables: { currentUser: User } };
-const app = new Hono<AppEnv>().basePath("/api");
+export const app = new Hono<AppEnv>().basePath("/api");
 
 app.use("*", async (c, next) => {
   const publicAuth = c.req.path === "/api/auth/line" || c.req.path === "/api/auth/line/callback";
@@ -146,6 +146,7 @@ app.post("/auth/logout", async (c) => {
 });
 
 app.get("/family/members", async (c) => {
+  if (!canInviteFamily(c.var.currentUser)) return c.json({ error: "家族情報を表示する権限がありません" }, 403);
   const result = await c.env.DB.prepare(`
     SELECT id, display_name, role, avatar_url, line_user_id, notification_enabled, created_at
       FROM users
@@ -299,6 +300,7 @@ app.delete("/events/:eventId/sections/:sectionId", async (c) => {
 });
 
 app.get("/events/:eventId/cover-media", async (c) => {
+  if (!canManageEvent(c.var.currentUser)) return c.json({ error: "カバー候補を表示する権限がありません" }, 403);
   const event = await c.env.DB.prepare("SELECT id FROM events WHERE id = ?").bind(c.req.param("eventId")).first();
   if (!event) return c.json({ error: "イベントが見つかりません" }, 404);
   const result = await c.env.DB.prepare(`
@@ -398,6 +400,7 @@ app.delete("/posts/:postId", async (c) => {
 });
 
 app.post("/posts/:postId/media/upload-urls", async (c) => {
+  if (!canCreatePost(c.var.currentUser)) return c.json({ error: "投稿する権限がありません" }, 403);
   const postId = c.req.param("postId");
   const input = uploadFilesSchema.parse(await c.req.json());
   const post = await c.env.DB.prepare("SELECT id, status FROM posts WHERE id = ? AND created_by = ?").bind(postId, c.var.currentUser.id).first<{ id: string; status: string }>();
@@ -451,6 +454,7 @@ app.post("/posts/:postId/media/upload-urls", async (c) => {
 });
 
 app.post("/media/:mediaId/upload-url", async (c) => {
+  if (!canCreatePost(c.var.currentUser)) return c.json({ error: "投稿する権限がありません" }, 403);
   const media = await c.env.DB.prepare(`
     SELECT m.id, m.original_object_key, m.preview_object_key, m.thumbnail_object_key, m.mime_type
       FROM media m JOIN posts p ON p.id = m.post_id
@@ -463,12 +467,14 @@ app.post("/media/:mediaId/upload-url", async (c) => {
 });
 
 app.post("/media/:mediaId/failed", async (c) => {
+  if (!canCreatePost(c.var.currentUser)) return c.json({ error: "投稿する権限がありません" }, 403);
   const result = await c.env.DB.prepare("UPDATE media SET status = 'failed' WHERE id = ? AND created_by = ? AND status = 'pending'").bind(c.req.param("mediaId"), c.var.currentUser.id).run();
   if (!result.meta.changes) return c.json({ error: "メディアが見つかりません" }, 404);
   return c.json({ id: c.req.param("mediaId"), status: "failed" });
 });
 
 app.post("/media/:mediaId/complete", async (c) => {
+  if (!canCreatePost(c.var.currentUser)) return c.json({ error: "投稿する権限がありません" }, 403);
   const input = mediaCompleteSchema.parse(await c.req.json());
   const mediaId = c.req.param("mediaId");
   const media = await c.env.DB.prepare("SELECT original_object_key, preview_object_key, thumbnail_object_key, byte_size, status FROM media WHERE id = ? AND created_by = ?").bind(mediaId, c.var.currentUser.id).first<{ original_object_key: string; preview_object_key: string | null; thumbnail_object_key: string; byte_size: number; status: string }>();
@@ -482,6 +488,7 @@ app.post("/media/:mediaId/complete", async (c) => {
 });
 
 app.post("/posts/:postId/publish", async (c) => {
+  if (!canCreatePost(c.var.currentUser)) return c.json({ error: "投稿する権限がありません" }, 403);
   const postId = c.req.param("postId");
   const post = await c.env.DB.prepare("SELECT id, event_id, status, published_at FROM posts WHERE id = ? AND created_by = ?").bind(postId, c.var.currentUser.id).first<{ id: string; event_id: string | null; status: string; published_at: string | null }>();
   if (!post) return c.json({ error: "投稿が見つかりません" }, 404);

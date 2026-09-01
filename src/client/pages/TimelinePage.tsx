@@ -5,8 +5,10 @@ import { api } from "../api";
 import { EmptyState, ErrorState, Loading } from "../components/AsyncState";
 import { PageHeader } from "../components/PageHeader";
 import { PostCard } from "../components/PostCard";
+import { useCurrentUser } from "../components/AppLayout";
 
 export function TimelinePage() {
+  const currentUser = useCurrentUser();
   const [posts, setPosts] = useState<Post[] | null>(null);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -46,7 +48,7 @@ export function TimelinePage() {
     <main className="feed">
       {!posts && !error && <Loading />}
       {error && <ErrorState message={error} retry={load} />}
-      {posts?.length === 0 && <EmptyState title="まだ投稿がありません" body="写真をまとめて、最初の思い出を追加できます。" action={<Link className="primary-button" to="/posts/new">写真を追加</Link>} />}
+      {posts?.length === 0 && <EmptyState title="まだ投稿がありません" body={currentUser.role === "viewer" ? "新しい思い出が追加されると、ここに表示されます。" : "写真をまとめて、最初の思い出を追加できます。"} action={currentUser.role === "viewer" ? undefined : <Link className="primary-button" to="/posts/new">写真を追加</Link>} />}
       {posts?.map((post) => <PostCard post={post} key={post.id} />)}
       {posts && nextCursor && <div className="form-page">
         {moreError && <p className="form-error" role="alert">{moreError}</p>}

@@ -1,17 +1,29 @@
-import { CalendarDays, House, Plus, Users } from "lucide-react";
+import { CalendarDays, House, Plus, Settings, Users } from "lucide-react";
 import { useEffect, useState } from "react";
-import { NavLink, Outlet, useLocation } from "react-router-dom";
+import { Navigate, NavLink, Outlet, useLocation, useOutletContext } from "react-router-dom";
 import type { CurrentUser } from "../../shared/types";
+import { canCreatePost, canInviteFamily, canManageEvent } from "../../shared/permissions";
 import { api } from "../api";
 import { ErrorState, Loading } from "./AsyncState";
 
 const viewerPattern = /^\/posts\/[^/]+\/media\//;
 const postDetailPattern = /^\/posts\/[^/]+$/;
+export function canAccessPath(user: CurrentUser, pathname: string): boolean {
+  if (/^\/posts\/new$/.test(pathname)) return canCreatePost(user);
+  if (/^\/events\/new$/.test(pathname) || /^\/events\/[^/]+\/edit$/.test(pathname)) return canManageEvent(user);
+  if (/^\/family$/.test(pathname)) return canInviteFamily(user);
+  return true;
+}
+
+export function useCurrentUser(): CurrentUser {
+  return useOutletContext<CurrentUser>();
+}
 
 export function AppLayout() {
   const { pathname } = useLocation();
   const invite = pathname.startsWith("/invite/");
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
+  const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [authError, setAuthError] = useState("");
   const hideNavigation = viewerPattern.test(pathname) || (pathname !== "/posts/new" && postDetailPattern.test(pathname));
 
@@ -19,7 +31,7 @@ export function AppLayout() {
     setAuthenticated(null);
     setAuthError("");
     void api<CurrentUser>("/me")
-      .then(() => setAuthenticated(true))
+      .then((user) => { setCurrentUser(user); setAuthenticated(true); })
       .catch((reason: Error) => {
         if (reason.message === "ログインが必要です") setAuthenticated(false);
         else setAuthError(reason.message);
@@ -28,7 +40,7 @@ export function AppLayout() {
 
   useEffect(() => {
     if (!invite) void api<CurrentUser>("/me")
-      .then(() => setAuthenticated(true))
+      .then((user) => { setCurrentUser(user); setAuthenticated(true); })
       .catch((reason: Error) => {
         if (reason.message === "ログインが必要です") setAuthenticated(false);
         else setAuthError(reason.message);
@@ -39,16 +51,20 @@ export function AppLayout() {
   if (authenticated === null && !authError) return <div className="app-shell"><Loading /></div>;
   if (authError) return <div className="app-shell"><ErrorState message={authError} retry={loadAuth} /></div>;
   if (!authenticated) return <LoginScreen />;
+  if (!currentUser) return <div className="app-shell"><Loading /></div>;
+  if (!canAccessPath(currentUser, pathname)) return <Navigate to="/" replace />;
 
   return (
     <div className={hideNavigation ? "app-shell viewer-shell" : "app-shell"}>
-      <Outlet />
+      <Outlet context={currentUser} />
       {!hideNavigation && (
         <nav className="tab-bar" aria-label="メインナビゲーション">
           <NavItem to="/" label="タイムライン" icon={<House />} end />
           <NavItem to="/events" label="イベント" icon={<CalendarDays />} />
-          <NavItem to="/posts/new" label="追加" icon={<Plus />} prominent />
-          <NavItem to="/family" label="家族" icon={<Users />} />
+          {canCreatePost(currentUser) && <NavItem to="/posts/new" label="追加" icon={<Plus />} prominent />}
+          {canInviteFamily(currentUser)
+            ? <NavItem to="/family" label="家族" icon={<Users />} />
+            : <NavItem to="/settings" label="設定" icon={<Settings />} />}
         </nav>
       )}
     </div>

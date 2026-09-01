@@ -55,3 +55,10 @@ Phase 1完成後、LINE連携前に実施。
 - [x] retry UX
 - [x] production monitoring
 - [x] backup / export検討
+
+## Phase 5 — Role-based access
+
+- [x] viewer向け管理導線の非表示
+- [x] role別クライアントルーティング制御
+- [x] 家族情報・管理APIの認可強化
+- [x] 投稿アップロード・公開APIの認可強化

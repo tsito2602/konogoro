@@ -15,6 +15,7 @@ import type { User } from "../shared/types";
 import { getCurrentUser } from "./auth";
 import { createPresignedUploadUrl, hasUploadCredentials } from "./r2";
 import { loadPosts, postSelect, type PostRow } from "./db";
+import { matchesUploadFiles, type ExistingMedia } from "./upload-request";
 
 type Bindings = Cloudflare.Env & R2Secrets;
 type EventRow = {
@@ -164,6 +165,27 @@ app.post("/posts/:postId/media/upload-urls", async (c) => {
   if (!post || post.status !== "draft") return c.json({ error: "下書き投稿が見つかりません" }, 404);
   if (!hasUploadCredentials(c.env)) {
     return c.json({ error: "R2アップロード用secretが設定されていません" }, 503);
+  }
+
+  const existing = await c.env.DB.prepare(`
+    SELECT id, original_filename, mime_type, original_object_key, thumbnail_object_key,
+           byte_size, captured_at, duration_seconds
+      FROM media
+     WHERE post_id = ?
+     ORDER BY position, id
+  `).bind(postId).all<ExistingMedia & { id: string; original_object_key: string; thumbnail_object_key: string }>();
+  if (existing.results.length > 0) {
+    if (!matchesUploadFiles(existing.results, input.files)) {
+      return c.json({ error: "下書きの写真・動画が選択内容と一致しません" }, 409);
+    }
+    const targets = await Promise.all(existing.results.map(async (media) => {
+      const [uploadUrl, thumbnailUploadUrl] = await Promise.all([
+        createPresignedUploadUrl(c.env, media.original_object_key, media.mime_type),
+        createPresignedUploadUrl(c.env, media.thumbnail_object_key, "image/webp"),
+      ]);
+      return { id: media.id, uploadUrl, thumbnailUploadUrl, contentType: media.mime_type } satisfies UploadTarget;
+    }));
+    return c.json({ media: targets });
   }
 
   const lastPosition = await c.env.DB.prepare("SELECT COALESCE(MAX(position), -1) AS value FROM media WHERE post_id = ?").bind(postId).first<{ value: number }>();

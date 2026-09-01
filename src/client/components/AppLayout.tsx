@@ -1,6 +1,6 @@
-import { CalendarDays, House, Plus, Settings, Users } from "lucide-react";
+import { CalendarDays, CalendarPlus, House, ImagePlus, Plus, Settings, Users } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Navigate, NavLink, Outlet, useLocation, useOutletContext } from "react-router-dom";
+import { Link, Navigate, NavLink, Outlet, useLocation, useOutletContext } from "react-router-dom";
 import type { CurrentUser } from "../../shared/types";
 import { canCreatePost, canInviteFamily, canManageEvent } from "../../shared/permissions";
 import { api } from "../api";
@@ -25,7 +25,9 @@ export function AppLayout() {
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [authError, setAuthError] = useState("");
+  const [addMenuOpen, setAddMenuOpen] = useState(false);
   const hideNavigation = viewerPattern.test(pathname) || (pathname !== "/posts/new" && postDetailPattern.test(pathname));
+  const hideAddButton = pathname === "/posts/new" || pathname === "/events/new" || /^\/events\/[^/]+\/edit$/.test(pathname);
 
   const loadAuth = () => {
     setAuthenticated(null);
@@ -61,12 +63,18 @@ export function AppLayout() {
         <nav className="tab-bar" aria-label="メインナビゲーション">
           <NavItem to="/" label="タイムライン" icon={<House />} end />
           <NavItem to="/events" label="イベント" icon={<CalendarDays />} />
-          {canCreatePost(currentUser) && <NavItem to="/posts/new" label="追加" icon={<Plus />} prominent />}
           {canInviteFamily(currentUser)
             ? <NavItem to="/family" label="家族" icon={<Users />} />
             : <NavItem to="/settings" label="設定" icon={<Settings />} />}
         </nav>
       )}
+      {!hideNavigation && !hideAddButton && canCreatePost(currentUser) && (canManageEvent(currentUser) ? <>
+        {addMenuOpen && <><button className="add-menu-backdrop" type="button" onClick={() => setAddMenuOpen(false)} aria-label="追加メニューを閉じる" /><div className="add-menu" role="menu" aria-label="追加するものを選択">
+          <Link to="/posts/new" role="menuitem" onClick={() => setAddMenuOpen(false)}><ImagePlus /><span><strong>写真・動画</strong><small>思い出を投稿する</small></span></Link>
+          <Link to="/events/new" role="menuitem" onClick={() => setAddMenuOpen(false)}><CalendarPlus /><span><strong>イベント</strong><small>旅行やお出かけを作る</small></span></Link>
+        </div></>}
+        <button className={`floating-add-button${addMenuOpen ? " open" : ""}`} type="button" onClick={() => setAddMenuOpen((open) => !open)} aria-expanded={addMenuOpen} aria-label={addMenuOpen ? "追加メニューを閉じる" : "追加メニューを開く"}><Plus /></button>
+      </> : <Link className="floating-add-button" to="/posts/new" aria-label="写真・動画を追加"><Plus /></Link>)}
     </div>
   );
 }
@@ -81,9 +89,9 @@ export function LoginScreen() {
   </section></main>;
 }
 
-function NavItem({ to, label, icon, end, prominent }: { to: string; label: string; icon: React.ReactNode; end?: boolean; prominent?: boolean }) {
+function NavItem({ to, label, icon, end }: { to: string; label: string; icon: React.ReactNode; end?: boolean }) {
   return (
-    <NavLink to={to} end={end} className={({ isActive }) => `tab-item${isActive ? " active" : ""}${prominent ? " add-tab" : ""}`}>
+    <NavLink to={to} end={end} className={({ isActive }) => `tab-item${isActive ? " active" : ""}`}>
       {icon}
       <span>{label}</span>
     </NavLink>

@@ -14,6 +14,7 @@ export type CurrentUser = User & {
   avatarUrl?: string | null;
   notificationEnabled?: boolean;
   lineConnected?: boolean;
+  lineFriend?: boolean;
 };
 
 export type Media = {

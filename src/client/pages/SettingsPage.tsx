@@ -49,8 +49,10 @@ export function SettingsPage() {
     <main className="page-content form-page">
       {error && !user ? <ErrorState message={error} retry={load} /> : !user ? <Loading /> : <form className="form-stack settings-form" onSubmit={save}>
         <label>表示名<input value={displayName} onChange={(event) => setDisplayName(event.target.value)} required maxLength={100} disabled={busy} /></label>
-        <label className="toggle-row"><span><strong>LINE通知</strong><small>新しい投稿のお知らせを受け取る</small></span><input type="checkbox" checked={notificationEnabled} onChange={(event) => setNotificationEnabled(event.target.checked)} disabled={busy || !user.lineConnected} /></label>
+        <label className="toggle-row"><span><strong>LINE通知</strong><small>{user.lineFriend ? "新しい投稿のお知らせを受け取る" : "友だち追加後に利用できる"}</small></span><input type="checkbox" checked={notificationEnabled} onChange={(event) => setNotificationEnabled(event.target.checked)} disabled={busy || !user.lineFriend} /></label>
         <div className="setting-status"><strong>LINE連携状態</strong><span className={user.lineConnected ? "linked" : ""}>{user.lineConnected ? "連携済み" : "未連携"}</span></div>
+        <div className="setting-status"><strong>公式アカウント</strong><span className={user.lineFriend ? "linked" : ""}>{user.lineFriend ? "友だち追加済み" : "未追加"}</span></div>
+        {user.lineConnected && !user.lineFriend && <a className="outline-button wide" href="/api/auth/line">友だち追加を確認</a>}
         {saved && <p className="save-message" role="status">設定を保存しました</p>}
         {error && <p className="form-error" role="alert">{error}</p>}
         <button className="primary-button wide" disabled={busy || !displayName.trim()}>{busy ? "保存中…" : "保存"}</button>

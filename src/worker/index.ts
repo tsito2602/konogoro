@@ -17,7 +17,7 @@ import {
 import type { EventCoverMedia, EventDetail, EventSummary, UploadTarget } from "../shared/types";
 import { canCreatePost, canDeleteComment, canDeletePost, canInviteFamily, canManageEvent } from "../shared/permissions";
 import type { User } from "../shared/types";
-import { getCurrentUser, hashToken, hasLineConfig, pkceChallenge, randomToken, safeEqual, type LineSecrets } from "./auth";
+import { getCurrentUser, getLineFriendship, hashToken, hasLineConfig, pkceChallenge, randomToken, safeEqual, type LineSecrets } from "./auth";
 import { createPresignedUploadUrl, hasUploadCredentials } from "./r2";
 import { loadPosts, postSelect, type PostRow } from "./db";
 import { matchesUploadFiles, type ExistingMedia } from "./upload-request";
@@ -88,8 +88,8 @@ app.onError((error, c) => {
 app.notFound((c) => c.json({ error: "見つかりませんでした" }, 404));
 
 app.get("/me", async (c) => {
-  const profile = await c.env.DB.prepare("SELECT avatar_url, line_user_id, notification_enabled FROM users WHERE id = ?").bind(c.var.currentUser.id).first<{ avatar_url: string | null; line_user_id: string | null; notification_enabled: number }>();
-  return c.json({ ...c.var.currentUser, avatarUrl: profile?.avatar_url ?? null, lineConnected: Boolean(profile?.line_user_id), notificationEnabled: Boolean(profile?.notification_enabled) });
+  const profile = await c.env.DB.prepare("SELECT avatar_url, line_user_id, line_friend_enabled, notification_enabled FROM users WHERE id = ?").bind(c.var.currentUser.id).first<{ avatar_url: string | null; line_user_id: string | null; line_friend_enabled: number; notification_enabled: number }>();
+  return c.json({ ...c.var.currentUser, avatarUrl: profile?.avatar_url ?? null, lineConnected: Boolean(profile?.line_user_id), lineFriend: Boolean(profile?.line_friend_enabled), notificationEnabled: Boolean(profile?.notification_enabled) });
 });
 
 app.patch("/me", async (c) => {
@@ -102,9 +102,9 @@ app.patch("/me", async (c) => {
            updated_at = ?
      WHERE id = ?
   `).bind(input.displayName ?? null, input.notificationEnabled === undefined ? null : Number(input.notificationEnabled), now, c.var.currentUser.id).run();
-  const user = await c.env.DB.prepare("SELECT id, display_name, role, avatar_url, line_user_id, notification_enabled FROM users WHERE id = ?").bind(c.var.currentUser.id).first<{ id: string; display_name: string; role: User["role"]; avatar_url: string | null; line_user_id: string | null; notification_enabled: number }>();
+  const user = await c.env.DB.prepare("SELECT id, display_name, role, avatar_url, line_user_id, line_friend_enabled, notification_enabled FROM users WHERE id = ?").bind(c.var.currentUser.id).first<{ id: string; display_name: string; role: User["role"]; avatar_url: string | null; line_user_id: string | null; line_friend_enabled: number; notification_enabled: number }>();
   if (!user) return c.json({ error: "ユーザーが見つかりません" }, 404);
-  return c.json({ id: user.id, displayName: user.display_name, role: user.role, avatarUrl: user.avatar_url, lineConnected: Boolean(user.line_user_id), notificationEnabled: Boolean(user.notification_enabled) });
+  return c.json({ id: user.id, displayName: user.display_name, role: user.role, avatarUrl: user.avatar_url, lineConnected: Boolean(user.line_user_id), lineFriend: Boolean(user.line_friend_enabled), notificationEnabled: Boolean(user.notification_enabled) });
 });
 
 app.get("/auth/line", async (c) => {
@@ -120,7 +120,7 @@ app.get("/auth/line", async (c) => {
   if (invite) setCookie(c, "line_invite", invite, cookie);
   const callback = `${c.env.APP_ORIGIN}/api/auth/line/callback`;
   const url = new URL("https://access.line.me/oauth2/v2.1/authorize");
-  url.search = new URLSearchParams({ response_type: "code", client_id: c.env.LINE_CHANNEL_ID, redirect_uri: callback, state, scope: "profile openid", nonce, code_challenge: await pkceChallenge(verifier), code_challenge_method: "S256" }).toString();
+  url.search = new URLSearchParams({ response_type: "code", client_id: c.env.LINE_CHANNEL_ID, redirect_uri: callback, state, scope: "profile openid", nonce, bot_prompt: "aggressive", code_challenge: await pkceChallenge(verifier), code_challenge_method: "S256" }).toString();
   return c.redirect(url.toString());
 });
 
@@ -135,10 +135,11 @@ app.get("/auth/line/callback", async (c) => {
   const redirectUri = `${c.env.APP_ORIGIN}/api/auth/line/callback`;
   const tokenResponse = await fetch("https://api.line.me/oauth2/v2.1/token", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ grant_type: "authorization_code", code, redirect_uri: redirectUri, client_id: c.env.LINE_CHANNEL_ID, client_secret: c.env.LINE_CHANNEL_SECRET, code_verifier: verifier }) });
   if (!tokenResponse.ok) return c.json({ error: "LINE Loginを完了できません" }, 502);
-  const token = await tokenResponse.json<{ id_token: string }>();
+  const token = await tokenResponse.json<{ id_token: string; access_token: string }>();
   const verifyResponse = await fetch("https://api.line.me/oauth2/v2.1/verify", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ id_token: token.id_token, client_id: c.env.LINE_CHANNEL_ID, nonce }) });
   if (!verifyResponse.ok) return c.json({ error: "LINEアカウントを確認できません" }, 502);
   const profile = await verifyResponse.json<{ sub: string; name?: string; picture?: string }>();
+  const lineFriend = await getLineFriendship(token.access_token);
   let user = await c.env.DB.prepare("SELECT id FROM users WHERE line_user_id = ?").bind(profile.sub).first<{ id: string }>();
   if (!user) {
     const inviteToken = getCookie(c, "line_invite");
@@ -147,7 +148,9 @@ app.get("/auth/line/callback", async (c) => {
     if (!invite) return c.json({ error: "招待URLが無効または期限切れです" }, 403);
     user = { id: ulid() };
     const now = new Date().toISOString();
-    await c.env.DB.prepare("INSERT INTO users (id, line_user_id, display_name, avatar_url, role, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)").bind(user.id, profile.sub, profile.name ?? "LINEユーザー", profile.picture ?? null, invite.role, now, now).run();
+    await c.env.DB.prepare("INSERT INTO users (id, line_user_id, display_name, avatar_url, role, notification_enabled, line_friend_enabled, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)").bind(user.id, profile.sub, profile.name ?? "LINEユーザー", profile.picture ?? null, invite.role, Number(lineFriend === true), Number(lineFriend === true), now, now).run();
+  } else if (lineFriend !== null) {
+    await c.env.DB.prepare("UPDATE users SET line_friend_enabled = ?, notification_enabled = CASE WHEN ? = 0 THEN 0 ELSE notification_enabled END, updated_at = ? WHERE id = ?").bind(Number(lineFriend), Number(lineFriend), new Date().toISOString(), user.id).run();
   }
   const session = randomToken();
   const now = new Date();

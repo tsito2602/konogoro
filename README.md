@@ -66,6 +66,8 @@ npx wrangler secret put APP_ORIGIN
 
 3値が揃っている環境ではLINE LoginとSession認証を使用する。未設定のローカル環境では固定の開発ユーザーを使用する。
 
+Messaging API ChannelのLINE公式アカウントをLINE Login Channelへリンクし、両Channelを同じProviderに配置する。ログイン時は友だち追加確認画面を表示し、認証後に友だち状態を取得する。ユーザーが友だち追加を確定する操作はLINE上で必要になる。
+
 ## LINE通知
 
 LINE Login Channelと同じProvider配下にMessaging API Channelを作成し、長期のChannel access tokenを発行する。ローカルでは`.dev.vars`へ、本番Workerではsecretへ設定する。
@@ -74,7 +76,7 @@ LINE Login Channelと同じProvider配下にMessaging API Channelを作成し、
 npx wrangler secret put LINE_CHANNEL_ACCESS_TOKEN
 ```
 
-通知を受け取るユーザーは、Messaging API Channelに紐づくLINE公式アカウントを友だち追加する必要がある。公開された投稿は約10分間まとめられ、毎分実行されるCron Triggerから通知設定がONのユーザーへ配信される。トークン未設定時はCron処理を安全にスキップする。
+通知を受け取るユーザーは、Messaging API Channelに紐づくLINE公式アカウントを友だち追加する必要がある。公開された投稿は約10分間まとめられ、毎分実行されるCron Triggerから友だち追加済みかつ通知設定がONのユーザーへ配信される。トークン未設定時はCron処理を安全にスキップする。
 
 ## コマンド
 

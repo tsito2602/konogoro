@@ -38,6 +38,19 @@ export function safeEqual(left: string, right: string): boolean {
   return difference === 0;
 }
 
+export async function getLineFriendship(accessToken: string, fetcher: typeof fetch = fetch): Promise<boolean | null> {
+  try {
+    const response = await fetcher("https://api.line.me/friendship/v1/status", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+    if (!response.ok) return null;
+    const result = await response.json<{ friendFlag?: unknown }>();
+    return typeof result.friendFlag === "boolean" ? result.friendFlag : null;
+  } catch {
+    return null;
+  }
+}
+
 function bytesToBase64Url(bytes: Uint8Array): string {
   return btoa(String.fromCharCode(...bytes)).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
 }

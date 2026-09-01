@@ -277,4 +277,5 @@ Event内Mediaをgridで表示。
 - 表示名
 - LINE通知
 - LINE連携状態
+- LINE公式アカウント友だち追加状態
 - ログアウト

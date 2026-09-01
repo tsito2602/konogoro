@@ -37,7 +37,7 @@ Phase 1完成後、LINE連携前に実施。
 - Family member
 - Invite
 - role/permission
-- LINE公式アカウント友だち追加導線
+- [x] LINE公式アカウント友だち追加導線
 
 ## Phase 3 — Notification
 

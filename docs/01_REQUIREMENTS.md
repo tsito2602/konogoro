@@ -369,10 +369,13 @@ token:
 ```text
 Invite URL
 → LINE Login
+→ LINE公式アカウント友だち追加確認
 → 参加確認
 → User登録
 → Timeline
 ```
+
+LINE Login ChannelにはMessaging API ChannelのLINE公式アカウントをリンクする。ログイン後に友だち状態を保存し、未追加の場合は設定画面から再確認できるようにする。
 
 ---
 
@@ -397,7 +400,7 @@ Mediaごと / Postごとの即時通知はしない。
 
 Cloudflare Cron Triggersで通知batchを処理。
 
-ユーザーごとに通知ON/OFFを持つ。
+ユーザーごとに通知ON/OFFを持つ。LINE公式アカウントを友だち追加済みのユーザーだけを送信対象にする。
 
 ---
 

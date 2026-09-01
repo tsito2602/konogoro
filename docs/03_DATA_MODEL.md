@@ -27,6 +27,7 @@ display_name
 avatar_url
 role: owner | uploader | viewer
 notification_enabled
+line_friend_enabled
 created_at
 updated_at
 ```

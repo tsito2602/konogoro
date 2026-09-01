@@ -26,6 +26,9 @@
   "vars": {
     "R2_BUCKET_NAME": "family-timeline-media"
   },
+  "triggers": {
+    "crons": ["* * * * *"]
+  },
   "observability": {
     "enabled": true,
     "head_sampling_rate": 1

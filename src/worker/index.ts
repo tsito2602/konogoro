@@ -21,6 +21,7 @@ import { createPresignedUploadUrl, hasUploadCredentials } from "./r2";
 import { loadPosts, postSelect, type PostRow } from "./db";
 import { matchesUploadFiles, type ExistingMedia } from "./upload-request";
 import { createInviteToken } from "./invite-token";
+import { processNotificationBatches, type NotificationCronEnv } from "./notification-cron";
 
 type Bindings = Cloudflare.Env & R2Secrets & LineSecrets;
 type EventRow = {
@@ -593,4 +594,9 @@ async function serveMedia(c: Context<AppEnv>, download: boolean): Promise<Respon
   return new Response(object.body, { headers });
 }
 
-export default app;
+export default {
+  fetch: app.fetch,
+  async scheduled(_controller: ScheduledController, env: NotificationCronEnv): Promise<void> {
+    await processNotificationBatches(env);
+  },
+};

@@ -42,7 +42,7 @@ export function TimelinePage() {
   };
 
   return <>
-    <PageHeader title="タイムライン" action={<Link className="header-link" to="/posts/new">追加</Link>} />
+    <PageHeader title="タイムライン" />
     <main className="feed">
       {!posts && !error && <Loading />}
       {error && <ErrorState message={error} retry={load} />}

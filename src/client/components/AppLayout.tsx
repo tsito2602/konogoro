@@ -2,10 +2,11 @@ import { CalendarDays, House, Plus, Users } from "lucide-react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 
 const viewerPattern = /^\/posts\/[^/]+\/media\//;
+const postDetailPattern = /^\/posts\/[^/]+$/;
 
 export function AppLayout() {
   const { pathname } = useLocation();
-  const hideNavigation = viewerPattern.test(pathname);
+  const hideNavigation = viewerPattern.test(pathname) || (pathname !== "/posts/new" && postDetailPattern.test(pathname));
 
   return (
     <div className={hideNavigation ? "app-shell viewer-shell" : "app-shell"}>

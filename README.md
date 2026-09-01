@@ -2,7 +2,7 @@
 
 家族限定で写真を共有する、React・Hono・Cloudflare Workers製のWebアプリ。写真投稿、イベント、家族招待、LINE Login、投稿まとめ通知を実装済み。
 
-本番URL: https://family-timeline.white-galaxys2-album2.workers.dev
+本番URL: https://family-timeline.tsito-apps.workers.dev
 
 ## 必要なもの
 
@@ -53,7 +53,7 @@ LINE Login ChannelのCallback URLへ`https://<本番origin>/api/auth/line/callba
 現在の本番Callback URL:
 
 ```text
-https://family-timeline.white-galaxys2-album2.workers.dev/api/auth/line/callback
+https://family-timeline.tsito-apps.workers.dev/api/auth/line/callback
 ```
 
 ```sh

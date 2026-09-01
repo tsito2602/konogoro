@@ -9,6 +9,8 @@ const STATIC_PATHS = new Set([
   "/favicon-32x32.png",
   "/favicon-16x16.png",
   "/icons/apple-touch-icon.png",
+  "/icons/icon-light-192.png",
+  "/icons/icon-dark-192.png",
   "/android-chrome-192x192.png",
   "/android-chrome-512x512.png",
 ]);

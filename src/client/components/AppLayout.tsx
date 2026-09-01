@@ -81,7 +81,10 @@ export function AppLayout() {
 
 export function LoginScreen() {
   return <main className="login-page"><section>
-    <img className="login-icon" src="/icons/icon-light-192.png" alt="" />
+    <picture>
+      <source media="(prefers-color-scheme: dark)" srcSet="/icons/icon-dark-192.png" />
+      <img className="login-icon" src="/icons/icon-light-192.png" alt="" />
+    </picture>
     <p className="login-eyebrow">このごろ</p>
     <h1>家族の思い出を、ひとつの場所に</h1>
     <p>写真や動画を家族だけで共有できます。</p>

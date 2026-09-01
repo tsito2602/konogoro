@@ -4,6 +4,18 @@ export type User = {
   role: "owner" | "uploader" | "viewer";
 };
 
+export type FamilyMember = User & {
+  avatarUrl: string | null;
+  notificationEnabled: boolean;
+  lineLinked: boolean;
+};
+
+export type CurrentUser = User & {
+  avatarUrl?: string | null;
+  notificationEnabled?: boolean;
+  lineLinked?: boolean;
+};
+
 export type Media = {
   id: string;
   kind: "image" | "video";

@@ -7,10 +7,12 @@ import { EventDetailPage } from "./pages/EventDetailPage";
 import { EventEditPage } from "./pages/EventEditPage";
 import { EventsPage } from "./pages/EventsPage";
 import { FamilyPage } from "./pages/FamilyPage";
+import { InvitePage } from "./pages/InvitePage";
 import { MediaViewerPage } from "./pages/MediaViewerPage";
 import { PostCreatePage } from "./pages/PostCreatePage";
 import { PostDetailPage } from "./pages/PostDetailPage";
 import { TimelinePage } from "./pages/TimelinePage";
+import { SettingsPage } from "./pages/SettingsPage";
 import "./styles.css";
 
 const router = createBrowserRouter([{
@@ -25,6 +27,8 @@ const router = createBrowserRouter([{
     { path: "/posts/:postId", element: <PostDetailPage /> },
     { path: "/posts/:postId/media/:mediaId", element: <MediaViewerPage /> },
     { path: "/family", element: <FamilyPage /> },
+    { path: "/invite/:token", element: <InvitePage /> },
+    { path: "/settings", element: <SettingsPage /> },
   ],
 }]);
 

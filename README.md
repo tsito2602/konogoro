@@ -2,7 +2,7 @@
 
 家族限定で写真を共有する、React・Hono・Cloudflare Workers製のWebアプリ。写真投稿、イベント、家族招待、LINE Login、投稿まとめ通知を実装済み。
 
-移行後の本番URL: https://konogoro.tsito-apps.workers.dev
+本番URLは家族にのみ共有し、公開ドキュメントには記載しない。
 
 ## 必要なもの
 
@@ -51,12 +51,6 @@ R2 bindingはローカル開発時も`remote: true`に設定。Presigned PUTの�
 ## LINE Login
 
 LINE Login ChannelのCallback URLへ`https://<本番origin>/api/auth/line/callback`を登録する。Workerには次の値をsecretとして設定する。
-
-現在の本番Callback URL:
-
-```text
-https://konogoro.tsito-apps.workers.dev/api/auth/line/callback
-```
 
 ```sh
 npx wrangler secret put LINE_CHANNEL_ID

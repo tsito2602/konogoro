@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import { AppLayout } from "./components/AppLayout";
 import { AlbumPage } from "./pages/AlbumPage";
+import { ActivityPage } from "./pages/ActivityPage";
 import { EventCreatePage } from "./pages/EventCreatePage";
 import { EventDetailPage } from "./pages/EventDetailPage";
 import { EventEditPage } from "./pages/EventEditPage";
@@ -19,7 +20,8 @@ import "./styles.css";
 const router = createBrowserRouter([{
   element: <AppLayout />,
   children: [
-    { path: "/", element: <TimelinePage /> },
+    { path: "/", element: <ActivityPage /> },
+    { path: "/timeline", element: <TimelinePage /> },
     { path: "/album", element: <AlbumPage /> },
     { path: "/events", element: <EventsPage /> },
     { path: "/events/new", element: <EventCreatePage /> },

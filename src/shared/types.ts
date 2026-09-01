@@ -38,6 +38,18 @@ export type AlbumMedia = Pick<Media, "id" | "kind" | "thumbnailUrl"> & {
   capturedAt: string;
 };
 
+export type Activity = {
+  id: string;
+  kind: "post" | "comment" | "view";
+  occurredAt: string;
+  actorId: string;
+  actorName: string;
+  postId: string;
+  postTitle: string;
+  body: string | null;
+  thumbnailUrl: string | null;
+};
+
 export type Comment = {
   id: string;
   body: string;

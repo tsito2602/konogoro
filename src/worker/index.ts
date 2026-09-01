@@ -45,6 +45,17 @@ type AlbumMediaRow = {
   kind: "image" | "video";
   captured_at: string;
 };
+type ActivityRow = {
+  activity_id: string;
+  kind: "post" | "comment" | "view";
+  occurred_at: string;
+  actor_id: string;
+  actor_name: string;
+  post_id: string;
+  post_title: string;
+  body: string | null;
+  media_id: string | null;
+};
 
 type AppEnv = { Bindings: Bindings; Variables: { currentUser: User } };
 export const app = new Hono<AppEnv>().basePath("/api");
@@ -247,6 +258,49 @@ app.get("/album", async (c) => {
   }));
   const last = rows.at(-1);
   return c.json({ media, nextCursor: hasMore && last ? `${last.captured_at}|${last.id}` : null });
+});
+
+app.get("/activity", async (c) => {
+  const cursor = parseCursor(c.req.query("cursor"));
+  const limit = 40;
+  const activitySelect = `
+    SELECT activity.*,
+           (SELECT m.id FROM media m WHERE m.post_id = activity.post_id AND m.status = 'uploaded' ORDER BY m.position, m.id LIMIT 1) AS media_id
+      FROM (
+        SELECT 'post:' || p.id AS activity_id, 'post' AS kind, p.published_at AS occurred_at,
+               u.id AS actor_id, u.display_name AS actor_name, p.id AS post_id, p.title AS post_title, NULL AS body
+          FROM posts p JOIN users u ON u.id = p.created_by
+         WHERE p.status = 'published' AND p.published_at IS NOT NULL
+        UNION ALL
+        SELECT 'comment:' || c.id, 'comment', c.created_at,
+               u.id, u.display_name, p.id, p.title, c.body
+          FROM comments c JOIN users u ON u.id = c.user_id JOIN posts p ON p.id = c.post_id
+         WHERE p.status = 'published'
+        UNION ALL
+        SELECT 'view:' || v.id, 'view', v.first_viewed_at,
+               u.id, u.display_name, p.id, p.title, NULL
+          FROM view_histories v JOIN users u ON u.id = v.user_id JOIN posts p ON p.id = v.post_id
+         WHERE p.status = 'published'
+      ) activity`;
+  const statement = cursor
+    ? c.env.DB.prepare(`${activitySelect} WHERE occurred_at < ? OR (occurred_at = ? AND activity_id < ?) ORDER BY occurred_at DESC, activity_id DESC LIMIT ?`).bind(cursor.capturedAt, cursor.capturedAt, cursor.id, limit + 1)
+    : c.env.DB.prepare(`${activitySelect} ORDER BY occurred_at DESC, activity_id DESC LIMIT ?`).bind(limit + 1);
+  const result = await statement.all<ActivityRow>();
+  const hasMore = result.results.length > limit;
+  const rows = result.results.slice(0, limit);
+  const activities = rows.map((item) => ({
+    id: item.activity_id,
+    kind: item.kind,
+    occurredAt: item.occurred_at,
+    actorId: item.actor_id,
+    actorName: item.actor_name,
+    postId: item.post_id,
+    postTitle: item.post_title,
+    body: item.body,
+    thumbnailUrl: item.media_id ? `/api/media/${item.media_id}/content?variant=thumbnail` : null,
+  }));
+  const last = rows.at(-1);
+  return c.json({ activities, nextCursor: hasMore && last ? `${last.occurred_at}|${last.activity_id}` : null });
 });
 
 app.get("/events", async (c) => {

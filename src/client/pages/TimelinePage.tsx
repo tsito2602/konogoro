@@ -44,7 +44,7 @@ export function TimelinePage() {
   };
 
   return <>
-    <PageHeader title="タイムライン" />
+    <PageHeader title="タイムライン" back />
     <main className="feed">
       {!posts && !error && <Loading />}
       {error && <ErrorState message={error} retry={load} />}

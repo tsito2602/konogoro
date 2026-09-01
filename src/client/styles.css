@@ -142,9 +142,11 @@ input:focus, select:focus, textarea:focus { border-color: var(--blue); box-shado
 .notification-state { display: flex; align-items: center; gap: 4px; }
 .notification-state svg { width: 15px; }
 .invite-section > p { color: var(--ash); font-size: 14px; }
-.role-guide { display: grid; gap: 8px; }
-.role-guide section { padding: 12px; border: 1px solid var(--border); border-radius: var(--radius); background: #fff; }
-.role-guide section.selected { border-color: var(--blue); background: rgba(0,113,227,.06); }
+.role-guide { margin: 0; padding: 0; display: grid; gap: 8px; border: 0; }
+.role-guide legend { margin-bottom: 8px; font-size: 14px; font-weight: 600; }
+.role-guide label { padding: 12px; display: grid; grid-template-columns: 20px minmax(0,1fr); gap: 10px; align-items: start; border: 1px solid var(--border); border-radius: var(--radius); background: #fff; cursor: pointer; }
+.role-guide label.selected { border-color: var(--blue); background: rgba(0,113,227,.06); }
+.role-guide input { width: 20px; min-height: 20px; margin: 0; padding: 0; accent-color: var(--blue); }
 .role-guide strong { font-size: 14px; }
 .role-guide p { margin: 4px 0 0; color: var(--ash); font-size: 13px; font-weight: 400; line-height: 1.5; }
 .invite-result { display: grid; gap: 10px; }

@@ -11,8 +11,13 @@ export function EventDetailPage() {
   const { eventId = "" } = useParams();
   const [detail, setDetail] = useState<EventDetail | null>(null);
   const [error, setError] = useState("");
-  const load = () => void api<EventDetail>(`/events/${eventId}`).then(setDetail).catch((reason: Error) => setError(reason.message));
-  useEffect(load, [eventId]);
+  const load = () => {
+    setError("");
+    void api<EventDetail>(`/events/${eventId}`).then(setDetail).catch((reason: Error) => setError(reason.message));
+  };
+  useEffect(() => {
+    void api<EventDetail>(`/events/${eventId}`).then(setDetail).catch((reason: Error) => setError(reason.message));
+  }, [eventId]);
   if (!detail && !error) return <><PageHeader title="イベント" back /><Loading /></>;
   if (error) return <><PageHeader title="イベント" back /><ErrorState message={error} retry={load} /></>;
   if (!detail) return null;

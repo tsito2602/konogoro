@@ -10,7 +10,13 @@ export function MediaViewerPage() {
   const navigate = useNavigate();
   const [post, setPost] = useState<Post | null>(null);
   const [error, setError] = useState("");
-  useEffect(() => { void api<Post>(`/posts/${postId}`).then(setPost).catch((reason: Error) => setError(reason.message)); }, [postId]);
+  const load = () => {
+    setError("");
+    void api<Post>(`/posts/${postId}`).then(setPost).catch((reason: Error) => setError(reason.message));
+  };
+  useEffect(() => {
+    void api<Post>(`/posts/${postId}`).then(setPost).catch((reason: Error) => setError(reason.message));
+  }, [postId]);
   const index = post?.media.findIndex((item) => item.id === mediaId) ?? -1;
   const current = post?.media[index];
   useEffect(() => {
@@ -24,7 +30,7 @@ export function MediaViewerPage() {
     return () => window.removeEventListener("keydown", keydown);
   }, [index, navigate, post, postId]);
   if (!post && !error) return <div className="media-viewer"><Loading /></div>;
-  if (error || !post || !current) return <div className="media-viewer"><ErrorState message={error || "写真が見つかりません"} /></div>;
+  if (error || !post || !current) return <div className="media-viewer"><ErrorState message={error || "写真が見つかりません"} retry={error ? load : undefined} /></div>;
   return <main className="media-viewer">
     <header className="viewer-header"><Link className="viewer-button" to={`/posts/${postId}`} aria-label="閉じる"><X /></Link><span>{index + 1} / {post.media.length}</span><a className="viewer-button" href={current.downloadUrl} aria-label="保存"><Download /></a></header>
     <div className="viewer-stage">

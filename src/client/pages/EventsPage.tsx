@@ -9,8 +9,13 @@ import { PageHeader } from "../components/PageHeader";
 export function EventsPage() {
   const [events, setEvents] = useState<EventSummary[] | null>(null);
   const [error, setError] = useState("");
-  const load = () => void api<{ events: EventSummary[] }>("/events").then((data) => setEvents(data.events)).catch((reason: Error) => setError(reason.message));
-  useEffect(load, []);
+  const load = () => {
+    setError("");
+    void api<{ events: EventSummary[] }>("/events").then((data) => setEvents(data.events)).catch((reason: Error) => setError(reason.message));
+  };
+  useEffect(() => {
+    void api<{ events: EventSummary[] }>("/events").then((data) => setEvents(data.events)).catch((reason: Error) => setError(reason.message));
+  }, []);
   return <>
     <PageHeader title="イベント" action={<Link className="icon-button" to="/events/new" aria-label="イベントを作成"><Plus /></Link>} />
     <main className="event-list page-content">

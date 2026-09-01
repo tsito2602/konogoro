@@ -13,11 +13,19 @@ export function EventEditPage() {
   const [media, setMedia] = useState<EventCoverMedia[]>([]);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
-  const load = useCallback(() => Promise.all([
-    api<EventDetail>(`/events/${eventId}`),
-    api<{ media: EventCoverMedia[] }>(`/events/${eventId}/cover-media`),
-  ]).then(([event, cover]) => { setDetail(event); setMedia(cover.media); }).catch((reason: Error) => setError(reason.message)), [eventId]);
-  useEffect(() => { void load(); }, [load]);
+  const load = useCallback(() => {
+    setError("");
+    return Promise.all([
+      api<EventDetail>(`/events/${eventId}`),
+      api<{ media: EventCoverMedia[] }>(`/events/${eventId}/cover-media`),
+    ]).then(([event, cover]) => { setDetail(event); setMedia(cover.media); }).catch((reason: Error) => setError(reason.message));
+  }, [eventId]);
+  useEffect(() => {
+    void Promise.all([
+      api<EventDetail>(`/events/${eventId}`),
+      api<{ media: EventCoverMedia[] }>(`/events/${eventId}/cover-media`),
+    ]).then(([event, cover]) => { setDetail(event); setMedia(cover.media); }).catch((reason: Error) => setError(reason.message));
+  }, [eventId]);
 
   if (!detail && !error) return <><PageHeader title="イベントを編集" back /><Loading /></>;
   if (!detail) return <><PageHeader title="イベントを編集" back /><ErrorState message={error} retry={() => void load()} /></>;

@@ -14,9 +14,15 @@ export function PostDetailPage() {
   const [commentError, setCommentError] = useState("");
   const [deleteError, setDeleteError] = useState("");
   const [deleting, setDeleting] = useState(false);
-  useEffect(() => { void api<Post>(`/posts/${postId}`).then(setPost).catch((reason: Error) => setError(reason.message)); }, [postId]);
+  const load = () => {
+    setError("");
+    void api<Post>(`/posts/${postId}`).then(setPost).catch((reason: Error) => setError(reason.message));
+  };
+  useEffect(() => {
+    void api<Post>(`/posts/${postId}`).then(setPost).catch((reason: Error) => setError(reason.message));
+  }, [postId]);
   if (!post && !error) return <><PageHeader title="投稿" back /><Loading /></>;
-  if (error) return <><PageHeader title="投稿" back /><ErrorState message={error} /></>;
+  if (error) return <><PageHeader title="投稿" back /><ErrorState message={error} retry={load} /></>;
   if (!post) return null;
   return <>
     <PageHeader title={post.title} back />

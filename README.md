@@ -1,6 +1,6 @@
 # Family Timeline
 
-家族限定で写真を共有する、React・Hono・Cloudflare Workers製のWebアプリだ。Phase 1では写真投稿、タイムライン、イベント、投稿詳細、Media Viewerを実装している。
+家族限定で写真を共有する、React・Hono・Cloudflare Workers製のWebアプリ。Phase 1では写真投稿、タイムライン、イベント、投稿詳細、Media Viewerを実装済み。
 
 ## 必要なもの
 
@@ -22,7 +22,7 @@ npx wrangler d1 migrations apply family-timeline --local
 npm run dev
 ```
 
-`wrangler d1 create`が返すdatabase IDで`wrangler.jsonc`の`database_id`を置き換える。本番D1へは次を実行する。
+`wrangler d1 create`が返すdatabase IDで`wrangler.jsonc`の`database_id`を置き換える。本番D1へのmigrationは次のコマンドを実行。
 
 ```sh
 npx wrangler d1 migrations apply family-timeline --remote
@@ -34,7 +34,7 @@ npx wrangler d1 migrations apply family-timeline --remote
 npx wrangler r2 bucket cors set family-timeline-media --file r2-cors.json
 ```
 
-本番Workerには同じ3値をsecretとして登録する。値はコマンド引数やリポジトリへ書かず、各コマンドの入力待ちで設定する。
+本番Workerには同じ3値をsecretとして登録。値はコマンド引数やリポジトリへ書かず、各コマンドの入力待ちで設定する。
 
 ```sh
 npx wrangler secret put R2_ACCOUNT_ID
@@ -42,7 +42,7 @@ npx wrangler secret put R2_ACCESS_KEY_ID
 npx wrangler secret put R2_SECRET_ACCESS_KEY
 ```
 
-R2 bindingはローカル開発時も`remote: true`にしてある。Presigned PUTの送信先と、完了APIがobjectを確認するbucketを一致させるためだ。D1はローカルを使用する。
+R2 bindingはローカル開発時も`remote: true`に設定。Presigned PUTの送信先と、完了APIがobjectを確認するbucketを一致させるため。D1はローカルを使用。
 
 ## コマンド
 

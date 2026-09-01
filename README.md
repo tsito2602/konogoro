@@ -1,6 +1,6 @@
 # Family Timeline
 
-家族限定で写真を共有する、React・Hono・Cloudflare Workers製のWebアプリ。Phase 1では写真投稿、タイムライン、イベント、投稿詳細、Media Viewerを実装済み。
+家族限定で写真を共有する、React・Hono・Cloudflare Workers製のWebアプリ。写真投稿、イベント、家族招待、LINE Login用の認証基盤を実装済み。
 
 ## 必要なもの
 
@@ -44,6 +44,18 @@ npx wrangler secret put R2_SECRET_ACCESS_KEY
 
 R2 bindingはローカル開発時も`remote: true`に設定。Presigned PUTの送信先と、完了APIがobjectを確認するbucketを一致させるため。D1はローカルを使用。
 
+## LINE Login
+
+LINE Login ChannelのCallback URLへ`https://<本番origin>/api/auth/line/callback`を登録する。Workerには次の値をsecretとして設定する。
+
+```sh
+npx wrangler secret put LINE_CHANNEL_ID
+npx wrangler secret put LINE_CHANNEL_SECRET
+npx wrangler secret put APP_ORIGIN
+```
+
+3値が揃っている環境ではLINE LoginとSession認証を使用する。未設定のローカル環境では固定の開発ユーザーを使用する。
+
 ## コマンド
 
 ```sh
@@ -54,9 +66,9 @@ npm run cf-typegen   # binding型を再生成
 npm run db:migrate   # ローカルD1 migration
 ```
 
-## Phase 1の制限
+## 現在の制限
 
 - 認証は固定の開発ユーザーを使う
 - JPEG、PNG、WebP、MP4、WebM、MOVを1投稿30件まで扱う
 - 写真は1枚25MB、動画は1本500MBまで扱う
-- LINE Login、招待、通知、家族管理は後続フェーズで実装する
+- LINE Messaging APIによる通知配信とメンバー権限変更は後続フェーズで実装する

@@ -42,7 +42,8 @@ const app = new Hono<AppEnv>().basePath("/api");
 app.use("*", async (c, next) => {
   const publicAuth = c.req.path === "/api/auth/line" || c.req.path === "/api/auth/line/callback";
   const lineConfigured = hasLineConfig(c.env);
-  const user = await getCurrentUser(c.env.DB, lineConfigured ? getCookie(c, "family_session") : undefined, !lineConfigured);
+  const localDevelopment = !lineConfigured || new URL(c.env.APP_ORIGIN!).hostname === "localhost";
+  const user = await getCurrentUser(c.env.DB, lineConfigured ? getCookie(c, "family_session") : undefined, localDevelopment);
   if (!user && !publicAuth) return c.json({ error: "ログインが必要です" }, 401);
   if (user) c.set("currentUser", user);
   await next();

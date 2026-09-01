@@ -242,13 +242,13 @@ input:focus, select:focus, textarea:focus { border-color: var(--blue); box-shado
 .conversation h2 { margin: 24px 0 14px; font-size: 20px; }
 .no-comments { margin: 0; color: var(--ash); font-size: 14px; }
 .comment-list { display: flex; flex-direction: column; }
-.comment { position: relative; padding: 13px 36px 13px 0; border-bottom: 1px solid #e8e8ed; }
-.comment > div { display: flex; align-items: baseline; gap: 8px; }
-.comment strong { font-size: 14px; }
-.comment span { color: var(--ash); font-size: 12px; }
-.comment p { margin: 5px 0 0; font-size: 15px; line-height: 1.5; white-space: pre-wrap; }
-.comment > button { position: absolute; top: 6px; right: -8px; width: 44px; height: 44px; display: grid; place-items: center; border: 0; background: transparent; color: var(--ash); }
-.comment > button svg { width: 17px; }
+.comment-list .comment { position: relative; padding: 13px 36px 13px 0; border-bottom: 1px solid #e8e8ed; }
+.comment-list .comment > div { display: flex; align-items: baseline; gap: 8px; }
+.comment-list .comment strong { font-size: 14px; }
+.comment-list .comment span { color: var(--ash); font-size: 12px; }
+.comment-list .comment p { margin: 5px 0 0; font-size: 15px; line-height: 1.5; white-space: pre-wrap; }
+.comment-list .comment > button { position: absolute; top: 6px; right: -8px; width: 44px; height: 44px; display: grid; place-items: center; border: 0; background: transparent; color: var(--ash); }
+.comment-list .comment > button svg { width: 17px; }
 .comment-form { margin-top: 16px; display: grid; grid-template-columns: 1fr auto; gap: 8px; }
 .comment-form .primary-button { min-width: 68px; }
 

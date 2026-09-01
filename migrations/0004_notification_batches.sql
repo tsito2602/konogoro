@@ -16,3 +16,6 @@ CREATE TABLE notification_batch_posts (
 
 CREATE INDEX idx_notification_batches_pending
   ON notification_batches(status, scheduled_for);
+
+CREATE UNIQUE INDEX idx_notification_batch_posts_post
+  ON notification_batch_posts(post_id);

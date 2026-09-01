@@ -22,6 +22,7 @@ import { loadPosts, postSelect, type PostRow } from "./db";
 import { matchesUploadFiles, type ExistingMedia } from "./upload-request";
 import { createInviteToken } from "./invite-token";
 import { processNotificationBatches, type NotificationCronEnv } from "./notification-cron";
+import { addPostToNotificationBatch } from "./notification-batch";
 
 type Bindings = Cloudflare.Env & R2Secrets & LineSecrets;
 type EventRow = {
@@ -473,9 +474,12 @@ app.post("/media/:mediaId/complete", async (c) => {
 
 app.post("/posts/:postId/publish", async (c) => {
   const postId = c.req.param("postId");
-  const post = await c.env.DB.prepare("SELECT id, event_id, status FROM posts WHERE id = ? AND created_by = ?").bind(postId, c.var.currentUser.id).first<{ id: string; event_id: string | null; status: string }>();
+  const post = await c.env.DB.prepare("SELECT id, event_id, status, published_at FROM posts WHERE id = ? AND created_by = ?").bind(postId, c.var.currentUser.id).first<{ id: string; event_id: string | null; status: string; published_at: string | null }>();
   if (!post) return c.json({ error: "投稿が見つかりません" }, 404);
-  if (post.status === "published") return c.json({ id: postId });
+  if (post.status === "published") {
+    await addPostToNotificationBatch(c.env.DB, postId, post.published_at ?? new Date().toISOString());
+    return c.json({ id: postId });
+  }
   const summary = await c.env.DB.prepare("SELECT COUNT(*) AS total, SUM(CASE WHEN status = 'uploaded' THEN 1 ELSE 0 END) AS uploaded, MIN(COALESCE(captured_at, uploaded_at)) AS captured_at FROM media WHERE post_id = ?").bind(postId).first<{ total: number; uploaded: number; captured_at: string | null }>();
   if (!summary || summary.total === 0 || summary.total !== summary.uploaded) return c.json({ error: "すべての写真・動画のアップロードを完了してください" }, 409);
   const now = new Date().toISOString();
@@ -500,6 +504,7 @@ app.post("/posts/:postId/publish", async (c) => {
     `).bind(now, post.event_id));
   }
   await c.env.DB.batch(statements);
+  await addPostToNotificationBatch(c.env.DB, postId, now);
   return c.json({ id: postId });
 });
 

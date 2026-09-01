@@ -11,6 +11,9 @@ export async function addPostToNotificationBatch(
   postId: string,
   publishedAt: string,
 ): Promise<string> {
+  const registered = await db.prepare("SELECT batch_id FROM notification_batch_posts WHERE post_id = ?").bind(postId).first<{ batch_id: string }>();
+  if (registered) return registered.batch_id;
+
   const pending = await db.prepare(`
     SELECT id FROM notification_batches
      WHERE status = 'pending'

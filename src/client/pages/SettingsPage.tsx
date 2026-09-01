@@ -36,7 +36,11 @@ export function SettingsPage() {
 
   const logout = async () => {
     setBusy(true); setError("");
-    try { await api<void>("/auth/logout", { method: "POST" }); window.location.assign("/"); }
+    try {
+      await api<void>("/auth/logout", { method: "POST" });
+      navigator.serviceWorker?.controller?.postMessage({ type: "CLEAR_MEDIA_CACHE" });
+      window.location.assign("/");
+    }
     catch (reason) { setError((reason as Error).message); setBusy(false); }
   };
 

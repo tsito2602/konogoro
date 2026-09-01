@@ -17,6 +17,7 @@ function viewerEnv(): Cloudflare.Env {
 describe("viewer API authorization", () => {
   it.each([
     ["GET", "/api/family/members", undefined],
+    ["PATCH", "/api/family/members/member-1", { role: "uploader" }],
     ["GET", "/api/events/event-1/cover-media", undefined],
     ["POST", "/api/posts/post-1/media/upload-urls", { files: [] }],
     ["POST", "/api/media/media-1/upload-url", undefined],

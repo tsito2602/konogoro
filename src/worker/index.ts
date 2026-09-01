@@ -11,6 +11,7 @@ import {
   sectionInputSchema,
   uploadFilesSchema,
   inviteInputSchema,
+  memberRoleInputSchema,
   profileInputSchema,
 } from "../shared/schemas";
 import type { EventCoverMedia, EventDetail, EventSummary, UploadTarget } from "../shared/types";
@@ -161,6 +162,28 @@ app.get("/family/members", async (c) => {
     notificationEnabled: Boolean(member.notification_enabled),
     joinedAt: member.created_at,
   })) });
+});
+
+app.patch("/family/members/:memberId", async (c) => {
+  if (!canInviteFamily(c.var.currentUser)) return c.json({ error: "メンバーの権限を変更する権限がありません" }, 403);
+  const memberId = c.req.param("memberId");
+  if (memberId === c.var.currentUser.id) return c.json({ error: "自分の権限は変更できません" }, 400);
+  const input = memberRoleInputSchema.parse(await c.req.json());
+  const member = await c.env.DB.prepare(`
+    UPDATE users
+       SET role = ?, updated_at = ?
+     WHERE id = ?
+     RETURNING id, display_name, role, avatar_url, line_user_id, notification_enabled
+  `).bind(input.role, new Date().toISOString(), memberId).first<{ id: string; display_name: string; role: User["role"]; avatar_url: string | null; line_user_id: string | null; notification_enabled: number }>();
+  if (!member) return c.json({ error: "メンバーが見つかりません" }, 404);
+  return c.json({
+    id: member.id,
+    displayName: member.display_name,
+    role: member.role,
+    avatarUrl: member.avatar_url,
+    lineConnected: Boolean(member.line_user_id),
+    notificationEnabled: Boolean(member.notification_enabled),
+  });
 });
 
 app.post("/family/invites", async (c) => {

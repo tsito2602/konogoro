@@ -6,6 +6,12 @@ import { api } from "../api";
 import { EmptyState, ErrorState, Loading } from "../components/AsyncState";
 import { PageHeader } from "../components/PageHeader";
 
+const roleLabels: Record<User["role"], string> = {
+  owner: "管理者",
+  uploader: "投稿者",
+  viewer: "閲覧者",
+};
+
 export function FamilyPage() {
   const [members, setMembers] = useState<FamilyMember[] | null>(null);
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
@@ -14,6 +20,8 @@ export function FamilyPage() {
   const [inviteError, setInviteError] = useState("");
   const [creatingInvite, setCreatingInvite] = useState(false);
   const [inviteRole, setInviteRole] = useState<User["role"]>("viewer");
+  const [updatingMemberId, setUpdatingMemberId] = useState("");
+  const [memberError, setMemberError] = useState("");
 
   const load = () => {
     setError("");
@@ -42,6 +50,16 @@ export function FamilyPage() {
     catch { setInviteError("招待URLをコピーできませんでした"); }
   };
 
+  const changeMemberRole = async (member: FamilyMember, role: User["role"]) => {
+    if (role === member.role) return;
+    setUpdatingMemberId(member.id); setMemberError("");
+    try {
+      const updated = await api<FamilyMember>(`/family/members/${member.id}`, { method: "PATCH", body: JSON.stringify({ role }) });
+      setMembers((current) => current?.map((item) => item.id === updated.id ? updated : item) ?? null);
+    } catch (reason) { setMemberError((reason as Error).message); }
+    finally { setUpdatingMemberId(""); }
+  };
+
   return <>
     <PageHeader title="家族" action={<Link className="icon-button" to="/settings" aria-label="設定"><Settings /></Link>} />
     <main className="page-content family-page">
@@ -51,9 +69,16 @@ export function FamilyPage() {
           {members.length === 0 ? <EmptyState title="メンバーはいません" body="家族を招待すると、ここに表示されます。" /> : <div className="member-list">
             {members.map((member) => <article className="member-row" key={member.id}>
               <div className="member-avatar">{member.avatarUrl ? <img src={member.avatarUrl} alt="" /> : member.displayName.slice(0, 1)}</div>
-              <div className="member-copy"><strong>{member.displayName}</strong><span>{member.role}</span></div>
+              <div className="member-copy"><strong>{member.displayName}</strong>{currentUser?.role === "owner" && member.id !== currentUser.id
+                ? <select className="member-role-select" value={member.role} disabled={updatingMemberId === member.id} aria-label={`${member.displayName}の権限`} onChange={(event) => void changeMemberRole(member, event.target.value as User["role"])}>
+                  <option value="viewer">閲覧者</option>
+                  <option value="uploader">投稿者</option>
+                  <option value="owner">管理者</option>
+                </select>
+                : <span>{roleLabels[member.role]}</span>}</div>
               <span className={`notification-state${member.notificationEnabled ? " enabled" : ""}`}>{member.notificationEnabled ? <Bell /> : <BellOff />}LINE通知{member.notificationEnabled ? "ON" : "OFF"}</span>
             </article>)}
+            {memberError && <p className="form-error" role="alert">{memberError}</p>}
           </div>}
         </section>
         {currentUser?.role === "owner" && <section className="family-section invite-section">

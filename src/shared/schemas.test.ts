@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { commentInputSchema, eventCoverInputSchema, eventInputSchema, uploadFilesSchema } from "./schemas";
+import { commentInputSchema, eventCoverInputSchema, eventInputSchema, memberRoleInputSchema, uploadFilesSchema } from "./schemas";
 
 describe("API validation", () => {
   it("終了日が開始日より前のイベントを拒否する", () => {
@@ -20,5 +20,10 @@ describe("API validation", () => {
     const base = { filename: "memory.mp4", byteSize: 1024, capturedAt: null, durationSeconds: 10 };
     expect(uploadFilesSchema.safeParse({ files: [{ ...base, mimeType: "video/mp4" }] }).success).toBe(true);
     expect(uploadFilesSchema.safeParse({ files: [{ ...base, mimeType: "application/pdf" }] }).success).toBe(false);
+  });
+
+  it("メンバー権限は定義済みのroleだけを許可する", () => {
+    expect(memberRoleInputSchema.safeParse({ role: "uploader" }).success).toBe(true);
+    expect(memberRoleInputSchema.safeParse({ role: "admin" }).success).toBe(false);
   });
 });

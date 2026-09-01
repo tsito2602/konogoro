@@ -91,4 +91,3 @@ npm run db:migrate   # ローカルD1 migration
 - LINE Login未設定のローカル環境では固定の開発ユーザーを使う
 - JPEG、PNG、WebP、MP4、WebM、MOVを1投稿30件まで扱う
 - 写真は1枚25MB、動画は1本500MBまで扱う
-- メンバー権限変更は後続フェーズで実装する

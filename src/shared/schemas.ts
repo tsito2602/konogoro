@@ -50,6 +50,10 @@ export const inviteInputSchema = z.object({
   maxUses: z.number().int().min(1).max(100).default(1),
 });
 
+export const memberRoleInputSchema = z.object({
+  role: z.enum(["owner", "uploader", "viewer"]),
+});
+
 export const profileInputSchema = z.object({
   displayName: z.string().trim().min(1).max(50).optional(),
   notificationEnabled: z.boolean().optional(),

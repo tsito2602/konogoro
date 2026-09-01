@@ -62,7 +62,11 @@ export function FamilyPage() {
             <option value="viewer">閲覧者</option>
             <option value="uploader">投稿者</option>
             <option value="owner">管理者</option>
-          </select></label><button className="primary-button" type="button" onClick={createInvite} disabled={creatingInvite}>{creatingInvite ? "発行中…" : "招待URLを発行"}</button></div> : <div className="invite-result">
+          </select></label><div className="role-guide" aria-label="権限ごとにできる操作">
+            <section className={inviteRole === "owner" ? "selected" : ""}><strong>管理者</strong><p>投稿・閲覧・コメント、イベント管理、家族の招待、すべての投稿の削除</p></section>
+            <section className={inviteRole === "uploader" ? "selected" : ""}><strong>投稿者</strong><p>投稿・閲覧・コメント、自分の投稿の削除</p></section>
+            <section className={inviteRole === "viewer" ? "selected" : ""}><strong>閲覧者</strong><p>タイムライン・イベント・投稿の閲覧、コメント、自分のコメントの削除</p></section>
+          </div><button className="primary-button" type="button" onClick={createInvite} disabled={creatingInvite}>{creatingInvite ? "発行中…" : "招待URLを発行"}</button></div> : <div className="invite-result">
             <input value={inviteUrl} readOnly aria-label="招待URL" />
             <div><button className="outline-button" type="button" onClick={copyInvite}><Copy />コピー</button><a className="primary-button" href={`https://line.me/R/msg/text/?${encodeURIComponent(inviteUrl)}`} target="_blank" rel="noreferrer"><ExternalLink />LINEで送る</a></div>
             <button className="text-button" type="button" onClick={() => setInviteUrl("")}>別の招待URLを発行</button>

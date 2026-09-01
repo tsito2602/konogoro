@@ -54,7 +54,8 @@ app.onError((error, c) => {
 app.notFound((c) => c.json({ error: "見つかりませんでした" }, 404));
 
 app.get("/me", async (c) => {
-  return c.json(c.var.currentUser);
+  const profile = await c.env.DB.prepare("SELECT avatar_url, line_user_id, notification_enabled FROM users WHERE id = ?").bind(c.var.currentUser.id).first<{ avatar_url: string | null; line_user_id: string | null; notification_enabled: number }>();
+  return c.json({ ...c.var.currentUser, avatarUrl: profile?.avatar_url ?? null, lineConnected: Boolean(profile?.line_user_id), notificationEnabled: Boolean(profile?.notification_enabled) });
 });
 
 app.patch("/me", async (c) => {
@@ -67,10 +68,12 @@ app.patch("/me", async (c) => {
            updated_at = ?
      WHERE id = ?
   `).bind(input.displayName ?? null, input.notificationEnabled === undefined ? null : Number(input.notificationEnabled), now, c.var.currentUser.id).run();
-  const user = await c.env.DB.prepare("SELECT id, display_name, role, notification_enabled FROM users WHERE id = ?").bind(c.var.currentUser.id).first<{ id: string; display_name: string; role: User["role"]; notification_enabled: number }>();
+  const user = await c.env.DB.prepare("SELECT id, display_name, role, avatar_url, line_user_id, notification_enabled FROM users WHERE id = ?").bind(c.var.currentUser.id).first<{ id: string; display_name: string; role: User["role"]; avatar_url: string | null; line_user_id: string | null; notification_enabled: number }>();
   if (!user) return c.json({ error: "ユーザーが見つかりません" }, 404);
-  return c.json({ id: user.id, displayName: user.display_name, role: user.role, notificationEnabled: Boolean(user.notification_enabled) });
+  return c.json({ id: user.id, displayName: user.display_name, role: user.role, avatarUrl: user.avatar_url, lineConnected: Boolean(user.line_user_id), notificationEnabled: Boolean(user.notification_enabled) });
 });
+
+app.post("/auth/logout", (c) => c.body(null, 204));
 
 app.get("/family/members", async (c) => {
   const result = await c.env.DB.prepare(`

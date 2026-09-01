@@ -7,13 +7,13 @@ export type User = {
 export type FamilyMember = User & {
   avatarUrl: string | null;
   notificationEnabled: boolean;
-  lineLinked: boolean;
+  lineConnected: boolean;
 };
 
 export type CurrentUser = User & {
   avatarUrl?: string | null;
   notificationEnabled?: boolean;
-  lineLinked?: boolean;
+  lineConnected?: boolean;
 };
 
 export type Media = {

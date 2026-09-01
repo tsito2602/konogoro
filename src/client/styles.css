@@ -122,6 +122,31 @@ input:focus, select:focus, textarea:focus { border-color: var(--blue); box-shado
 .cover-grid svg { width: 17px; }
 .muted, .danger-zone p { color: var(--ash); font-size: 14px; }
 .danger-button { min-height: 44px; padding: 10px 18px; border: 1px solid #b42318; border-radius: var(--pill); color: #b42318; background: transparent; cursor: pointer; }
+.family-page { padding: 24px 16px 40px; }
+.family-section + .family-section { margin-top: 32px; padding-top: 28px; border-top: 1px solid #e8e8ed; }
+.family-section h2 { margin: 0 0 14px; font-size: 20px; }
+.member-row { min-height: 64px; display: grid; grid-template-columns: 44px minmax(0,1fr) auto; gap: 12px; align-items: center; border-bottom: 1px solid #e8e8ed; }
+.member-avatar { width: 40px; height: 40px; display: grid; place-items: center; overflow: hidden; border-radius: 50%; background: #e8e8ed; font-weight: 600; }
+.member-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.member-copy { display: flex; flex-direction: column; }
+.member-copy span, .notification-state { color: var(--ash); font-size: 12px; }
+.notification-state { display: flex; align-items: center; gap: 4px; }
+.notification-state svg { width: 15px; }
+.invite-section > p { color: var(--ash); font-size: 14px; }
+.invite-result { display: grid; gap: 10px; }
+.invite-result > div { display: flex; gap: 8px; }
+.invite-result svg { width: 17px; }
+.invite-page { min-height: calc(100vh - 132px); display: grid; place-items: center; padding: 32px 20px; text-align: center; }
+.invite-page section { max-width: 420px; }
+.invite-page p { color: var(--ash); line-height: 1.6; }
+.line-login-button { min-height: 48px; margin-top: 20px; padding: 12px 20px; display: inline-flex; align-items: center; border-radius: var(--radius); color: white; background: #06c755; font-weight: 600; }
+.toggle-row, .setting-status { min-height: 60px; display: flex; flex-direction: row !important; align-items: center; justify-content: space-between; gap: 16px; }
+.toggle-row span { display: flex; flex-direction: column; }
+.toggle-row small { color: var(--ash); font-weight: 400; }
+.toggle-row input { width: 24px; min-height: 24px; }
+.setting-status span { color: var(--ash); }
+.setting-status span.linked, .save-message { color: #16803c; }
+.settings-logout { align-self: center; }
 
 .photo-picker { margin: 0 -16px; }
 .selected-photos { padding: 0 16px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }

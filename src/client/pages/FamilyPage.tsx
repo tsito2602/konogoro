@@ -21,7 +21,11 @@ export function FamilyPage() {
       .catch((reason) => setError((reason as Error).message));
   };
 
-  useEffect(load, []);
+  useEffect(() => {
+    void Promise.all([api<{ members: FamilyMember[] }>("/family/members"), api<CurrentUser>("/me")])
+      .then(([family, me]) => { setMembers(family.members); setCurrentUser(me); })
+      .catch((reason) => setError((reason as Error).message));
+  }, []);
 
   const createInvite = async () => {
     setCreatingInvite(true); setInviteError("");

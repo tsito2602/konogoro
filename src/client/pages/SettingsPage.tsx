@@ -19,7 +19,11 @@ export function SettingsPage() {
     }).catch((reason) => setError((reason as Error).message));
   };
 
-  useEffect(load, []);
+  useEffect(() => {
+    void api<CurrentUser>("/me").then((result) => {
+      setUser(result); setDisplayName(result.displayName); setNotificationEnabled(result.notificationEnabled ?? false);
+    }).catch((reason) => setError((reason as Error).message));
+  }, []);
 
   const save = async (event: FormEvent) => {
     event.preventDefault(); setBusy(true); setError(""); setSaved(false);
@@ -41,8 +45,8 @@ export function SettingsPage() {
     <main className="page-content form-page">
       {error && !user ? <ErrorState message={error} retry={load} /> : !user ? <Loading /> : <form className="form-stack settings-form" onSubmit={save}>
         <label>表示名<input value={displayName} onChange={(event) => setDisplayName(event.target.value)} required maxLength={100} disabled={busy} /></label>
-        <label className="toggle-row"><span><strong>LINE通知</strong><small>新しい投稿のお知らせを受け取る</small></span><input type="checkbox" checked={notificationEnabled} onChange={(event) => setNotificationEnabled(event.target.checked)} disabled={busy || !user.lineLinked} /></label>
-        <div className="setting-status"><strong>LINE連携状態</strong><span className={user.lineLinked ? "linked" : ""}>{user.lineLinked ? "連携済み" : "未連携"}</span></div>
+        <label className="toggle-row"><span><strong>LINE通知</strong><small>新しい投稿のお知らせを受け取る</small></span><input type="checkbox" checked={notificationEnabled} onChange={(event) => setNotificationEnabled(event.target.checked)} disabled={busy || !user.lineConnected} /></label>
+        <div className="setting-status"><strong>LINE連携状態</strong><span className={user.lineConnected ? "linked" : ""}>{user.lineConnected ? "連携済み" : "未連携"}</span></div>
         {saved && <p className="save-message" role="status">設定を保存しました</p>}
         {error && <p className="form-error" role="alert">{error}</p>}
         <button className="primary-button wide" disabled={busy || !displayName.trim()}>{busy ? "保存中…" : "保存"}</button>

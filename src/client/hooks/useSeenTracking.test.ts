@@ -9,7 +9,7 @@ describe("seen tracking", () => {
     await markPostSeen("post-1", storage, request);
 
     expect(request).toHaveBeenCalledWith("/posts/post-1/view", { method: "POST" });
-    expect(storage.setItem).toHaveBeenCalledWith("family-timeline:viewed:post-1", "1");
+    expect(storage.setItem).toHaveBeenCalledWith("konogoro:viewed:post-1", "1");
   });
 
   it("API失敗時は閲覧済みを保存しない", async () => {

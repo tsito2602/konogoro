@@ -1,4 +1,4 @@
-# Family Timeline — AI Development Docs
+# このごろ — AI開発ドキュメント
 
 このディレクトリは、Codex / AI coding agent にプロジェクト全体の意図・仕様・実装方針を共有するための資料です。
 

@@ -1,16 +1,18 @@
-# Family Timeline
+# このごろ
 
 家族限定で写真を共有する、React・Hono・Cloudflare Workers製のWebアプリ。写真投稿、イベント、家族招待、LINE Login、投稿まとめ通知を実装済み。
 
-本番URL: https://family-timeline.tsito-apps.workers.dev
+移行後の本番URL: https://konogoro.tsito-apps.workers.dev
 
 ## 必要なもの
 
 - Node.js 22以降
 - Cloudflareアカウント
-- D1 database `family-timeline`
-- private R2 bucket `family-timeline-media`
+- D1 database
+- private R2 bucket
 - bucketへPUTできるR2 S3 API token
+
+既存本番環境のD1とR2は、データを維持するため作成時の物理名を`wrangler.jsonc`に残している。D1は作成後に改名できず、R2にもrename操作がない。新規環境では`konogoro`と`konogoro-media`を作成し、返されたIDとbucket名を`wrangler.jsonc`へ設定する。
 
 ## セットアップ
 
@@ -18,22 +20,22 @@
 npm install
 cp .dev.vars.example .dev.vars
 npx wrangler login
-npx wrangler d1 create family-timeline
-npx wrangler r2 bucket create family-timeline-media
-npx wrangler d1 migrations apply family-timeline --local
+npx wrangler d1 create konogoro
+npx wrangler r2 bucket create konogoro-media
+npx wrangler d1 migrations apply DB --local
 npm run dev
 ```
 
 `wrangler d1 create`が返すdatabase IDで`wrangler.jsonc`の`database_id`を置き換える。本番D1へのmigrationは次のコマンドを実行。
 
 ```sh
-npx wrangler d1 migrations apply family-timeline --remote
+npx wrangler d1 migrations apply DB --remote
 ```
 
 `.dev.vars`へ`R2_ACCOUNT_ID`、`R2_ACCESS_KEY_ID`、`R2_SECRET_ACCESS_KEY`を設定する。`r2-cors.json`のoriginへ本番originを追加し、R2 bucketのCORSポリシーとして設定する。
 
 ```sh
-npx wrangler r2 bucket cors set family-timeline-media --file r2-cors.json
+npx wrangler r2 bucket cors set <R2_BUCKET_NAME> --file r2-cors.json
 ```
 
 本番Workerには同じ3値をsecretとして登録。値はコマンド引数やリポジトリへ書かず、各コマンドの入力待ちで設定する。
@@ -53,7 +55,7 @@ LINE Login ChannelのCallback URLへ`https://<本番origin>/api/auth/line/callba
 現在の本番Callback URL:
 
 ```text
-https://family-timeline.tsito-apps.workers.dev/api/auth/line/callback
+https://konogoro.tsito-apps.workers.dev/api/auth/line/callback
 ```
 
 ```sh

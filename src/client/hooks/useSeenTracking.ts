@@ -6,7 +6,7 @@ export function useSeenTracking(postId: string) {
 
   useEffect(() => {
     const element = ref.current;
-    const key = `family-timeline:viewed:${postId}`;
+    const key = `konogoro:viewed:${postId}`;
     if (!element || sessionStorage.getItem(key)) return;
     let timer: number | undefined;
     let active = true;
@@ -37,5 +37,5 @@ type SeenRequest = (path: string, init: RequestInit) => Promise<unknown>;
 
 export async function markPostSeen(postId: string, storage: Pick<Storage, "setItem">, request: SeenRequest = api): Promise<void> {
   await request(`/posts/${postId}/view`, { method: "POST" });
-  storage.setItem(`family-timeline:viewed:${postId}`, "1");
+  storage.setItem(`konogoro:viewed:${postId}`, "1");
 }

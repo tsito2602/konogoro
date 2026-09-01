@@ -4,7 +4,7 @@
 
 `wrangler.jsonc`でWorkers Logsを有効化し、小規模運用中は全invocationを保存する。トラフィックやログ料金が増えた場合は`head_sampling_rate`を下げる。
 
-Cloudflare Dashboardの「Workers & Pages」→`family-timeline`→「Observability」で次を確認する。
+Cloudflare Dashboardの「Workers & Pages」→`konogoro`→「Observability」で次を確認する。
 
 - HTTP 5xxとuncaught exceptionの有無
 - `event = api_error`のAPIエラー
@@ -28,22 +28,22 @@ D1 production databaseはTime Travelの対象で、特別な有効化は不要�
 現在状態とbookmarkの確認:
 
 ```sh
-npx wrangler d1 info family-timeline
-npx wrangler d1 time-travel info family-timeline
+npx wrangler d1 info DB
+npx wrangler d1 time-travel info DB
 ```
 
 本番migrationや大量の手動更新前は、復旧期間を超えて保存できるSQL exportも取得する。`backups/`は個人情報を含むためリポジトリへcommitせず、暗号化された保存先へ移す。export中はDBリクエストがブロックされるため、利用の少ない時間帯に実行する。
 
 ```sh
 mkdir -p backups
-npx wrangler d1 export family-timeline --remote --output=backups/family-timeline-YYYYMMDD.sql
+npx wrangler d1 export DB --remote --output=backups/konogoro-YYYYMMDD.sql
 ```
 
 復旧が必要な場合は、必ず先に現在のbookmarkとSQL exportを保存し、復旧対象の時刻と影響範囲を確認する。Time Travel restoreは本番DBを上書きする破壊的操作のため、人間の明示承認なしに実行しない。
 
 ## R2メディア
 
-R2の`family-timeline-media`は非公開bucketとし、D1にobject keyのみ保存する。D1のTime TravelはR2 objectを復旧しない。投稿削除でR2 objectも削除する現行仕様のため、アプリ上の削除からの復元は非対応。
+R2 bindingの`MEDIA`は非公開bucketを参照し、D1にobject keyのみ保存する。D1のTime TravelはR2 objectを復旧しない。投稿削除でR2 objectも削除する現行仕様のため、アプリ上の削除からの復元は非対応。
 
 現時点では、家族の元写真・動画を端末または別のクラウドストレージに残すことをR2のバックアップ方針とする。R2の全object複製は保存容量と運用を二重化するため、利用量と復元要件が明確になるまで導入しない。
 

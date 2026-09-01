@@ -1,5 +1,5 @@
 {
-  "name": "family-timeline",
+  "name": "konogoro",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -13,7 +13,7 @@
     "lint": "eslint .",
     "test": "vitest run",
     "cf-typegen": "wrangler types",
-    "db:migrate": "wrangler d1 migrations apply family-timeline --local",
+    "db:migrate": "wrangler d1 migrations apply DB --local",
     "check": "npm run typecheck && npm run lint && npm run test && npm run build"
   },
   "dependencies": {

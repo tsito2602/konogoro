@@ -1,6 +1,6 @@
 /* global self, caches, URL, fetch */
 
-const CACHE_NAME = "family-timeline-static-v3";
+const CACHE_NAME = "konogoro-static-v1";
 const STATIC_PATHS = new Set([
   "/manifest.webmanifest",
   "/favicon.ico",

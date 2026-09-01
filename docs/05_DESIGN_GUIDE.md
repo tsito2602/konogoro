@@ -1,4 +1,4 @@
-# Design Guide — Family Timeline Overrides
+# Design Guide — このごろ Overrides
 
 `docs/DESIGN.md` をデザイン言語として参照する。
 

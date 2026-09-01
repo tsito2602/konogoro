@@ -5,7 +5,7 @@
         "origins": [
           "http://localhost:5173",
           "http://127.0.0.1:5173",
-          "https://family-timeline.tsito-apps.workers.dev"
+          "https://konogoro.tsito-apps.workers.dev"
         ],
         "methods": ["PUT"],
         "headers": ["Content-Type"]

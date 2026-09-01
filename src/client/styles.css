@@ -70,6 +70,14 @@ img { display: block; max-width: 100%; }
 .post-meta svg { width: 15px; height: 15px; }
 .post-caption { margin: 12px 0 0; font-size: 15px; line-height: 1.55; white-space: pre-wrap; }
 .post-social-meta { margin-top: 12px; display: flex; flex-direction: column; gap: 3px; color: var(--ash); font-size: 13px; }
+.seen-by { position: relative; width: fit-content; }
+.seen-by summary { min-height: 32px; padding: 4px 9px; display: inline-flex; align-items: center; gap: 5px; list-style: none; border-radius: var(--pill); color: var(--ash); background: #f0f0f3; font-size: 13px; font-weight: 600; cursor: pointer; }
+.seen-by summary::-webkit-details-marker { display: none; }
+.seen-eyes { font-size: 18px; line-height: 1; }
+.seen-popover { position: absolute; z-index: 15; top: calc(100% + 6px); left: 0; min-width: 160px; padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius); color: var(--carbon); background: #fff; box-shadow: 0 8px 28px rgba(0,0,0,.14); }
+.seen-popover strong { font-size: 14px; }
+.seen-popover ul { margin: 7px 0 0; padding: 0; list-style: none; }
+.seen-popover li { padding: 3px 0; white-space: nowrap; font-size: 13px; font-weight: 400; }
 
 .event-list { padding: 16px; display: grid; gap: 12px; }
 .event-card { position: relative; min-height: 260px; display: flex; align-items: flex-end; overflow: hidden; border-radius: var(--radius-card); color: white; background-position: center; background-size: cover; }
@@ -189,7 +197,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--blue); box-shado
 .detail-caption { margin: 0; padding: 22px 16px 32px; font-size: 16px; line-height: 1.6; white-space: pre-wrap; }
 .conversation { padding: 22px 16px 40px; border-top: 1px solid #e8e8ed; }
 .conversation h2 { margin: 24px 0 14px; font-size: 20px; }
-.seen-by, .no-comments { margin: 0; color: var(--ash); font-size: 14px; }
+.no-comments { margin: 0; color: var(--ash); font-size: 14px; }
 .comment-list { display: flex; flex-direction: column; }
 .comment { position: relative; padding: 13px 36px 13px 0; border-bottom: 1px solid #e8e8ed; }
 .comment > div { display: flex; align-items: baseline; gap: 8px; }

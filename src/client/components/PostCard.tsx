@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import type { Post } from "../../shared/types";
 import { formatDate } from "../api";
 import { useSeenTracking } from "../hooks/useSeenTracking";
+import { SeenBy } from "./SeenBy";
 
 export function PostCard({ post, showContext = true }: { post: Post; showContext?: boolean }) {
   const seenRef = useSeenTracking(post.id);
@@ -28,7 +29,7 @@ export function PostCard({ post, showContext = true }: { post: Post; showContext
         {post.caption && <p className="post-caption">{post.caption}</p>}
         <div className="post-social-meta">
           {post.comments.length > 0 && <span>コメント{post.comments.length}件</span>}
-          {post.seenBy.length > 0 && <span>{post.seenBy.map((user) => user.displayName).join("、")}が見ました</span>}
+          <SeenBy users={post.seenBy} />
         </div>
       </div>
     </article>

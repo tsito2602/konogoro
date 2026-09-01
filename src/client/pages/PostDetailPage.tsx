@@ -5,6 +5,7 @@ import type { Comment, Post } from "../../shared/types";
 import { api, formatDate } from "../api";
 import { ErrorState, Loading } from "../components/AsyncState";
 import { PageHeader } from "../components/PageHeader";
+import { SeenBy } from "../components/SeenBy";
 
 export function PostDetailPage() {
   const { postId = "" } = useParams();
@@ -36,7 +37,7 @@ export function PostDetailPage() {
       </div>
       {post.caption && <p className="detail-caption">{post.caption}</p>}
       <section className="conversation">
-        {post.seenBy.length > 0 && <p className="seen-by">{post.seenBy.map((user) => user.displayName).join("、")}が見ました</p>}
+        <SeenBy users={post.seenBy} />
         <h2>コメント</h2>
         {post.comments.length === 0 && <p className="no-comments">まだコメントはありません</p>}
         <div className="comment-list">{post.comments.map((comment) => <CommentRow comment={comment} key={comment.id} onDelete={async () => {

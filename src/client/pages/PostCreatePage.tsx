@@ -91,6 +91,13 @@ export function PostCreatePage() {
     navigate(`/posts/${postId}`, { replace: true });
   };
 
+  const requestUploads = async (postId: string) => {
+    const response = await api<{ media: UploadTarget[] }>(`/posts/${postId}/media/upload-urls`, { method: "POST", body: JSON.stringify({ files: files.map((item) => ({ filename: item.file.name, mimeType: item.file.type, byteSize: item.file.size, capturedAt: item.capturedAt, durationSeconds: item.durationSeconds })) }) });
+    const prepared = files.map((item, index) => ({ ...item, mediaId: response.media[index].id }));
+    setFiles(prepared);
+    await uploadEntries(postId, prepared.map((item, index) => ({ item, index, target: response.media[index] })));
+  };
+
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (files.length === 0) { setError("写真・動画を1件以上選択してください"); return; }
@@ -99,11 +106,15 @@ export function PostCreatePage() {
     try {
       const post = await api<{ id: string }>("/posts", { method: "POST", body: JSON.stringify({ title: form.get("title"), caption: form.get("caption"), eventId: eventId || null, sectionId: sectionId || null }) });
       setDraftPostId(post.id);
-      const response = await api<{ media: UploadTarget[] }>(`/posts/${post.id}/media/upload-urls`, { method: "POST", body: JSON.stringify({ files: files.map((item) => ({ filename: item.file.name, mimeType: item.file.type, byteSize: item.file.size, capturedAt: item.capturedAt, durationSeconds: item.durationSeconds })) }) });
-      const prepared = files.map((item, index) => ({ ...item, mediaId: response.media[index].id }));
-      setFiles(prepared);
-      await uploadEntries(post.id, prepared.map((item, index) => ({ item, index, target: response.media[index] })));
+      await requestUploads(post.id);
     } catch (reason) { setError((reason as Error).message); setBusy(false); }
+  };
+
+  const retryUploadSetup = async () => {
+    if (!draftPostId) return;
+    setBusy(true); setError("");
+    try { await requestUploads(draftPostId); }
+    catch (reason) { setError((reason as Error).message); setBusy(false); }
   };
 
   const retryFailed = async () => {
@@ -113,6 +124,15 @@ export function PostCreatePage() {
       const failed = files.map((item, index) => ({ item, index })).filter(({ item }) => item.status === "failed" && item.mediaId);
       const entries = await Promise.all(failed.map(async ({ item, index }) => ({ item, index, target: await api<UploadTarget>(`/media/${item.mediaId}/upload-url`, { method: "POST" }) })));
       await uploadEntries(draftPostId, entries);
+    } catch (reason) { setError((reason as Error).message); setBusy(false); }
+  };
+
+  const retryPublish = async () => {
+    if (!draftPostId) return;
+    setBusy(true); setError("");
+    try {
+      await api(`/posts/${draftPostId}/publish`, { method: "POST" });
+      navigate(`/posts/${draftPostId}`, { replace: true });
     } catch (reason) { setError((reason as Error).message); setBusy(false); }
   };
 
@@ -133,7 +153,10 @@ export function PostCreatePage() {
       <label>キャプション<textarea name="caption" rows={4} maxLength={2000} placeholder="思い出をひとこと" disabled={busy || !!draftPostId} /></label>
       {(busy || progress > 0) && <div className="upload-progress" role="status"><div><span>{progress === 100 ? "処理中" : "アップロード中"}</span><strong>{progress}%</strong></div><progress value={progress} max={100} /></div>}
       {error && <p className="form-error" role="alert">{error}</p>}
-      {files.some((item) => item.status === "failed") ? <button className="outline-button wide" type="button" onClick={retryFailed} disabled={busy}><RotateCcw />失敗した項目を再試行</button> : <button className="primary-button wide" disabled={busy || files.length === 0 || !!draftPostId}>{busy ? "投稿しています…" : "投稿"}</button>}
+      {files.some((item) => item.status === "failed") ? <button className="outline-button wide" type="button" onClick={retryFailed} disabled={busy}><RotateCcw />失敗した項目を再試行</button>
+        : draftPostId && files.every((item) => item.status === "uploaded") ? <button className="outline-button wide" type="button" onClick={retryPublish} disabled={busy}><RotateCcw />投稿を完了</button>
+        : draftPostId ? <button className="outline-button wide" type="button" onClick={retryUploadSetup} disabled={busy}><RotateCcw />アップロードを再開</button>
+        : <button className="primary-button wide" disabled={busy || files.length === 0}>{busy ? "投稿しています…" : "投稿"}</button>}
     </form></main>
   </>;
 }
@@ -168,7 +191,14 @@ function loadVideo(url: string): Promise<HTMLVideoElement> {
   return new Promise((resolve, reject) => {
     const video = document.createElement("video");
     video.preload = "metadata"; video.muted = true; video.playsInline = true;
-    video.addEventListener("loadeddata", () => { video.currentTime = Math.min(1, Math.max(0, video.duration / 3)); });
+    video.addEventListener("loadeddata", () => {
+      const seekTime = Number.isFinite(video.duration) && video.duration > 0 ? Math.min(1, video.duration / 3) : 0;
+      if (seekTime === 0) resolve(video);
+      else {
+        video.currentTime = seekTime;
+        window.setTimeout(() => resolve(video), 1000);
+      }
+    }, { once: true });
     video.addEventListener("seeked", () => resolve(video), { once: true });
     video.addEventListener("error", () => reject(new Error("動画を読み込めません")), { once: true });
     video.src = url;

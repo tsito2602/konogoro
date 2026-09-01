@@ -49,6 +49,8 @@ export async function processNotificationBatches(
      ORDER BY id
   `).all<NotificationRecipient>();
 
+  let sentCount = 0;
+  let failedCount = 0;
   for (const batch of due.results) {
     const text = buildNotificationText({
       postCount: Number(batch.post_count),
@@ -70,12 +72,17 @@ export async function processNotificationBatches(
       const message = failed.reason instanceof Error ? failed.reason.message : String(failed.reason);
       await env.DB.prepare("UPDATE notification_batches SET last_error = ? WHERE id = ? AND status = 'pending'")
         .bind(message.slice(0, 1000), batch.id).run();
+      failedCount += 1;
+      console.error({ event: "notification_batch_failed", batchId: batch.id, recipientCount: recipients.results.length, message });
       continue;
     }
 
     await env.DB.prepare("UPDATE notification_batches SET status = 'sent', sent_at = ?, last_error = NULL WHERE id = ? AND status = 'pending'")
       .bind(now.toISOString(), batch.id).run();
+    sentCount += 1;
   }
+
+  console.log({ event: "notification_cron_completed", dueCount: due.results.length, sentCount, failedCount, recipientCount: recipients.results.length });
 }
 
 export async function notificationRetryKey(batchId: string, userId: string): Promise<string> {

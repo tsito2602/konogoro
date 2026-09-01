@@ -55,7 +55,14 @@ app.onError((error, c) => {
   if (error instanceof ZodError) {
     return c.json({ error: error.issues[0]?.message ?? "入力内容を確認してください" }, 400);
   }
-  console.error(JSON.stringify({ message: error.message, stack: error.stack }));
+  console.error({
+    event: "api_error",
+    message: error.message,
+    stack: error.stack,
+    method: c.req.method,
+    path: c.req.path,
+    requestId: c.req.header("cf-ray"),
+  });
   return c.json({ error: "処理に失敗しました" }, 500);
 });
 
@@ -384,7 +391,7 @@ app.delete("/posts/:postId", async (c) => {
     try {
       await c.env.MEDIA.delete(keys);
     } catch (error) {
-      console.error(JSON.stringify({ message: "投稿削除後のR2オブジェクト削除に失敗しました", postId, error: error instanceof Error ? error.message : String(error) }));
+      console.error({ event: "r2_delete_error", message: "投稿削除後のR2オブジェクト削除に失敗しました", postId, error: error instanceof Error ? error.message : String(error) });
     }
   }
   return c.body(null, 204);

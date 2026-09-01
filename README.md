@@ -76,6 +76,8 @@ npm run cf-typegen   # binding型を再生成
 npm run db:migrate   # ローカルD1 migration
 ```
 
+本番の監視、D1復旧、バックアップの運用手順は[`docs/08_OPERATIONS.md`](docs/08_OPERATIONS.md)を参照。
+
 ## 現在の制限
 
 - LINE Login未設定のローカル環境では固定の開発ユーザーを使う

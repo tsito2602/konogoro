@@ -53,5 +53,5 @@ Phase 1完成後、LINE連携前に実施。
 - thumbnail / preview最適化
 - video thumbnail
 - retry UX
-- production monitoring
-- backup / export検討
+- [x] production monitoring
+- [x] backup / export検討

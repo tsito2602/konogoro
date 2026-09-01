@@ -55,6 +55,7 @@
 - `docs/DESIGN.md`の青いaccentは、このアプリではアプリアイコンの朝日`#FFD166`へ置き換える。
 - Primary actionの背景は`#FFD166`、その上の文字とアイコンは`#1F2733`を使う。
 - 白背景上のlink、outline、active stateには、可読性を確保した`#6B4B00`を使う。黄色を文字色として直接使わない。
+- ボトムナビの選択中アイコンは、追加ボタンと同じ`#FFD166`を背景に使い、未選択タブとの差を明確にする。
 - Metadata, comments, seen indicators should remain neutral.
 - UI should be mostly monochrome because user photos provide color.
 

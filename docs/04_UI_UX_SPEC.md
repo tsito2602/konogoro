@@ -155,6 +155,8 @@ Mediaを押すとMedia Viewer。
 - Event / Section / Post
 - 保存
 
+画像間の移動はブラウザ履歴へ追加しない。閉じる操作ではPost Detailへ戻り、その後の戻る操作でMedia Viewerへ戻らない。
+
 外部共有ボタンは置かない。
 
 ---

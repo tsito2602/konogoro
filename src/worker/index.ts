@@ -229,10 +229,22 @@ app.post("/posts/:postId/publish", async (c) => {
   const statements = [c.env.DB.prepare("UPDATE posts SET status = 'published', captured_at = ?, published_at = ?, updated_at = ? WHERE id = ?").bind(summary.captured_at ?? now, now, now, postId)];
   if (post.event_id) {
     statements.push(c.env.DB.prepare(`
-      UPDATE events SET cover_media_id = COALESCE(cover_media_id, (SELECT id FROM media WHERE post_id = ? AND status = 'uploaded' ORDER BY position LIMIT 1)),
-                        cover_object_key = COALESCE(cover_object_key, (SELECT original_object_key FROM media WHERE post_id = ? AND status = 'uploaded' ORDER BY position LIMIT 1)), updated_at = ?
+      UPDATE events SET cover_media_id = (
+                          SELECT m.id FROM media m JOIN posts p ON p.id = m.post_id
+                           WHERE p.event_id = events.id AND p.status = 'published' AND m.status = 'uploaded'
+                           ORDER BY CASE WHEN m.kind = 'image' THEN 0 ELSE 1 END,
+                                    COALESCE(m.captured_at, p.captured_at, p.published_at, p.created_at), m.position, m.id
+                           LIMIT 1
+                        ),
+                        cover_object_key = (
+                          SELECT m.original_object_key FROM media m JOIN posts p ON p.id = m.post_id
+                           WHERE p.event_id = events.id AND p.status = 'published' AND m.status = 'uploaded'
+                           ORDER BY CASE WHEN m.kind = 'image' THEN 0 ELSE 1 END,
+                                    COALESCE(m.captured_at, p.captured_at, p.published_at, p.created_at), m.position, m.id
+                           LIMIT 1
+                        ), updated_at = ?
        WHERE id = ? AND cover_source = 'auto'
-    `).bind(postId, postId, now, post.event_id));
+    `).bind(now, post.event_id));
   }
   await c.env.DB.batch(statements);
   return c.json({ id: postId });
@@ -307,14 +319,24 @@ async function serveMedia(c: Context<AppEnv>, download: boolean): Promise<Respon
   const media = await c.env.DB.prepare("SELECT original_object_key, thumbnail_object_key, mime_type, original_filename FROM media WHERE id = ? AND status = 'uploaded'").bind(c.req.param("mediaId")).first<{ original_object_key: string; thumbnail_object_key: string | null; mime_type: string; original_filename: string }>();
   if (!media) return c.json({ error: "メディアが見つかりません" }, 404);
   const thumbnail = !download && c.req.query("variant") === "thumbnail" && media.thumbnail_object_key;
-  const object = await c.env.MEDIA.get(thumbnail ? media.thumbnail_object_key! : media.original_object_key);
+  const range = !thumbnail && !download && media.mime_type.startsWith("video/") ? c.req.header("Range") : undefined;
+  const object = await c.env.MEDIA.get(thumbnail ? media.thumbnail_object_key! : media.original_object_key, range ? { range: c.req.raw.headers } : undefined);
   if (!object) return c.json({ error: "ファイルが見つかりません" }, 404);
   const headers = new Headers();
   object.writeHttpMetadata(headers);
   headers.set("Content-Type", thumbnail ? "image/webp" : media.mime_type);
   headers.set("Cache-Control", "private, max-age=3600");
   headers.set("ETag", object.httpEtag);
+  headers.set("Accept-Ranges", "bytes");
   if (download) headers.set("Content-Disposition", `attachment; filename*=UTF-8''${encodeURIComponent(media.original_filename)}`);
+  if (range && object.range) {
+    const offset = "suffix" in object.range ? Math.max(object.size - object.range.suffix, 0) : (object.range.offset ?? 0);
+    const requestedLength = "suffix" in object.range ? object.range.suffix : (object.range.length ?? object.size - offset);
+    const length = Math.min(requestedLength, object.size - offset);
+    headers.set("Content-Range", `bytes ${offset}-${offset + length - 1}/${object.size}`);
+    headers.set("Content-Length", String(length));
+    return new Response(object.body, { status: 206, headers });
+  }
   return new Response(object.body, { headers });
 }
 

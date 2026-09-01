@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { User } from "./types";
-import { canCreatePost, canDeleteComment, canDeletePost, canManageEvent } from "./permissions";
+import { canCreatePost, canDeleteComment, canDeletePost, canInviteFamily, canManageEvent } from "./permissions";
 
 const owner: User = { id: "owner", displayName: "Owner", role: "owner" };
 const uploader: User = { id: "uploader", displayName: "Uploader", role: "uploader" };
@@ -11,6 +11,12 @@ describe("permissions", () => {
     expect(canManageEvent(owner)).toBe(true);
     expect(canManageEvent(uploader)).toBe(false);
     expect(canManageEvent(viewer)).toBe(false);
+  });
+
+  it("ownerだけが家族を招待できる", () => {
+    expect(canInviteFamily(owner)).toBe(true);
+    expect(canInviteFamily(uploader)).toBe(false);
+    expect(canInviteFamily(viewer)).toBe(false);
   });
 
   it("ownerとuploaderが投稿できる", () => {

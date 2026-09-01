@@ -15,3 +15,7 @@ export function canDeletePost(user: User, authorId: string): boolean {
 export function canManageEvent(user: User): boolean {
   return user.role === "owner";
 }
+
+export function canInviteFamily(user: User): boolean {
+  return user.role === "owner";
+}

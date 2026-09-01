@@ -9,14 +9,17 @@ import {
   postInputSchema,
   sectionInputSchema,
   uploadFilesSchema,
+  inviteInputSchema,
+  profileInputSchema,
 } from "../shared/schemas";
 import type { EventCoverMedia, EventDetail, EventSummary, UploadTarget } from "../shared/types";
-import { canCreatePost, canDeleteComment, canDeletePost, canManageEvent } from "../shared/permissions";
+import { canCreatePost, canDeleteComment, canDeletePost, canInviteFamily, canManageEvent } from "../shared/permissions";
 import type { User } from "../shared/types";
 import { getCurrentUser } from "./auth";
 import { createPresignedUploadUrl, hasUploadCredentials } from "./r2";
 import { loadPosts, postSelect, type PostRow } from "./db";
 import { matchesUploadFiles, type ExistingMedia } from "./upload-request";
+import { createInviteToken } from "./invite-token";
 
 type Bindings = Cloudflare.Env & R2Secrets;
 type EventRow = {
@@ -52,6 +55,53 @@ app.notFound((c) => c.json({ error: "見つかりませんでした" }, 404));
 
 app.get("/me", async (c) => {
   return c.json(c.var.currentUser);
+});
+
+app.patch("/me", async (c) => {
+  const input = profileInputSchema.parse(await c.req.json());
+  const now = new Date().toISOString();
+  await c.env.DB.prepare(`
+    UPDATE users
+       SET display_name = COALESCE(?, display_name),
+           notification_enabled = COALESCE(?, notification_enabled),
+           updated_at = ?
+     WHERE id = ?
+  `).bind(input.displayName ?? null, input.notificationEnabled === undefined ? null : Number(input.notificationEnabled), now, c.var.currentUser.id).run();
+  const user = await c.env.DB.prepare("SELECT id, display_name, role, notification_enabled FROM users WHERE id = ?").bind(c.var.currentUser.id).first<{ id: string; display_name: string; role: User["role"]; notification_enabled: number }>();
+  if (!user) return c.json({ error: "ユーザーが見つかりません" }, 404);
+  return c.json({ id: user.id, displayName: user.display_name, role: user.role, notificationEnabled: Boolean(user.notification_enabled) });
+});
+
+app.get("/family/members", async (c) => {
+  const result = await c.env.DB.prepare(`
+    SELECT id, display_name, role, avatar_url, line_user_id, notification_enabled, created_at
+      FROM users
+     ORDER BY CASE role WHEN 'owner' THEN 0 WHEN 'uploader' THEN 1 ELSE 2 END, created_at, id
+  `).all<{ id: string; display_name: string; role: User["role"]; avatar_url: string | null; line_user_id: string | null; notification_enabled: number; created_at: string }>();
+  return c.json({ members: result.results.map((member) => ({
+    id: member.id,
+    displayName: member.display_name,
+    role: member.role,
+    avatarUrl: member.avatar_url,
+    lineConnected: Boolean(member.line_user_id),
+    notificationEnabled: Boolean(member.notification_enabled),
+    joinedAt: member.created_at,
+  })) });
+});
+
+app.post("/family/invites", async (c) => {
+  if (!canInviteFamily(c.var.currentUser)) return c.json({ error: "家族を招待する権限がありません" }, 403);
+  const input = inviteInputSchema.parse(await c.req.json());
+  const { token, tokenHash } = await createInviteToken();
+  const id = ulid();
+  const now = new Date();
+  const expiresAt = new Date(now.getTime() + input.expiresInDays * 24 * 60 * 60 * 1000).toISOString();
+  await c.env.DB.prepare(`
+    INSERT INTO invites (id, token_hash, role, expires_at, max_uses, use_count, created_by, created_at)
+    VALUES (?, ?, ?, ?, ?, 0, ?, ?)
+  `).bind(id, tokenHash, input.role, expiresAt, input.maxUses, c.var.currentUser.id, now.toISOString()).run();
+  const inviteUrl = new URL(`/invite/${token}`, c.req.url).toString();
+  return c.json({ id, inviteUrl, role: input.role, expiresAt, maxUses: input.maxUses }, 201);
 });
 
 app.get("/timeline", async (c) => {

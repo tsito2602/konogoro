@@ -43,3 +43,16 @@ export const mediaCompleteSchema = z.object({
 export const commentInputSchema = z.object({
   body: z.string().trim().min(1, "コメントを入力してください").max(1000),
 });
+
+export const inviteInputSchema = z.object({
+  role: z.enum(["owner", "uploader", "viewer"]).default("viewer"),
+  expiresInDays: z.number().int().min(1).max(30).default(7),
+  maxUses: z.number().int().min(1).max(100).default(1),
+});
+
+export const profileInputSchema = z.object({
+  displayName: z.string().trim().min(1).max(50).optional(),
+  notificationEnabled: z.boolean().optional(),
+}).refine(({ displayName, notificationEnabled }) => displayName !== undefined || notificationEnabled !== undefined, {
+  message: "変更内容を指定してください",
+});

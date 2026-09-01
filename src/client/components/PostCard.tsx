@@ -11,11 +11,12 @@ export function PostCard({ post, showContext = true }: { post: Post; showContext
       {showContext && (post.sectionTitle || post.eventTitle) && (
         <p className="post-context">{post.sectionTitle ?? post.eventTitle}</p>
       )}
-      <Link to={`/posts/${post.id}`} className="media-grid" data-count={Math.min(post.media.length, 5)} aria-label={`${post.title}を開く`}>
-        {post.media.slice(0, 5).map((media, index) => (
+      <Link to={`/posts/${post.id}`} className="media-grid" data-count={Math.min(post.media.length, 4)} aria-label={`${post.title}を開く`}>
+        {post.media.slice(0, 4).map((media, index) => (
           <div className="media-cell" key={media.id}>
             <img src={media.thumbnailUrl} alt="" loading="lazy" />
-            {index === 4 && post.media.length > 5 && <span className="more-count">+{post.media.length - 5}</span>}
+            {media.kind === "video" && <span className="media-play-mark" aria-hidden>▶</span>}
+            {index === 3 && post.media.length >= 4 && <span className="more-count">+{post.media.length - 3}</span>}
           </div>
         ))}
       </Link>

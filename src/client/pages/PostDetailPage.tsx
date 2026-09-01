@@ -22,8 +22,8 @@ export function PostDetailPage() {
         {(post.eventTitle || post.sectionTitle) && <p>{[post.eventTitle, post.sectionTitle].filter(Boolean).join(" · ")}</p>}
         <p>{formatDate(post.capturedAt)} · {post.authorName}</p>
       </div>
-      <div className="detail-media-grid">
-        {post.media.map((media) => <Link className="detail-media" key={media.id} to={`/posts/${post.id}/media/${media.id}`}><img src={media.kind === "video" ? media.thumbnailUrl : media.contentUrl} alt={`${post.title}の${media.kind === "video" ? "動画" : "写真"}`} />{media.kind === "video" && <span className="play-mark">▶</span>}</Link>)}
+      <div className="media-grid detail-media-grid" data-count={Math.min(post.media.length, 4)}>
+        {post.media.slice(0, 4).map((media, index) => <Link className="media-cell detail-media" key={media.id} to={`/posts/${post.id}/media/${media.id}`}><img src={media.thumbnailUrl} alt={`${post.title}の${media.kind === "video" ? "動画" : "写真"}`} />{media.kind === "video" && <span className="media-play-mark" aria-hidden>▶</span>}{index === 3 && post.media.length >= 4 && <span className="more-count">+{post.media.length - 3}</span>}</Link>)}
       </div>
       {post.caption && <p className="detail-caption">{post.caption}</p>}
       <section className="conversation">

@@ -100,6 +100,10 @@ input:focus, select:focus, textarea:focus { border-color: var(--blue); box-shado
 .primary-button.wide { width: 100%; font-size: 17px; }
 .primary-button:disabled { background: #b7b7bb; cursor: default; }
 .form-error { margin: 0; color: #b42318; font-size: 14px; line-height: 1.45; }
+.post-delete-section { padding: 24px 16px; border-top: 1px solid var(--border); }
+.danger-button { min-height: 44px; border: 1px solid #d92d20; border-radius: 10px; padding: 10px 14px; display: inline-flex; align-items: center; gap: 8px; background: #fff; color: #b42318; font: inherit; cursor: pointer; }
+.danger-button:disabled { opacity: .6; cursor: default; }
+.danger-button svg { width: 18px; height: 18px; }
 .inline-action { align-self: flex-start; display: flex; gap: 5px; align-items: center; margin-top: -14px; padding-left: 0; }
 .inline-action svg { width: 17px; }
 .inline-form { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-top: -12px; }

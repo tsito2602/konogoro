@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { User } from "./types";
-import { canCreatePost, canDeleteComment, canManageEvent } from "./permissions";
+import { canCreatePost, canDeleteComment, canDeletePost, canManageEvent } from "./permissions";
 
 const owner: User = { id: "owner", displayName: "Owner", role: "owner" };
 const uploader: User = { id: "uploader", displayName: "Uploader", role: "uploader" };
@@ -23,5 +23,12 @@ describe("permissions", () => {
     expect(canDeleteComment(owner, "viewer")).toBe(true);
     expect(canDeleteComment(viewer, "viewer")).toBe(true);
     expect(canDeleteComment(uploader, "viewer")).toBe(false);
+  });
+
+  it("ownerは全投稿、uploaderは自分の投稿だけを削除できる", () => {
+    expect(canDeletePost(owner, "uploader")).toBe(true);
+    expect(canDeletePost(uploader, "uploader")).toBe(true);
+    expect(canDeletePost(uploader, "owner")).toBe(false);
+    expect(canDeletePost(viewer, "viewer")).toBe(false);
   });
 });

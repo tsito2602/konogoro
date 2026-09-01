@@ -1,4 +1,4 @@
-import { canDeleteComment } from "../shared/permissions";
+import { canDeleteComment, canDeletePost } from "../shared/permissions";
 import type { Comment, Media, Post, SeenUser, User } from "../shared/types";
 
 type PostRow = {
@@ -12,6 +12,7 @@ type PostRow = {
   captured_at: string | null;
   published_at: string | null;
   author_name: string;
+  created_by: string;
 };
 
 type MediaRow = {
@@ -111,6 +112,7 @@ export async function loadPosts(db: D1Database, rows: PostRow[], currentUser: Us
     capturedAt: row.captured_at,
     publishedAt: row.published_at,
     authorName: row.author_name,
+    canDelete: canDeletePost(currentUser, row.created_by),
     media: mediaByPost.get(row.id) ?? [],
     comments: commentsByPost.get(row.id) ?? [],
     seenBy: seenByPost.get(row.id) ?? [],
@@ -120,7 +122,7 @@ export async function loadPosts(db: D1Database, rows: PostRow[], currentUser: Us
 export const postSelect = `
   SELECT p.id, p.title, p.caption, p.event_id, e.title AS event_title,
          p.section_id, s.title AS section_title, p.captured_at,
-         p.published_at, u.display_name AS author_name
+         p.published_at, p.created_by, u.display_name AS author_name
     FROM posts p
     JOIN users u ON u.id = p.created_by
     LEFT JOIN events e ON e.id = p.event_id

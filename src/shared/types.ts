@@ -45,6 +45,7 @@ export type Post = {
   capturedAt: string | null;
   publishedAt: string | null;
   authorName: string;
+  canDelete: boolean;
   media: Media[];
   comments: Comment[];
   seenBy: SeenUser[];

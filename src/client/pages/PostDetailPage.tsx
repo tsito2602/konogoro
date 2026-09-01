@@ -1,6 +1,6 @@
 import { Trash2 } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import type { Comment, Post } from "../../shared/types";
 import { api, formatDate } from "../api";
 import { ErrorState, Loading } from "../components/AsyncState";
@@ -8,9 +8,12 @@ import { PageHeader } from "../components/PageHeader";
 
 export function PostDetailPage() {
   const { postId = "" } = useParams();
+  const navigate = useNavigate();
   const [post, setPost] = useState<Post | null>(null);
   const [error, setError] = useState("");
   const [commentError, setCommentError] = useState("");
+  const [deleteError, setDeleteError] = useState("");
+  const [deleting, setDeleting] = useState(false);
   useEffect(() => { void api<Post>(`/posts/${postId}`).then(setPost).catch((reason: Error) => setError(reason.message)); }, [postId]);
   if (!post && !error) return <><PageHeader title="投稿" back /><Loading /></>;
   if (error) return <><PageHeader title="投稿" back /><ErrorState message={error} /></>;
@@ -43,6 +46,21 @@ export function PostDetailPage() {
         }}><input name="body" aria-label="コメント" placeholder="コメントを書く" maxLength={1000} required /><button className="primary-button" type="submit">送信</button></form>
         {commentError && <p className="form-error">{commentError}</p>}
       </section>
+      {post.canDelete && <section className="post-delete-section">
+        <button className="danger-button" type="button" disabled={deleting} onClick={async () => {
+          if (!window.confirm("この投稿を削除しますか？写真・動画とコメントも削除されます。")) return;
+          setDeleting(true);
+          setDeleteError("");
+          try {
+            await api(`/posts/${post.id}`, { method: "DELETE" });
+            navigate(post.eventId ? `/events/${post.eventId}` : "/", { replace: true });
+          } catch (reason) {
+            setDeleteError((reason as Error).message);
+            setDeleting(false);
+          }
+        }}><Trash2 />{deleting ? "削除中…" : "投稿を削除"}</button>
+        {deleteError && <p className="form-error" role="alert">{deleteError}</p>}
+      </section>}
     </main>
   </>;
 }

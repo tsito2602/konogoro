@@ -8,6 +8,7 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
       ...init?.headers,
     },
   });
+  if (response.status === 204) return undefined as T;
   const body = await response.json() as T & { error?: string };
   if (!response.ok) throw new ApiError(body.error ?? "処理に失敗しました");
   return body;

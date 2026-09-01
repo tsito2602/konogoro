@@ -10,7 +10,7 @@ import {
   uploadFilesSchema,
 } from "../shared/schemas";
 import type { EventDetail, EventSummary, UploadTarget } from "../shared/types";
-import { canCreatePost, canDeleteComment, canManageEvent } from "../shared/permissions";
+import { canCreatePost, canDeleteComment, canDeletePost, canManageEvent } from "../shared/permissions";
 import type { User } from "../shared/types";
 import { getCurrentUser } from "./auth";
 import { createPresignedUploadUrl, hasUploadCredentials } from "./r2";
@@ -156,6 +156,46 @@ app.get("/posts/:postId", async (c) => {
   const result = await c.env.DB.prepare(`${postSelect} WHERE p.id = ? AND p.status = 'published'`).bind(c.req.param("postId")).all<PostRow>();
   if (result.results.length === 0) return c.json({ error: "投稿が見つかりません" }, 404);
   return c.json((await loadPosts(c.env.DB, result.results, c.var.currentUser))[0]);
+});
+
+app.delete("/posts/:postId", async (c) => {
+  const postId = c.req.param("postId");
+  const post = await c.env.DB.prepare("SELECT created_by, event_id FROM posts WHERE id = ?").bind(postId).first<{ created_by: string; event_id: string | null }>();
+  if (!post) return c.json({ error: "投稿が見つかりません" }, 404);
+  if (!canDeletePost(c.var.currentUser, post.created_by)) return c.json({ error: "投稿を削除する権限がありません" }, 403);
+
+  const media = await c.env.DB.prepare("SELECT original_object_key, preview_object_key, thumbnail_object_key FROM media WHERE post_id = ?").bind(postId).all<{ original_object_key: string; preview_object_key: string | null; thumbnail_object_key: string | null }>();
+  const statements = [c.env.DB.prepare("DELETE FROM posts WHERE id = ?").bind(postId)];
+  if (post.event_id) {
+    statements.push(c.env.DB.prepare(`
+      UPDATE events SET cover_media_id = (
+                          SELECT m.id FROM media m JOIN posts p ON p.id = m.post_id
+                           WHERE p.event_id = events.id AND p.status = 'published' AND m.status = 'uploaded'
+                           ORDER BY CASE WHEN m.kind = 'image' THEN 0 ELSE 1 END,
+                                    COALESCE(m.captured_at, p.captured_at, p.published_at, p.created_at), m.position, m.id
+                           LIMIT 1
+                        ),
+                        cover_object_key = (
+                          SELECT m.original_object_key FROM media m JOIN posts p ON p.id = m.post_id
+                           WHERE p.event_id = events.id AND p.status = 'published' AND m.status = 'uploaded'
+                           ORDER BY CASE WHEN m.kind = 'image' THEN 0 ELSE 1 END,
+                                    COALESCE(m.captured_at, p.captured_at, p.published_at, p.created_at), m.position, m.id
+                           LIMIT 1
+                        ), updated_at = ?
+       WHERE id = ? AND cover_source = 'auto'
+    `).bind(new Date().toISOString(), post.event_id));
+  }
+  await c.env.DB.batch(statements);
+
+  const keys = media.results.flatMap((item) => [item.original_object_key, item.preview_object_key, item.thumbnail_object_key]).filter((key): key is string => Boolean(key));
+  if (keys.length > 0) {
+    try {
+      await c.env.MEDIA.delete(keys);
+    } catch (error) {
+      console.error(JSON.stringify({ message: "投稿削除後のR2オブジェクト削除に失敗しました", postId, error: error instanceof Error ? error.message : String(error) }));
+    }
+  }
+  return c.body(null, 204);
 });
 
 app.post("/posts/:postId/media/upload-urls", async (c) => {

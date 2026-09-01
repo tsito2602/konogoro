@@ -2,6 +2,8 @@
 
 家族限定で写真を共有する、React・Hono・Cloudflare Workers製のWebアプリ。写真投稿、イベント、家族招待、LINE Login、投稿まとめ通知を実装済み。
 
+本番URL: https://family-timeline.white-galaxys2-album2.workers.dev
+
 ## 必要なもの
 
 - Node.js 22以降
@@ -47,6 +49,12 @@ R2 bindingはローカル開発時も`remote: true`に設定。Presigned PUTの�
 ## LINE Login
 
 LINE Login ChannelのCallback URLへ`https://<本番origin>/api/auth/line/callback`を登録する。Workerには次の値をsecretとして設定する。
+
+現在の本番Callback URL:
+
+```text
+https://family-timeline.white-galaxys2-album2.workers.dev/api/auth/line/callback
+```
 
 ```sh
 npx wrangler secret put LINE_CHANNEL_ID

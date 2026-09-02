@@ -8,7 +8,6 @@ import { ErrorState, Loading } from "./AsyncState";
 import { ToastProvider } from "./Toast";
 
 const viewerPattern = /^\/posts\/[^/]+\/media\//;
-const postDetailPattern = /^\/posts\/[^/]+$/;
 export function canAccessPath(user: CurrentUser, pathname: string): boolean {
   if (/^\/posts\/(new|[^/]+\/edit)$/.test(pathname)) return canCreatePost(user);
   if (/^\/events\/new$/.test(pathname) || /^\/events\/[^/]+\/edit$/.test(pathname)) return canManageEvent(user);
@@ -27,8 +26,8 @@ export function AppLayout() {
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [authError, setAuthError] = useState("");
   const [addMenuOpen, setAddMenuOpen] = useState(false);
-  const hideNavigation = viewerPattern.test(pathname) || (pathname !== "/posts/new" && postDetailPattern.test(pathname));
-  const hideAddButton = pathname === "/posts/new" || /^\/posts\/[^/]+\/edit$/.test(pathname) || pathname === "/events/new" || /^\/events\/[^/]+\/edit$/.test(pathname);
+  const hideNavigation = viewerPattern.test(pathname);
+  const hideAddButton = /^\/posts\/[^/]+$/.test(pathname) || pathname === "/posts/new" || /^\/posts\/[^/]+\/edit$/.test(pathname) || pathname === "/events/new" || /^\/events\/[^/]+\/edit$/.test(pathname);
 
   const loadAuth = useCallback(() => {
     void api<CurrentUser>("/me")

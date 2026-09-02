@@ -8,7 +8,7 @@ export function PageHeader({ title, action, back = false, inverse = false }: { t
       <div className="header-side">
         {back && <button className="icon-button" type="button" onClick={() => navigate(-1)} aria-label="戻る"><ChevronLeft /></button>}
       </div>
-      <h1>{title}</h1>
+      {title ? <h1>{title}</h1> : <span aria-hidden />}
       <div className="header-side header-action">{action}</div>
     </header>
   );

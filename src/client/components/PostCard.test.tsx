@@ -42,6 +42,8 @@ describe("PostCard", () => {
     expect(html).toContain("箱根旅行");
     expect(html).toContain("2日目");
     expect(html).toContain('class="post-author-avatar"');
+    expect(html).toContain("lucide-calendar-days");
+    expect(html).not.toContain("lucide-folder");
   });
 
   it("イベントがない投稿は日常の投稿として表示する", () => {

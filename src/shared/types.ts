@@ -47,7 +47,7 @@ export type Activity = {
   actorId: string;
   actorName: string;
   postId: string;
-  postCaption: string;
+  postLabel: string;
   body: string | null;
   thumbnailUrl: string | null;
 };

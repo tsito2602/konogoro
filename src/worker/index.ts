@@ -51,7 +51,7 @@ type ActivityRow = {
   actor_id: string;
   actor_name: string;
   post_id: string;
-  post_caption: string;
+  post_label: string;
   body: string | null;
   media_id: string | null;
 };
@@ -325,13 +325,21 @@ app.get("/activity", async (c) => {
            (SELECT m.id FROM media m WHERE m.post_id = activity.post_id AND m.status = 'uploaded' ORDER BY m.position, m.id LIMIT 1) AS media_id
       FROM (
         SELECT 'post:' || p.id AS activity_id, 'post' AS kind, p.published_at AS occurred_at,
-               u.id AS actor_id, u.display_name AS actor_name, p.id AS post_id, p.caption AS post_caption, NULL AS body
-          FROM posts p JOIN users u ON u.id = p.created_by
+               u.id AS actor_id, u.display_name AS actor_name, p.id AS post_id,
+               COALESCE(s.title, e.title, '投稿') AS post_label, NULL AS body
+          FROM posts p
+          JOIN users u ON u.id = p.created_by
+          LEFT JOIN event_sections s ON s.id = p.section_id AND s.event_id = p.event_id
+          LEFT JOIN events e ON e.id = p.event_id
          WHERE p.status = 'published' AND p.published_at IS NOT NULL
         UNION ALL
         SELECT 'comment:' || c.id, 'comment', c.created_at,
-               u.id, u.display_name, p.id, p.caption, c.body
-          FROM comments c JOIN users u ON u.id = c.user_id JOIN posts p ON p.id = c.post_id
+               u.id, u.display_name, p.id, COALESCE(s.title, e.title, '投稿'), c.body
+          FROM comments c
+          JOIN users u ON u.id = c.user_id
+          JOIN posts p ON p.id = c.post_id
+          LEFT JOIN event_sections s ON s.id = p.section_id AND s.event_id = p.event_id
+          LEFT JOIN events e ON e.id = p.event_id
          WHERE p.status = 'published'
       ) activity`;
   const statement = cursor
@@ -347,7 +355,7 @@ app.get("/activity", async (c) => {
     actorId: item.actor_id,
     actorName: item.actor_name,
     postId: item.post_id,
-    postCaption: item.post_caption,
+    postLabel: item.post_label,
     body: item.body,
     thumbnailUrl: item.media_id ? `/api/media/${item.media_id}/content?variant=thumbnail` : null,
   }));

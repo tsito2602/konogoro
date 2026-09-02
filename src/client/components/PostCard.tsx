@@ -1,4 +1,4 @@
-import { Camera, ChevronRight, Folder, MessageCircle, Upload } from "lucide-react";
+import { CalendarDays, Camera, ChevronRight, MessageCircle, Upload } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { Post } from "../../shared/types";
 import { useSeenTracking } from "../hooks/useSeenTracking";
@@ -15,7 +15,7 @@ export function PostCard({ post, showContext = true }: { post: Post; showContext
     <article className="post-card" ref={seenRef}>
       <Link className="post-head" to={`/posts/${post.id}`} aria-label={`${post.authorName}さんの投稿を開く`}>
         <span className="post-author-avatar" aria-hidden>{post.authorAvatarUrl ? <img src={post.authorAvatarUrl} alt="" /> : post.authorName.slice(0, 1)}</span>
-        <span className="post-head-copy"><strong>{contextTitle}</strong>{contextSubtitle && <span className="post-section-label"><Folder aria-hidden />{contextSubtitle}</span>}</span>
+        <span className="post-head-copy"><strong className="post-event-title">{post.eventTitle && <CalendarDays aria-hidden />}{contextTitle}</strong>{contextSubtitle && <span>{contextSubtitle}</span>}</span>
         <ChevronRight aria-hidden />
       </Link>
       <Link to={`/posts/${post.id}`} className={`media-grid${viewed ? "" : " unseen"}`} data-count={Math.min(post.media.length, 4)} aria-label={`${viewed ? "" : "未閲覧の"}投稿を開く`}>

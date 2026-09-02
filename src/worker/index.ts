@@ -371,6 +371,7 @@ app.get("/activity", async (c) => {
 });
 
 app.get("/events", async (c) => {
+  const today = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
   const result = await c.env.DB.prepare(`
     SELECT e.id, e.title, e.description, e.start_date, e.end_date, e.cover_media_id, e.cover_source,
            COUNT(DISTINCT CASE WHEN p.status = 'published' THEN p.id END) AS post_count,
@@ -380,8 +381,18 @@ app.get("/events", async (c) => {
       LEFT JOIN posts p ON p.event_id = e.id
       LEFT JOIN media m ON m.post_id = p.id
      GROUP BY e.id
-     ORDER BY COALESCE(e.start_date, substr(e.created_at, 1, 10)) DESC, e.id DESC
-  `).all<EventRow>();
+     ORDER BY CASE
+                WHEN e.start_date IS NULL AND e.end_date IS NULL THEN 2
+                WHEN COALESCE(e.start_date, e.end_date) <= ? AND COALESCE(e.end_date, e.start_date) >= ? THEN 0
+                WHEN COALESCE(e.start_date, e.end_date) > ? THEN 1
+                ELSE 3
+              END,
+              CASE WHEN COALESCE(e.start_date, e.end_date) <= ? AND COALESCE(e.end_date, e.start_date) >= ? THEN COALESCE(e.end_date, e.start_date) END,
+              CASE WHEN COALESCE(e.start_date, e.end_date) > ? THEN COALESCE(e.start_date, e.end_date) END,
+              CASE WHEN e.start_date IS NULL AND e.end_date IS NULL THEN e.updated_at END DESC,
+              CASE WHEN COALESCE(e.end_date, e.start_date) < ? THEN COALESCE(e.end_date, e.start_date) END DESC,
+              e.id DESC
+  `).bind(today, today, today, today, today, today, today).all<EventRow>();
   return c.json({ events: result.results.map(mapEvent) });
 });
 

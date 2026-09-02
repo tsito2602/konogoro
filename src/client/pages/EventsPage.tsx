@@ -7,6 +7,7 @@ import { EmptyState, ErrorState, Loading } from "../components/AsyncState";
 import { PageHeader } from "../components/PageHeader";
 import { useCurrentUser } from "../components/AppLayout";
 import { canManageEvent } from "../../shared/permissions";
+import { eventTiming } from "../../shared/event-timing";
 
 export function EventsPage() {
   const currentUser = useCurrentUser();
@@ -28,6 +29,7 @@ export function EventsPage() {
       {events?.length === 0 && <EmptyState title="イベントがありません" body={manageable ? "旅行や大きなお出かけをまとめられます。" : "イベントが追加されると、ここに表示されます。"} action={manageable ? <Link className="primary-button" to="/events/new">イベントを作成</Link> : undefined} />}
       {events?.map((event) => <Link className={`event-card${event.coverUrl ? "" : " no-cover"}`} to={`/events/${event.id}`} key={event.id} style={event.coverUrl ? { backgroundImage: `url(${event.coverUrl})` } : undefined}>
         <div className="event-card-copy">
+          {eventStatusLabel(event.startDate, event.endDate)}
           <p>{eventDate(event.startDate, event.endDate)}</p>
           <h2>{event.title}</h2>
           <span>{mediaCounts(event.photoCount, event.videoCount)}</span>
@@ -39,4 +41,11 @@ export function EventsPage() {
 
 function mediaCounts(photos: number, videos: number): string {
   return [photos ? `写真${photos}枚` : "", videos ? `動画${videos}本` : ""].filter(Boolean).join(" · ") || "メディア0件";
+}
+
+function eventStatusLabel(startDate: string | null, endDate: string | null) {
+  const timing = eventTiming(startDate, endDate);
+  if (timing === "ongoing") return <span className="event-status ongoing">進行中</span>;
+  if (timing === "upcoming") return <span className="event-status upcoming">予定</span>;
+  return null;
 }

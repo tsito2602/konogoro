@@ -237,6 +237,8 @@ img { display: block; max-width: 100%; }
 .event-card.no-cover, .event-cover.no-cover { background: linear-gradient(145deg,#333,#111); }
 .event-card-copy { position: relative; z-index: 1; padding: 20px; }
 .event-card-copy p, .event-card-copy span { margin: 0; font-size: 13px; color: rgba(255,255,255,.8); }
+.event-card-copy .event-status { width: fit-content; margin-bottom: 7px; padding: 5px 9px; display: block; border-radius: var(--pill); color: var(--accent-contrast); background: var(--accent); font-size: 12px; font-weight: 700; line-height: 1; }
+.event-card-copy .event-status.upcoming { color: #fff; background: rgba(0,0,0,.52); }
 .event-card-copy h2 { margin: 4px 0 8px; font-size: 24px; line-height: 1.15; letter-spacing: -.02em; }
 
 .event-cover { position: relative; min-height: 330px; display: flex; align-items: flex-end; overflow: hidden; background-size: cover; background-position: center; color: white; }

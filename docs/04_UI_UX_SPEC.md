@@ -55,6 +55,10 @@ Postは複数Mediaのまとまり。
 
 現在のユーザーがまだ見ていないPostは、Media Grid上へ「未閲覧」バッジを表示する。Post Cardが自動既読になったらバッジを消す。
 
+Eventに属するPostは、Event titleとSection titleを`Event title › Section title`の形でMedia Gridの上に表示する。Post titleには右向きの矢印を添え、Post Detailを開けることを示す。
+
+Commentがある場合は最新の1件をPost Cardに表示する。2件以上ある場合は、その下に残りの件数を含む「ほかのコメントN件を見る」を表示し、Post Detailへ移動できるようにする。
+
 代表例:
 
 ```text

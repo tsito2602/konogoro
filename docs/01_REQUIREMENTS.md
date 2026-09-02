@@ -146,15 +146,18 @@ Eventに属さないPostも表示する。
 
 Postカードには原則として以下を表示:
 
-- Section title（存在する場合）
+- Event titleとSection title（存在する場合）
 - Post title
 - Media Grid
 - 投稿者
 - Caption
-- Comments count
+- 最新のComment 1件
+- 残りのCommentを開く導線
 - Seen by
 
 写真1枚ごとをSNS投稿にしない。
+
+Event titleとSection titleは関係が分かるように一続きで表示する。Post titleにはPost Detailを開けることが分かる矢印を添える。
 
 ### 近況
 

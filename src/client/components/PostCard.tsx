@@ -1,4 +1,4 @@
-import { Images } from "lucide-react";
+import { CalendarDays, ChevronRight, Images } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { Post } from "../../shared/types";
 import { formatDate } from "../api";
@@ -7,10 +7,15 @@ import { SeenBy } from "./SeenBy";
 
 export function PostCard({ post, showContext = true }: { post: Post; showContext?: boolean }) {
   const { ref: seenRef, viewed } = useSeenTracking(post.id, post.viewedByCurrentUser);
+  const latestComment = post.comments.at(-1);
   return (
     <article className="post-card" ref={seenRef}>
-      {showContext && (post.sectionTitle || post.eventTitle) && (
-        <p className="post-context">{post.sectionTitle ?? post.eventTitle}</p>
+      {showContext && post.eventId && post.eventTitle && (
+        <Link className="post-context" to={`/events/${post.eventId}`} aria-label={`${post.eventTitle}を開く`}>
+          <CalendarDays aria-hidden />
+          <span>{post.eventTitle}</span>
+          {post.sectionTitle && <><ChevronRight aria-hidden /><span>{post.sectionTitle}</span></>}
+        </Link>
       )}
       <Link to={`/posts/${post.id}`} className={`media-grid${viewed ? "" : " unseen"}`} data-count={Math.min(post.media.length, 4)} aria-label={`${viewed ? "" : "未閲覧の"}${post.title}を開く`}>
         {post.media.slice(0, 4).map((media, index) => (
@@ -23,12 +28,18 @@ export function PostCard({ post, showContext = true }: { post: Post; showContext
       </Link>
       <div className="post-copy">
         <div>
-          <Link to={`/posts/${post.id}`} className="post-title">{post.title}</Link>
+          <Link to={`/posts/${post.id}`} className="post-title" aria-label={`${post.title}の詳細を開く`}><span>{post.title}</span><ChevronRight aria-hidden /></Link>
           <p className="post-meta"><Images aria-hidden />{post.authorName} · {mediaSummary(post)} · {formatDate(post.capturedAt)}</p>
         </div>
         {post.caption && <p className="post-caption">{post.caption}</p>}
+        {latestComment && <div className="post-comment-section">
+          <Link className="post-comment-preview" to={`/posts/${post.id}`} aria-label={`${latestComment.authorName}さんのコメントを開く`}>
+            <span className="post-comment-avatar" aria-hidden>{latestComment.avatarUrl ? <img src={latestComment.avatarUrl} alt="" /> : latestComment.authorName.slice(0, 1)}</span>
+            <span><strong>{latestComment.authorName}</strong><span>{latestComment.body}</span></span>
+          </Link>
+          {post.comments.length > 1 && <Link className="more-comments-link" to={`/posts/${post.id}`}>ほかのコメント{post.comments.length - 1}件を見る</Link>}
+        </div>}
         <div className="post-social-meta">
-          {post.comments.length > 0 && <span>コメント{post.comments.length}件</span>}
           <SeenBy users={post.seenBy} />
         </div>
       </div>

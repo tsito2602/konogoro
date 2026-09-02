@@ -35,4 +35,23 @@ describe("PostCard", () => {
     expect(html).toContain('class="media-grid"');
     expect(html).not.toContain('class="media-grid unseen"');
   });
+
+  it("イベントとセクションを一緒に表示して投稿詳細への矢印を付ける", () => {
+    const html = renderToStaticMarkup(<MemoryRouter><PostCard post={{ ...post, eventId: "event-1", eventTitle: "箱根旅行", sectionTitle: "2日目" }} /></MemoryRouter>);
+    expect(html).toContain('href="/events/event-1"');
+    expect(html).toContain("箱根旅行");
+    expect(html).toContain("2日目");
+    expect(html).toContain('aria-label="旅行の詳細を開く"');
+  });
+
+  it("最新コメント1件と残りのコメント数を表示する", () => {
+    const comments = [
+      { id: "comment-1", body: "最初のコメント", userId: "user-1", authorName: "薫", avatarUrl: null, createdAt: "2026-09-01T00:00:00.000Z", canDelete: false },
+      { id: "comment-2", body: "最新のコメント", userId: "user-2", authorName: "翼", avatarUrl: null, createdAt: "2026-09-02T00:00:00.000Z", canDelete: false },
+    ];
+    const html = renderToStaticMarkup(<MemoryRouter><PostCard post={{ ...post, comments }} /></MemoryRouter>);
+    expect(html).toContain("最新のコメント");
+    expect(html).not.toContain("最初のコメント");
+    expect(html).toContain("ほかのコメント1件を見る");
+  });
 });

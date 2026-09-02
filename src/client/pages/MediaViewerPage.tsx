@@ -16,6 +16,10 @@ export function swipeDragOffset(deltaX: number, canMovePrevious: boolean, canMov
   return deltaX * (reachedEdge ? 0.24 : 0.88);
 }
 
+export function mediaExitOffset(direction: "previous" | "next", width: number): number {
+  return direction === "previous" ? width : -width;
+}
+
 export function MediaViewerPage() {
   const { postId = "", mediaId = "" } = useParams();
   const navigate = useNavigate();
@@ -24,6 +28,7 @@ export function MediaViewerPage() {
   const [error, setError] = useState("");
   const [dragOffset, setDragOffset] = useState(0);
   const [dragging, setDragging] = useState(false);
+  const stageRef = useRef<HTMLDivElement>(null);
   const swipeStart = useRef<{ x: number; y: number; pointerId: number } | null>(null);
   const swipeAnimation = useRef<number | null>(null);
   const load = () => {
@@ -56,16 +61,29 @@ export function MediaViewerPage() {
     },
     [location.state, navigate, post, postId],
   );
+  const animateToMedia = useCallback(
+    (targetIndex: number, direction: "previous" | "next") => {
+      if (!post || targetIndex < 0 || targetIndex >= post.media.length || swipeAnimation.current !== null) return;
+      setDragging(false);
+      setDragOffset(mediaExitOffset(direction, stageRef.current?.clientWidth ?? window.innerWidth));
+      swipeAnimation.current = window.setTimeout(() => {
+        showMedia(targetIndex);
+        setDragOffset(0);
+        swipeAnimation.current = null;
+      }, 200);
+    },
+    [post, showMedia],
+  );
   useEffect(() => {
     const keydown = (event: KeyboardEvent) => {
       if (!post) return;
-      if (event.key === "ArrowLeft") showMedia(index - 1);
-      if (event.key === "ArrowRight") showMedia(index + 1);
+      if (event.key === "ArrowLeft") animateToMedia(index - 1, "previous");
+      if (event.key === "ArrowRight") animateToMedia(index + 1, "next");
       if (event.key === "Escape") closeViewer();
     };
     window.addEventListener("keydown", keydown);
     return () => window.removeEventListener("keydown", keydown);
-  }, [closeViewer, index, post, showMedia]);
+  }, [animateToMedia, closeViewer, index, post]);
   const startSwipe = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (swipeAnimation.current !== null) return;
     if (!event.isPrimary || (event.pointerType === "mouse" && event.button !== 0)) return;
@@ -90,13 +108,7 @@ export function MediaViewerPage() {
     const direction = swipeDirection(event.clientX - start.x, event.clientY - start.y);
     const targetIndex = direction === "previous" ? index - 1 : direction === "next" ? index + 1 : -1;
     if (direction && post && targetIndex >= 0 && targetIndex < post.media.length) {
-      setDragging(false);
-      setDragOffset(direction === "previous" ? event.currentTarget.clientWidth : -event.currentTarget.clientWidth);
-      swipeAnimation.current = window.setTimeout(() => {
-        showMedia(targetIndex);
-        setDragOffset(0);
-        swipeAnimation.current = null;
-      }, 200);
+      animateToMedia(targetIndex, direction);
       return;
     }
     setDragging(false);
@@ -133,6 +145,7 @@ export function MediaViewerPage() {
         </a>
       </header>
       <div
+        ref={stageRef}
         className="viewer-stage"
         onPointerDown={startSwipe}
         onPointerMove={moveSwipe}
@@ -146,6 +159,10 @@ export function MediaViewerPage() {
             replace
             state={location.state}
             aria-label="前の写真"
+            onClick={(event) => {
+              event.preventDefault();
+              animateToMedia(index - 1, "previous");
+            }}
           >
             <ChevronLeft />
           </Link>
@@ -168,6 +185,10 @@ export function MediaViewerPage() {
             replace
             state={location.state}
             aria-label="次の写真"
+            onClick={(event) => {
+              event.preventDefault();
+              animateToMedia(index + 1, "next");
+            }}
           >
             <ChevronRight />
           </Link>

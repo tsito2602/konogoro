@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { swipeDirection, swipeDragOffset } from "./MediaViewerPage";
+import { mediaExitOffset, swipeDirection, swipeDragOffset } from "./MediaViewerPage";
 
 describe("swipeDirection", () => {
   it("右へ十分に動かすと前のメディアへ移動する", () => {
@@ -16,6 +16,16 @@ describe("swipeDirection", () => {
 
   it("縦方向の移動が大きい場合はスワイプとして扱わない", () => {
     expect(swipeDirection(80, 70)).toBeNull();
+  });
+});
+
+describe("mediaExitOffset", () => {
+  it("前へ送ると現在のメディアを右へ移動する", () => {
+    expect(mediaExitOffset("previous", 390)).toBe(390);
+  });
+
+  it("次へ送ると現在のメディアを左へ移動する", () => {
+    expect(mediaExitOffset("next", 390)).toBe(-390);
   });
 });
 

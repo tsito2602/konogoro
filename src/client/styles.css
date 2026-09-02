@@ -2917,12 +2917,16 @@ textarea:focus {
   color: white;
 }
 .viewer-header {
+  position: sticky;
+  z-index: 4;
+  top: 0;
   display: grid;
   grid-template-columns: 44px 1fr 44px;
   align-items: center;
   padding: env(safe-area-inset-top) 8px 0;
   text-align: center;
   font-size: 13px;
+  background: #000;
 }
 .viewer-button {
   width: 44px;

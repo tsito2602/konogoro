@@ -115,6 +115,7 @@ export async function loadPosts(db: D1Database, rows: PostRow[], currentUser: Us
     authorName: row.author_name,
     canEdit: canCreatePost(currentUser),
     canDelete: canDeletePost(currentUser),
+    viewedByCurrentUser: (seenByPost.get(row.id) ?? []).some((user) => user.id === currentUser.id),
     media: mediaByPost.get(row.id) ?? [],
     comments: commentsByPost.get(row.id) ?? [],
     seenBy: seenByPost.get(row.id) ?? [],

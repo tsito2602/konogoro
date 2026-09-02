@@ -53,6 +53,8 @@ Bottom Navigationのタブを押して画面を切り替えたときは、遷移
 
 Postは複数Mediaのまとまり。
 
+現在のユーザーがまだ見ていないPostは、Media Grid上へ「未閲覧」バッジを表示する。Post Cardが自動既読になったらバッジを消す。
+
 代表例:
 
 ```text

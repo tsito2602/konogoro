@@ -347,6 +347,8 @@ SectionはEvent選択時のみ利用可能。
 
 同一ユーザー・同一Postへ大量writeしないこと。
 
+現在のユーザーがまだ見ていないPostは、TimelineとEvent DetailのPost Cardへ「未閲覧」と表示する。自動既読が記録されたら、その場で表示を消す。
+
 UI:
 
 ```text

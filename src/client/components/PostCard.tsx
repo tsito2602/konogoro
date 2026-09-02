@@ -6,13 +6,13 @@ import { useSeenTracking } from "../hooks/useSeenTracking";
 import { SeenBy } from "./SeenBy";
 
 export function PostCard({ post, showContext = true }: { post: Post; showContext?: boolean }) {
-  const seenRef = useSeenTracking(post.id);
+  const { ref: seenRef, viewed } = useSeenTracking(post.id, post.viewedByCurrentUser);
   return (
     <article className="post-card" ref={seenRef}>
       {showContext && (post.sectionTitle || post.eventTitle) && (
         <p className="post-context">{post.sectionTitle ?? post.eventTitle}</p>
       )}
-      <Link to={`/posts/${post.id}`} className="media-grid" data-count={Math.min(post.media.length, 4)} aria-label={`${post.title}を開く`}>
+      <Link to={`/posts/${post.id}`} className={`media-grid${viewed ? "" : " unseen"}`} data-count={Math.min(post.media.length, 4)} aria-label={`${viewed ? "" : "未閲覧の"}${post.title}を開く`}>
         {post.media.slice(0, 4).map((media, index) => (
           <div className="media-cell" key={media.id}>
             <img src={media.thumbnailUrl} alt="" loading="lazy" />

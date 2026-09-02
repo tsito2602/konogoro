@@ -1,13 +1,14 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { api } from "../api";
 
-export function useSeenTracking(postId: string) {
+export function useSeenTracking(postId: string, initiallyViewed = false) {
   const ref = useRef<HTMLElement>(null);
+  const [viewed, setViewed] = useState(initiallyViewed);
 
   useEffect(() => {
     const element = ref.current;
     const key = `konogoro:viewed:${postId}`;
-    if (!element || sessionStorage.getItem(key)) return;
+    if (!element || viewed || sessionStorage.getItem(key)) return;
     let timer: number | undefined;
     let active = true;
     const observer = new IntersectionObserver(([entry]) => {
@@ -16,6 +17,7 @@ export function useSeenTracking(postId: string) {
           timer = undefined;
           observer.unobserve(element);
           void markPostSeen(postId, sessionStorage).then(() => {
+            setViewed(true);
             observer.disconnect();
           }).catch(() => {
             if (active) observer.observe(element);
@@ -28,9 +30,9 @@ export function useSeenTracking(postId: string) {
     }, { threshold: [0.5] });
     observer.observe(element);
     return () => { active = false; observer.disconnect(); if (timer) window.clearTimeout(timer); };
-  }, [postId]);
+  }, [postId, viewed]);
 
-  return ref;
+  return { ref, viewed };
 }
 
 type SeenRequest = (path: string, init: RequestInit) => Promise<unknown>;

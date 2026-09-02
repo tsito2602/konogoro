@@ -87,6 +87,7 @@ export type Post = {
   authorName: string;
   canEdit: boolean;
   canDelete: boolean;
+  viewedByCurrentUser: boolean;
   media: Media[];
   comments: Comment[];
   seenBy: SeenUser[];

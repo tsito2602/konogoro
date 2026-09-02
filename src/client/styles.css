@@ -444,7 +444,8 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-ink); box
 .thumbnail-video-mark { position: absolute; z-index: 2; inset: 50% auto auto 50%; width: 22px; height: 22px; display: grid; place-items: center; transform: translate(-50%,-50%); border-radius: 50%; color: #fff; background: rgba(0,0,0,.58); font-size: 9px; padding-left: 1px; }
 
 @media (max-width: 390px) {
-  .date-row { grid-template-columns: 1fr; }
+  .date-row { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; }
+  .date-row input[type="date"] { appearance: none; -webkit-appearance: none; display: block; max-width: 100%; padding-inline: 8px; }
 }
 
 @media (min-width: 720px) {

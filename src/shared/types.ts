@@ -85,6 +85,7 @@ export type Post = {
   capturedAt: string | null;
   publishedAt: string | null;
   authorName: string;
+  authorAvatarUrl: string | null;
   canEdit: boolean;
   canDelete: boolean;
   viewedByCurrentUser: boolean;

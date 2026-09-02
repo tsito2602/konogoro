@@ -1,22 +1,22 @@
-import { CalendarDays, ChevronRight, Images } from "lucide-react";
+import { ChevronRight, MessageCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { Post } from "../../shared/types";
-import { formatDate } from "../api";
 import { useSeenTracking } from "../hooks/useSeenTracking";
 import { SeenBy } from "./SeenBy";
 
 export function PostCard({ post, showContext = true }: { post: Post; showContext?: boolean }) {
   const { ref: seenRef, viewed } = useSeenTracking(post.id, post.viewedByCurrentUser);
   const latestComment = post.comments.at(-1);
+  const contextTitle = showContext ? post.eventTitle ?? post.title : post.sectionTitle ?? post.title;
+  const contextSubtitle = showContext ? post.sectionTitle : null;
   return (
     <article className="post-card" ref={seenRef}>
-      {showContext && post.eventId && post.eventTitle && (
-        <Link className="post-context" to={`/events/${post.eventId}`} aria-label={`${post.eventTitle}を開く`}>
-          <CalendarDays aria-hidden />
-          <span>{post.eventTitle}</span>
-          {post.sectionTitle && <><ChevronRight aria-hidden /><span>{post.sectionTitle}</span></>}
-        </Link>
-      )}
+      <Link className="post-head" to={`/posts/${post.id}`} aria-label={`${post.authorName}さんの投稿「${post.title}」を開く`}>
+        <span className="post-author-avatar" aria-hidden>{post.authorAvatarUrl ? <img src={post.authorAvatarUrl} alt="" /> : post.authorName.slice(0, 1)}</span>
+        <span className="post-head-copy"><strong>{contextTitle}</strong>{contextSubtitle && <span>{contextSubtitle}</span>}</span>
+        <time dateTime={post.capturedAt ?? post.publishedAt ?? undefined}>{formatPostDate(post.capturedAt ?? post.publishedAt)}</time>
+        <ChevronRight aria-hidden />
+      </Link>
       <Link to={`/posts/${post.id}`} className={`media-grid${viewed ? "" : " unseen"}`} data-count={Math.min(post.media.length, 4)} aria-label={`${viewed ? "" : "未閲覧の"}${post.title}を開く`}>
         {post.media.slice(0, 4).map((media, index) => (
           <div className="media-cell" key={media.id}>
@@ -27,28 +27,29 @@ export function PostCard({ post, showContext = true }: { post: Post; showContext
         ))}
       </Link>
       <div className="post-copy">
-        <div>
-          <Link to={`/posts/${post.id}`} className="post-title" aria-label={`${post.title}の詳細を開く`}><span>{post.title}</span><ChevronRight aria-hidden /></Link>
-          <p className="post-meta"><Images aria-hidden />{post.authorName} · {mediaSummary(post)} · {formatDate(post.capturedAt)}</p>
+        <div className="post-engagement">
+          <SeenBy users={post.seenBy} />
+          <Link className="comment-count-link" to={`/posts/${post.id}`} aria-label={`コメント${post.comments.length}件を開く`}>
+            <MessageCircle aria-hidden />
+            <span>{post.comments.length}</span>
+          </Link>
         </div>
-        {post.caption && <p className="post-caption">{post.caption}</p>}
+        <Link className="post-caption" to={`/posts/${post.id}`} aria-label={`${post.title}の詳細を開く`}>
+          <strong>{post.title}</strong>{post.caption && <span>{post.caption}</span>}
+        </Link>
         {latestComment && <div className="post-comment-section">
           <Link className="post-comment-preview" to={`/posts/${post.id}`} aria-label={`${latestComment.authorName}さんのコメントを開く`}>
             <span className="post-comment-avatar" aria-hidden>{latestComment.avatarUrl ? <img src={latestComment.avatarUrl} alt="" /> : latestComment.authorName.slice(0, 1)}</span>
             <span><strong>{latestComment.authorName}</strong><span>{latestComment.body}</span></span>
           </Link>
-          {post.comments.length > 1 && <Link className="more-comments-link" to={`/posts/${post.id}`}>ほかのコメント{post.comments.length - 1}件を見る</Link>}
+          {post.comments.length > 1 && <Link className="more-comments-link" to={`/posts/${post.id}`}>ほかのコメントを見る</Link>}
         </div>}
-        <div className="post-social-meta">
-          <SeenBy users={post.seenBy} />
-        </div>
       </div>
     </article>
   );
 }
 
-function mediaSummary(post: Post): string {
-  const photos = post.media.filter((media) => media.kind === "image").length;
-  const videos = post.media.length - photos;
-  return [photos ? `写真${photos}枚` : "", videos ? `動画${videos}本` : ""].filter(Boolean).join("・");
+function formatPostDate(value: string | null): string {
+  if (!value) return "日付なし";
+  return new Intl.DateTimeFormat("ja-JP", { month: "short", day: "numeric" }).format(new Date(value));
 }

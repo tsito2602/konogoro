@@ -19,7 +19,7 @@ describe("SeenBy", () => {
     expect(html).toContain('class="seen-user-avatar"');
   });
 
-  it("閲覧者がいない場合は表示しない", () => {
-    expect(renderToStaticMarkup(createElement(SeenBy, { users: [] }))).toBe("");
+  it("閲覧者がいない場合は0人と表示する", () => {
+    expect(renderToStaticMarkup(createElement(SeenBy, { users: [] }))).toContain('aria-label="みたよ 0人"');
   });
 });

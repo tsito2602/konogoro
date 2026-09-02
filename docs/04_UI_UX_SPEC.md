@@ -55,25 +55,23 @@ Postは複数Mediaのまとまり。
 
 現在のユーザーがまだ見ていないPostは、Media Grid上へ「未閲覧」バッジを表示する。Post Cardが自動既読になったらバッジを消す。
 
-Eventに属するPostは、Event titleとSection titleを`Event title › Section title`の形でMedia Gridの上に表示する。Post titleには右向きの矢印を添え、Post Detailを開けることを示す。
+Media Gridの上には、投稿者のプロフィールアイコン、Event title、Section title、撮影日、右向きの矢印をコンパクトに表示する。投稿者名は常時表示せず、プロフィールアイコンの代替テキストで補う。Eventに属さないPostではEvent titleの代わりにPost titleを表示する。
 
-Commentがある場合は最新の1件をPost Cardに表示する。2件以上ある場合は、その下に残りの件数を含む「ほかのコメントN件を見る」を表示し、Post Detailへ移動できるようにする。
+Media Gridの下には「みたよ」の両目アイコンと人数、コメントアイコンとComment総数を並べる。その下にPost titleとCaptionを一続きで表示する。Commentがある場合は最新の1件をPost Cardに表示する。2件以上ある場合は、その下に「ほかのコメントを見る」を表示し、Post Detailへ移動できるようにする。総数はコメントアイコンの右に表示済みのため、この導線では件数を重複表示しない。
 
 代表例:
 
 ```text
-Day 2 - シュトゥットガルト
-
-ポルシェミュージアム
+[投稿者アイコン] ドイツ旅行
+                 Day 2                  8月30日  ›
 [ Media Grid ]
 
-翼
-写真18枚
+👀 3   ◯ 2
 
-念願のポルシェミュージアム...
+ポルシェミュージアム  念願の場所へ行けた
 
-コメント 2件
-👀 3
+[コメント者アイコン] すごかったね！
+ほかのコメントを見る
 ```
 
 ## Media Grid

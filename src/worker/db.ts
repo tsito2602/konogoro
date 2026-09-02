@@ -12,6 +12,7 @@ type PostRow = {
   captured_at: string | null;
   published_at: string | null;
   author_name: string;
+  author_avatar_url: string | null;
 };
 
 type MediaRow = {
@@ -113,6 +114,7 @@ export async function loadPosts(db: D1Database, rows: PostRow[], currentUser: Us
     capturedAt: row.captured_at,
     publishedAt: row.published_at,
     authorName: row.author_name,
+    authorAvatarUrl: row.author_avatar_url,
     canEdit: canCreatePost(currentUser),
     canDelete: canDeletePost(currentUser),
     viewedByCurrentUser: (seenByPost.get(row.id) ?? []).some((user) => user.id === currentUser.id),
@@ -125,7 +127,7 @@ export async function loadPosts(db: D1Database, rows: PostRow[], currentUser: Us
 export const postSelect = `
   SELECT p.id, p.title, p.caption, p.event_id, e.title AS event_title,
          p.section_id, s.title AS section_title, p.captured_at,
-         p.published_at, u.display_name AS author_name
+         p.published_at, u.display_name AS author_name, u.avatar_url AS author_avatar_url
     FROM posts p
     JOIN users u ON u.id = p.created_by
     LEFT JOIN events e ON e.id = p.event_id

@@ -97,7 +97,7 @@ export async function loadPosts(db: D1Database, rows: PostRow[], currentUser: Us
       position: item.position,
       contentUrl:
         item.kind === "video"
-          ? `/api/media/${item.id}/content?variant=video`
+          ? `/api/media/${item.id}/content?variant=video-v2`
           : `/api/media/${item.id}/content?variant=preview`,
       thumbnailUrl: `/api/media/${item.id}/content?variant=thumbnail`,
       downloadUrl: `/api/media/${item.id}/download`,

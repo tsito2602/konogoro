@@ -43,13 +43,13 @@ function mediaEnv() {
 }
 
 describe("video delivery", () => {
-  it("通常応答に動画全体のサイズを含める", async () => {
+  it("通常応答はR2の動画ストリームをそのまま返す", async () => {
     const response = await app.request("/api/media/video-1/content", undefined, mediaEnv());
 
     expect(response.status).toBe(200);
     expect(response.headers.get("Content-Type")).toBe("video/quicktime");
     expect(response.headers.get("Accept-Ranges")).toBe("bytes");
-    expect(response.headers.get("Content-Length")).toBe("12");
+    expect(response.headers.get("Content-Length")).toBeNull();
   });
 
   it("Range要求へ206と取得範囲を返す", async () => {

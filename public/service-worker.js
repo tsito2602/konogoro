@@ -1,6 +1,6 @@
 /* global self, caches, URL, fetch */
 
-const MEDIA_CACHE_NAME = "konogoro-media-v1";
+const MEDIA_CACHE_NAME = "konogoro-media-v2";
 const MEDIA_CACHE_LIMIT = 300;
 
 self.addEventListener("install", (event) => {
@@ -25,7 +25,12 @@ self.addEventListener("fetch", (event) => {
   const isMediaPreview = /^\/api\/media\/[^/]+\/content$/.test(url.pathname)
     && (url.searchParams.get("variant") === "thumbnail" || url.searchParams.get("variant") === "preview");
 
-  if (request.method !== "GET" || url.origin !== self.location.origin || !isMediaPreview) {
+  if (
+    request.method !== "GET" ||
+    request.headers.has("Range") ||
+    url.origin !== self.location.origin ||
+    !isMediaPreview
+  ) {
     return;
   }
 
@@ -33,7 +38,7 @@ self.addEventListener("fetch", (event) => {
     const cached = await cache.match(request);
     if (cached) return cached;
     const response = await fetch(request);
-    if (response.ok) {
+    if (response.ok && response.status === 200 && response.headers.get("Content-Type")?.startsWith("image/")) {
       event.waitUntil(cache.put(request, response.clone()).then(() => trimMediaCache(cache)).catch(() => {}));
     }
     return response;

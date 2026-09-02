@@ -159,7 +159,7 @@ export function MediaViewerPage() {
           style={{ transform: `translate3d(${dragOffset}px, 0, 0)` }}
         >
           {current.kind === "video" ? (
-            <video src={current.contentUrl} controls playsInline draggable={false} />
+            <video src={current.contentUrl} controls playsInline preload="metadata" draggable={false} />
           ) : (
             <img src={current.contentUrl} alt={`投稿の写真 ${index + 1}`} draggable={false} />
           )}

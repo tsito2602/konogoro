@@ -1544,6 +1544,7 @@ async function serveMedia(c: Context<AppEnv>, download: boolean): Promise<Respon
   headers.set("Cache-Control", "private, max-age=3600");
   headers.set("ETag", object.httpEtag);
   headers.set("Accept-Ranges", "bytes");
+  headers.set("Content-Length", String(object.size));
   if (download)
     headers.set("Content-Disposition", `attachment; filename*=UTF-8''${encodeURIComponent(media.original_filename)}`);
   if (range && object.range) {

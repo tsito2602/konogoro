@@ -1540,7 +1540,14 @@ async function serveMedia(c: Context<AppEnv>, download: boolean): Promise<Respon
   if (!object) return c.json({ error: "ファイルが見つかりません" }, 404);
   const headers = new Headers();
   object.writeHttpMetadata(headers);
-  headers.set("Content-Type", thumbnail || preview ? "image/webp" : media.mime_type);
+  headers.set(
+    "Content-Type",
+    thumbnail || preview
+      ? "image/webp"
+      : !download && media.mime_type === "video/quicktime"
+        ? "video/mp4"
+        : media.mime_type,
+  );
   headers.set("Cache-Control", "private, max-age=3600");
   headers.set("ETag", object.httpEtag);
   headers.set("Accept-Ranges", "bytes");

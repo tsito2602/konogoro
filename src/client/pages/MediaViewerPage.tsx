@@ -69,10 +69,7 @@ export function MediaViewerPage() {
   const startSwipe = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (swipeAnimation.current !== null) return;
     if (!event.isPrimary || (event.pointerType === "mouse" && event.button !== 0)) return;
-    if (current?.kind === "video" && event.target instanceof HTMLVideoElement) {
-      const bounds = event.target.getBoundingClientRect();
-      if (event.clientY >= bounds.bottom - 52) return;
-    }
+    if (current?.kind === "video" && event.target instanceof HTMLVideoElement) return;
     swipeStart.current = { x: event.clientX, y: event.clientY, pointerId: event.pointerId };
   };
   const moveSwipe = (event: ReactPointerEvent<HTMLDivElement>) => {

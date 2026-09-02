@@ -28,12 +28,12 @@ export function AppLayout() {
   const [authError, setAuthError] = useState("");
   const [addMenuOpen, setAddMenuOpen] = useState(false);
   const routedContent = useOutlet(currentUser);
-  const postSheetNavigation = Boolean((location.state as { postSheet?: boolean } | null)?.postSheet);
-  const showPostSheet = /^\/posts\/[^/]+$/.test(pathname) && postSheetNavigation;
+  const postPageNavigation = Boolean((location.state as { postPage?: boolean } | null)?.postPage);
+  const showPostPage = /^\/posts\/[^/]+$/.test(pathname) && postPageNavigation;
   const routeIdentity = `${location.key}:${currentUser?.id ?? ""}`;
   const [backgroundSnapshot, setBackgroundSnapshot] = useState(() => ({ routeIdentity, content: routedContent }));
   let backgroundContent = backgroundSnapshot.content;
-  if (!postSheetNavigation && backgroundSnapshot.routeIdentity !== routeIdentity) {
+  if (!postPageNavigation && backgroundSnapshot.routeIdentity !== routeIdentity) {
     backgroundContent = routedContent;
     setBackgroundSnapshot({ routeIdentity, content: routedContent });
   }
@@ -85,8 +85,8 @@ export function AppLayout() {
   return (
     <ToastProvider>
       <div className={hideNavigation ? "app-shell viewer-shell" : "app-shell"}>
-        {showPostSheet && backgroundContent ? backgroundContent : routedContent}
-        {showPostSheet && backgroundContent ? routedContent : null}
+        {showPostPage && backgroundContent ? backgroundContent : routedContent}
+        {showPostPage && backgroundContent ? routedContent : null}
         {!hideNavigation && (
           <nav className="tab-bar" aria-label="メインナビゲーション">
             <NavItem to="/" label="タイムライン" icon={<Images />} end />

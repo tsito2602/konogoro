@@ -1,13 +1,5 @@
-import { CalendarDays, Camera, Ellipsis, MessageCircle, Pencil, Send, Trash2, Upload } from "lucide-react";
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  type FormEvent,
-  type PointerEvent as ReactPointerEvent,
-  type ReactNode,
-} from "react";
+import { CalendarDays, Camera, ChevronLeft, Ellipsis, MessageCircle, Pencil, Send, Trash2, Upload } from "lucide-react";
+import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import type { Comment, Post } from "../../shared/types";
 import { api, formatDate } from "../api";
@@ -31,8 +23,8 @@ export function PostDetailPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const fallbackPath = post?.eventId ? `/events/${post.eventId}` : "/";
-  const closeSheet = useCallback(() => {
-    if ((location.state as { postSheet?: boolean } | null)?.postSheet) navigate(-1);
+  const closePage = useCallback(() => {
+    if ((location.state as { postPage?: boolean } | null)?.postPage) navigate(-1);
     else navigate(fallbackPath, { replace: true });
   }, [fallbackPath, location.state, navigate]);
   const load = () => {
@@ -48,15 +40,15 @@ export function PostDetailPage() {
   }, [postId]);
   if (!post && !error)
     return (
-      <PostSheet onClose={closeSheet} footer={<CommentComposerSkeleton />}>
+      <PostPage onClose={closePage} footer={<CommentComposerSkeleton />}>
         <PageSkeleton variant="post-detail" />
-      </PostSheet>
+      </PostPage>
     );
   if (error)
     return (
-      <PostSheet onClose={closeSheet}>
+      <PostPage onClose={closePage}>
         <ErrorState message={error} retry={load} />
-      </PostSheet>
+      </PostPage>
     );
   if (!post) return null;
   const deletePost = async () => {
@@ -72,8 +64,8 @@ export function PostDetailPage() {
     }
   };
   return (
-    <PostSheet
-      onClose={closeSheet}
+    <PostPage
+      onClose={closePage}
       overlay={
         deleteOpen && (
           <div
@@ -284,15 +276,11 @@ export function PostDetailPage() {
           </div>
         </section>
       </main>
-    </PostSheet>
+    </PostPage>
   );
 }
 
-export function shouldClosePostSheet(deltaY: number): boolean {
-  return deltaY >= 72;
-}
-
-function PostSheet({
+function PostPage({
   children,
   action,
   footer,
@@ -305,16 +293,11 @@ function PostSheet({
   overlay?: ReactNode;
   onClose: () => void;
 }) {
-  const [dragOffset, setDragOffset] = useState(0);
-  const [dragging, setDragging] = useState(false);
   const [closing, setClosing] = useState(false);
-  const dragStart = useRef<{ y: number; pointerId: number } | null>(null);
   const closeTimer = useRef<number | null>(null);
 
   const close = useCallback(() => {
     if (closing) return;
-    setDragging(false);
-    setDragOffset(0);
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       onClose();
       return;
@@ -344,60 +327,19 @@ function PostSheet({
     [],
   );
 
-  const startDrag = (event: ReactPointerEvent<HTMLButtonElement>) => {
-    if (closing || !event.isPrimary || (event.pointerType === "mouse" && event.button !== 0)) return;
-    dragStart.current = { y: event.clientY, pointerId: event.pointerId };
-    event.currentTarget.setPointerCapture(event.pointerId);
-    setDragging(true);
-  };
-  const moveDrag = (event: ReactPointerEvent<HTMLButtonElement>) => {
-    const start = dragStart.current;
-    if (!start || start.pointerId !== event.pointerId) return;
-    setDragOffset(Math.max(0, event.clientY - start.y));
-  };
-  const finishDrag = (event: ReactPointerEvent<HTMLButtonElement>) => {
-    const start = dragStart.current;
-    dragStart.current = null;
-    if (!start || start.pointerId !== event.pointerId) return;
-    if (shouldClosePostSheet(event.clientY - start.y)) close();
-    else {
-      setDragging(false);
-      setDragOffset(0);
-    }
-  };
-  const cancelDrag = () => {
-    dragStart.current = null;
-    setDragging(false);
-    setDragOffset(0);
-  };
-
   return (
-    <div className={`post-sheet-layer${closing ? " closing" : ""}`}>
-      <button className="post-sheet-backdrop" type="button" onClick={close} aria-label="投稿詳細を閉じる" />
-      <section
-        className={`post-sheet${dragging ? " dragging" : ""}`}
-        role="dialog"
-        aria-modal="true"
-        aria-label="投稿詳細"
-        style={dragging ? { transform: `translate3d(0, ${dragOffset}px, 0)` } : undefined}
-      >
-        <header className="post-sheet-header">
-          <button
-            className="post-sheet-handle"
-            type="button"
-            aria-label="下にスワイプして閉じる"
-            onPointerDown={startDrag}
-            onPointerMove={moveDrag}
-            onPointerUp={finishDrag}
-            onPointerCancel={cancelDrag}
-          >
-            <span aria-hidden />
+    <div className={`post-page-layer${closing ? " closing" : ""}`}>
+      <header className="page-header post-page-header">
+        <div className="header-side">
+          <button className="icon-button" type="button" onClick={close} aria-label="戻る">
+            <ChevronLeft />
           </button>
-          {action && <div className="post-sheet-action">{action}</div>}
-        </header>
-        <div className="post-sheet-scroll">{children}</div>
-        {footer}
-      </section>
+        </div>
+        <span aria-hidden />
+        <div className="header-side header-action">{action}</div>
+      </header>
+      <div className="post-page-scroll">{children}</div>
+      {footer}
       {overlay}
     </div>
   );

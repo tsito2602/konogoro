@@ -1,12 +1,11 @@
 import { CalendarDays, Camera, MessageCircle, Upload } from "lucide-react";
-import { Link, useLocation } from "react-router-dom";
+import { Link } from "react-router-dom";
 import type { Post } from "../../shared/types";
 import { useSeenTracking } from "../hooks/useSeenTracking";
 import { SeenBy } from "./SeenBy";
 
 export function PostCard({ post, showContext = true }: { post: Post; showContext?: boolean }) {
-  const location = useLocation();
-  const postSheetState = { postSheet: true, backgroundPath: `${location.pathname}${location.search}` };
+  const postPageState = { postPage: true };
   const { ref: seenRef, viewed } = useSeenTracking(post.id, post.viewedByCurrentUser);
   const latestComment = post.comments.at(-1);
   const date = post.capturedAt ?? post.publishedAt;
@@ -16,7 +15,7 @@ export function PostCard({ post, showContext = true }: { post: Post; showContext
       <Link
         className="post-head"
         to={`/posts/${post.id}`}
-        state={postSheetState}
+        state={postPageState}
         aria-label={`${post.authorName}さんの投稿を開く`}
       >
         <span className="post-author-row">
@@ -40,7 +39,7 @@ export function PostCard({ post, showContext = true }: { post: Post; showContext
       </Link>
       <Link
         to={`/posts/${post.id}`}
-        state={postSheetState}
+        state={postPageState}
         className={`media-grid${viewed ? "" : " unseen"}`}
         data-count={Math.min(post.media.length, 4)}
         aria-label={`${viewed ? "" : "未閲覧の"}投稿を開く`}
@@ -63,7 +62,7 @@ export function PostCard({ post, showContext = true }: { post: Post; showContext
           <Link
             className="comment-count-link"
             to={`/posts/${post.id}`}
-            state={postSheetState}
+            state={postPageState}
             aria-label={`コメント${post.comments.length}件を開く`}
           >
             <MessageCircle aria-hidden />
@@ -75,7 +74,7 @@ export function PostCard({ post, showContext = true }: { post: Post; showContext
           </time>
         </div>
         {post.caption && (
-          <Link className="post-caption" to={`/posts/${post.id}`} state={postSheetState} aria-label="投稿の詳細を開く">
+          <Link className="post-caption" to={`/posts/${post.id}`} state={postPageState} aria-label="投稿の詳細を開く">
             {post.caption}
           </Link>
         )}
@@ -84,7 +83,7 @@ export function PostCard({ post, showContext = true }: { post: Post; showContext
             <Link
               className="post-comment-preview"
               to={`/posts/${post.id}`}
-              state={postSheetState}
+              state={postPageState}
               aria-label={`${latestComment.authorName}さんのコメントを開く`}
             >
               <span className="post-comment-avatar" aria-hidden>
@@ -100,7 +99,7 @@ export function PostCard({ post, showContext = true }: { post: Post; showContext
               </span>
             </Link>
             {post.comments.length > 1 && (
-              <Link className="more-comments-link" to={`/posts/${post.id}`} state={postSheetState}>
+              <Link className="more-comments-link" to={`/posts/${post.id}`} state={postPageState}>
                 ほかのコメントを見る
               </Link>
             )}

@@ -1,6 +1,6 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import { createBrowserRouter, Navigate, RouterProvider } from "react-router-dom";
 import { AppLayout } from "./components/AppLayout";
 import { AlbumPage } from "./pages/AlbumPage";
 import { ActivityPage } from "./pages/ActivityPage";
@@ -8,7 +8,6 @@ import { EventCreatePage } from "./pages/EventCreatePage";
 import { EventDetailPage } from "./pages/EventDetailPage";
 import { EventEditPage } from "./pages/EventEditPage";
 import { EventsPage } from "./pages/EventsPage";
-import { FamilyPage } from "./pages/FamilyPage";
 import { FamilySettingsPage } from "./pages/FamilySettingsPage";
 import { InvitePage } from "./pages/InvitePage";
 import { MediaViewerPage } from "./pages/MediaViewerPage";
@@ -37,7 +36,7 @@ const router = createBrowserRouter([{
     { path: "/posts/:postId", element: <PostDetailPage /> },
     { path: "/posts/:postId/edit", element: <PostEditPage /> },
     { path: "/posts/:postId/media/:mediaId", element: <MediaViewerPage /> },
-    { path: "/family", element: <FamilyPage /> },
+    { path: "/family", element: <Navigate to="/settings" replace /> },
     { path: "/invite/:token", element: <InvitePage /> },
     { path: "/settings", element: <SettingsPage /> },
     { path: "/settings/family", element: <FamilySettingsPage /> },

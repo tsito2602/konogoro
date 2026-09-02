@@ -8,11 +8,11 @@ const viewer: CurrentUser = { id: "viewer", displayName: "Viewer", role: "viewer
 const uploader: CurrentUser = { id: "uploader", displayName: "Uploader", role: "uploader" };
 
 describe("canAccessPath", () => {
-  it.each(["/posts/new", "/posts/post-1/edit", "/events/new", "/events/event-1/edit", "/family", "/settings/family"])("viewerの管理ルート%sを拒否する", (pathname) => {
+  it.each(["/posts/new", "/posts/post-1/edit", "/events/new", "/events/event-1/edit", "/settings/family"])("viewerの管理ルート%sを拒否する", (pathname) => {
     expect(canAccessPath(viewer, pathname)).toBe(false);
   });
 
-  it.each(["/", "/events", "/events/event-1", "/posts/post-1", "/posts/post-1/media/media-1", "/settings"])("viewerの閲覧ルート%sを許可する", (pathname) => {
+  it.each(["/", "/events", "/events/event-1", "/posts/post-1", "/posts/post-1/media/media-1", "/settings", "/family"])("viewerの閲覧ルート%sを許可する", (pathname) => {
     expect(canAccessPath(viewer, pathname)).toBe(true);
   });
 
@@ -21,7 +21,7 @@ describe("canAccessPath", () => {
     expect(canAccessPath(uploader, "/posts/post-1/edit")).toBe(true);
     expect(canAccessPath(uploader, "/events/new")).toBe(true);
     expect(canAccessPath(uploader, "/events/event-1/edit")).toBe(true);
-    expect(canAccessPath(uploader, "/family")).toBe(false);
+    expect(canAccessPath(uploader, "/family")).toBe(true);
     expect(canAccessPath(uploader, "/settings/family")).toBe(false);
   });
 });

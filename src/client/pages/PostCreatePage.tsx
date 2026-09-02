@@ -2,7 +2,7 @@ import * as exifr from "exifr";
 import { AlertCircle, ImagePlus, Plus, RotateCcw, X } from "lucide-react";
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import type { EventDetail, EventSection, EventSummary, UploadTarget } from "../../shared/types";
+import type { EventDetail, EventScene, EventSummary, UploadTarget } from "../../shared/types";
 import { api } from "../api";
 import { PageHeader } from "../components/PageHeader";
 import { useToast } from "../components/Toast";
@@ -28,22 +28,22 @@ export function PostCreatePage() {
   const showToast = useToast();
   const [searchParams] = useSearchParams();
   const [events, setEvents] = useState<EventSummary[]>([]);
-  const [sections, setSections] = useState<EventSection[]>([]);
+  const [scenes, setScenes] = useState<EventScene[]>([]);
   const [eventId, setEventId] = useState(searchParams.get("event") ?? "");
-  const [sectionId, setSectionId] = useState("");
+  const [sceneId, setSceneId] = useState("");
   const [files, setFiles] = useState<SelectedFile[]>([]);
   const [draftPostId, setDraftPostId] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
   const [busy, setBusy] = useState(false);
   const [preparing, setPreparing] = useState(false);
   const [error, setError] = useState("");
-  const [newSection, setNewSection] = useState("");
-  const [showSectionForm, setShowSectionForm] = useState(false);
+  const [newScene, setNewScene] = useState("");
+  const [showSceneForm, setShowSceneForm] = useState(false);
   const filesRef = useRef(files);
 
   useEffect(() => { void api<{ events: EventSummary[] }>("/events").then(({ events: result }) => setEvents(result)); }, []);
   useEffect(() => {
-    if (eventId) void api<EventDetail>(`/events/${eventId}`).then((detail) => setSections(detail.sections));
+    if (eventId) void api<EventDetail>(`/events/${eventId}`).then((detail) => setScenes(detail.scenes));
   }, [eventId]);
   useEffect(() => { filesRef.current = files; }, [files]);
   useEffect(() => () => filesRef.current.forEach(({ previewUrl }) => URL.revokeObjectURL(previewUrl)), []);
@@ -67,11 +67,11 @@ export function PostCreatePage() {
     setFiles((current) => { URL.revokeObjectURL(current[index].previewUrl); return current.filter((_, itemIndex) => itemIndex !== index); });
   };
 
-  const createSection = async () => {
-    if (!eventId || !newSection.trim()) return;
+  const createScene = async () => {
+    if (!eventId || !newScene.trim()) return;
     try {
-      const section = await api<EventSection>(`/events/${eventId}/sections`, { method: "POST", body: JSON.stringify({ title: newSection }) });
-      setSections((current) => [...current, section]); setSectionId(section.id); setNewSection(""); setShowSectionForm(false);
+      const scene = await api<EventScene>(`/events/${eventId}/scenes`, { method: "POST", body: JSON.stringify({ title: newScene }) });
+      setScenes((current) => [...current, scene]); setSceneId(scene.id); setNewScene(""); setShowSceneForm(false);
     } catch (reason) { setError((reason as Error).message); }
   };
 
@@ -127,7 +127,7 @@ export function PostCreatePage() {
     setBusy(true); setError(""); setProgress(0);
     const form = new FormData(event.currentTarget);
     try {
-      const post = await api<{ id: string }>("/posts", { method: "POST", body: JSON.stringify({ caption: form.get("caption"), eventId: eventId || null, sectionId: sectionId || null }) });
+      const post = await api<{ id: string }>("/posts", { method: "POST", body: JSON.stringify({ caption: form.get("caption"), eventId: eventId || null, sceneId: sceneId || null }) });
       setDraftPostId(post.id);
       await requestUploads(post.id);
     } catch (reason) { setError((reason as Error).message); setBusy(false); }
@@ -170,9 +170,9 @@ export function PostCreatePage() {
         {files.map((item, index) => <div className={`selected-photo ${item.status}`} key={`${item.file.name}-${item.file.lastModified}-${index}`}><img src={item.previewUrl} alt="" />{item.file.type.startsWith("video/") && <span className="video-badge">動画</span>}{item.status === "failed" && <span className="failed-badge"><AlertCircle /></span>}{!draftPostId && <button type="button" onClick={() => removeFile(index)} aria-label={`${item.file.name}を外す`}><X /></button>}</div>)}
         {!draftPostId && <label className="photo-add"><ImagePlus /><span>{files.length ? "さらに選択" : "写真・動画を選択"}</span><input type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime" multiple onChange={selectFiles} disabled={busy || preparing} /></label>}
       </div>{files.length > 0 && <p className="selection-count">{[photos ? `写真${photos}枚` : "", videos ? `動画${videos}本` : ""].filter(Boolean).join(" · ")}</p>}</section>
-      <label>イベント<select value={eventId} onChange={(event) => { setEventId(event.target.value); setSectionId(""); setSections([]); }} disabled={busy || !!draftPostId}><option value="">イベントなし</option>{events.map((item) => <option value={item.id} key={item.id}>{item.title}</option>)}</select></label>
-      {eventId && <label>セクション<select value={sectionId} onChange={(event) => setSectionId(event.target.value)} disabled={busy || !!draftPostId}><option value="">セクションなし</option>{sections.map((item) => <option value={item.id} key={item.id}>{item.title}</option>)}</select></label>}
-      {eventId && !draftPostId && (!showSectionForm ? <button className="text-button inline-action" type="button" onClick={() => setShowSectionForm(true)}><Plus />新しいセクション</button> : <div className="inline-form"><input value={newSection} onChange={(event) => setNewSection(event.target.value)} placeholder="例: Day 2 - シュトゥットガルト" maxLength={100} /><button type="button" className="outline-button" onClick={createSection}>作成</button></div>)}
+      <label>イベント<select value={eventId} onChange={(event) => { setEventId(event.target.value); setSceneId(""); setScenes([]); }} disabled={busy || !!draftPostId}><option value="">イベントなし</option>{events.map((item) => <option value={item.id} key={item.id}>{item.title}</option>)}</select></label>
+      {eventId && <label>シーン<select value={sceneId} onChange={(event) => setSceneId(event.target.value)} disabled={busy || !!draftPostId}><option value="">シーンなし</option>{scenes.map((item) => <option value={item.id} key={item.id}>{item.title}</option>)}</select></label>}
+      {eventId && !draftPostId && (!showSceneForm ? <button className="text-button inline-action" type="button" onClick={() => setShowSceneForm(true)}><Plus />新しいシーン</button> : <div className="inline-form"><input value={newScene} onChange={(event) => setNewScene(event.target.value)} placeholder="例: 2日目・プレゼント" maxLength={100} /><button type="button" className="outline-button" onClick={createScene}>作成</button></div>)}
       <label>ひとこと（任意）<textarea name="caption" rows={4} maxLength={2000} placeholder="思い出をひとこと" disabled={busy || !!draftPostId} /></label>
       {preparing && <p className="muted" role="status">画像を準備中…</p>}
       {(busy || progress > 0) && <div className="upload-progress" role="status"><div><span>{progress === 100 ? "処理中" : "アップロード中"}</span><strong>{progress}%</strong></div><progress value={progress} max={100} /></div>}

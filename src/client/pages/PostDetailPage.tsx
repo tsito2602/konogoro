@@ -55,7 +55,7 @@ export function PostDetailPage() {
         <span className="post-author-avatar" aria-hidden>{post.authorAvatarUrl ? <img src={post.authorAvatarUrl} alt="" /> : post.authorName.slice(0, 1)}</span>
         <div className="post-detail-context">
           <strong>{post.eventTitle && <CalendarDays aria-hidden />}{post.eventTitle ?? "日常の投稿"}</strong>
-          {post.sectionTitle && <span>{post.sectionTitle}</span>}
+          {post.sceneTitle && <span>{post.sceneTitle}</span>}
         </div>
       </div>
       <div className="media-grid detail-media-grid" data-count={Math.min(post.media.length, 4)}>

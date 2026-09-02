@@ -6,8 +6,8 @@ type PostRow = {
   caption: string;
   event_id: string | null;
   event_title: string | null;
-  section_id: string | null;
-  section_title: string | null;
+  scene_id: string | null;
+  scene_title: string | null;
   captured_at: string | null;
   published_at: string | null;
   author_name: string;
@@ -107,8 +107,8 @@ export async function loadPosts(db: D1Database, rows: PostRow[], currentUser: Us
     caption: row.caption,
     eventId: row.event_id,
     eventTitle: row.event_title,
-    sectionId: row.section_id,
-    sectionTitle: row.section_title,
+    sceneId: row.scene_id,
+    sceneTitle: row.scene_title,
     capturedAt: row.captured_at,
     publishedAt: row.published_at,
     authorName: row.author_name,
@@ -124,11 +124,11 @@ export async function loadPosts(db: D1Database, rows: PostRow[], currentUser: Us
 
 export const postSelect = `
   SELECT p.id, p.caption, p.event_id, e.title AS event_title,
-         p.section_id, s.title AS section_title, p.captured_at,
+         p.scene_id, s.title AS scene_title, p.captured_at,
          p.published_at, u.display_name AS author_name, u.avatar_url AS author_avatar_url
     FROM posts p
     JOIN users u ON u.id = p.created_by
     LEFT JOIN events e ON e.id = p.event_id
-    LEFT JOIN event_sections s ON s.id = p.section_id`;
+    LEFT JOIN event_scenes s ON s.id = p.scene_id`;
 
 export type { PostRow };

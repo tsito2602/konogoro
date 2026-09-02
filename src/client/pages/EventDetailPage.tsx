@@ -25,19 +25,16 @@ export function EventDetailPage() {
   if (!detail && !error) return <><PageHeader title="イベント" back /><Loading /></>;
   if (error) return <><PageHeader title="イベント" back /><ErrorState message={error} retry={load} /></>;
   if (!detail) return null;
-  const groups = [{ id: null, title: "", posts: detail.posts.filter((post) => !post.sectionId) }, ...detail.sections.map((section) => ({ ...section, posts: detail.posts.filter((post) => post.sectionId === section.id) }))].filter((group) => group.posts.length > 0);
+  const groups = [{ id: null, title: "", posts: detail.posts.filter((post) => !post.sceneId) }, ...detail.scenes.map((scene) => ({ ...scene, posts: detail.posts.filter((post) => post.sceneId === scene.id) }))].filter((group) => group.posts.length > 0);
   return <>
     <PageHeader title={detail.title} back action={canManageEvent(currentUser) ? <Link className="icon-button" to={`/events/${detail.id}/edit`} aria-label="イベントを編集"><Pencil /></Link> : undefined} />
     <main className="event-detail">
       <section className={`event-cover${detail.coverUrl ? "" : " no-cover"}`} style={detail.coverUrl ? { backgroundImage: `url(${detail.coverUrl})` } : undefined}>
         <div><p>{eventDate(detail.startDate, detail.endDate)}</p><h2>{detail.title}</h2><span>{eventCounts(detail.postCount, detail.photoCount, detail.videoCount)}</span></div>
       </section>
-      {(canAddPost || canManageEvent(currentUser)) && <div className="event-actions">
-        {canManageEvent(currentUser) && <Link className="outline-button" to={`/events/${detail.id}/edit#event-sections`}>セクションを追加</Link>}
-        {canAddPost && <Link className="primary-button" to={`/posts/new?event=${detail.id}`}>投稿を追加</Link>}
-      </div>}
+      {canAddPost && <div className="event-actions"><Link className="primary-button" to={`/posts/new?event=${detail.id}`}>投稿を追加</Link></div>}
       {groups.length === 0 && <EmptyState title="まだ投稿がありません" body={canAddPost ? "このイベントの写真を追加できます。" : "投稿が追加されると、ここに表示されます。"} action={canAddPost ? <Link className="primary-button" to={`/posts/new?event=${detail.id}`}>写真を追加</Link> : undefined} />}
-      {groups.map((group) => <section className="event-section" key={group.id ?? "none"}>
+      {groups.map((group) => <section className="event-scene" key={group.id ?? "none"}>
         {group.title && <h2>{group.title}</h2>}
         {group.posts.map((post) => <PostCard key={post.id} post={post} showContext={false} />)}
       </section>)}

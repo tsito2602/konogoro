@@ -8,7 +8,7 @@ import {
   commentInputSchema,
   mediaCompleteSchema,
   postInputSchema,
-  sectionInputSchema,
+  sceneInputSchema,
   uploadFilesSchema,
   inviteInputSchema,
   memberRoleInputSchema,
@@ -329,7 +329,7 @@ app.get("/activity", async (c) => {
                COALESCE(s.title, e.title, '投稿') AS post_label, NULL AS body
           FROM posts p
           JOIN users u ON u.id = p.created_by
-          LEFT JOIN event_sections s ON s.id = p.section_id AND s.event_id = p.event_id
+          LEFT JOIN event_scenes s ON s.id = p.scene_id AND s.event_id = p.event_id
           LEFT JOIN events e ON e.id = p.event_id
          WHERE p.status = 'published' AND p.published_at IS NOT NULL
         UNION ALL
@@ -338,7 +338,7 @@ app.get("/activity", async (c) => {
           FROM comments c
           JOIN users u ON u.id = c.user_id
           JOIN posts p ON p.id = c.post_id
-          LEFT JOIN event_sections s ON s.id = p.section_id AND s.event_id = p.event_id
+          LEFT JOIN event_scenes s ON s.id = p.scene_id AND s.event_id = p.event_id
           LEFT JOIN events e ON e.id = p.event_id
          WHERE p.status = 'published'
       ) activity`;
@@ -429,7 +429,7 @@ app.delete("/events/:eventId", async (c) => {
   const event = await c.env.DB.prepare("SELECT id FROM events WHERE id = ?").bind(eventId).first();
   if (!event) return c.json({ error: "イベントが見つかりません" }, 404);
   const [, result] = await c.env.DB.batch([
-    c.env.DB.prepare("UPDATE posts SET section_id = NULL WHERE event_id = ?").bind(eventId),
+    c.env.DB.prepare("UPDATE posts SET scene_id = NULL WHERE event_id = ?").bind(eventId),
     c.env.DB.prepare("DELETE FROM events WHERE id = ?").bind(eventId),
   ]);
   if (!result.meta.changes) return c.json({ error: "イベントが見つかりません" }, 404);
@@ -450,48 +450,48 @@ app.get("/events/:eventId", async (c) => {
   `).bind(eventId).first<EventRow>();
   if (!event) return c.json({ error: "イベントが見つかりません" }, 404);
 
-  const [sectionsResult, postsResult] = await Promise.all([
-    c.env.DB.prepare("SELECT id, title, sort_order FROM event_sections WHERE event_id = ? ORDER BY sort_order, id").bind(eventId).all<{ id: string; title: string; sort_order: number }>(),
+  const [scenesResult, postsResult] = await Promise.all([
+    c.env.DB.prepare("SELECT id, title, sort_order FROM event_scenes WHERE event_id = ? ORDER BY sort_order, id").bind(eventId).all<{ id: string; title: string; sort_order: number }>(),
     c.env.DB.prepare(`${postSelect} WHERE p.event_id = ? AND p.status = 'published' ORDER BY p.captured_at DESC, p.id DESC`).bind(eventId).all<PostRow>(),
   ]);
   const detail: EventDetail = {
     ...mapEvent(event),
-    sections: sectionsResult.results.map((section) => ({ id: section.id, title: section.title, sortOrder: section.sort_order })),
+    scenes: scenesResult.results.map((scene) => ({ id: scene.id, title: scene.title, sortOrder: scene.sort_order })),
     posts: await loadPosts(c.env.DB, postsResult.results, c.var.currentUser),
   };
   return c.json(detail);
 });
 
-app.post("/events/:eventId/sections", async (c) => {
-  if (!canManageEvent(c.var.currentUser)) return c.json({ error: "セクションを作成する権限がありません" }, 403);
+app.post("/events/:eventId/scenes", async (c) => {
+  if (!canManageEvent(c.var.currentUser)) return c.json({ error: "シーンを作成する権限がありません" }, 403);
   const eventId = c.req.param("eventId");
-  const input = sectionInputSchema.parse(await c.req.json());
+  const input = sceneInputSchema.parse(await c.req.json());
   const event = await c.env.DB.prepare("SELECT id FROM events WHERE id = ?").bind(eventId).first();
   if (!event) return c.json({ error: "イベントが見つかりません" }, 404);
   const id = ulid();
   const now = new Date().toISOString();
-  const order = await c.env.DB.prepare("SELECT COALESCE(MAX(sort_order), -1) + 1 AS value FROM event_sections WHERE event_id = ?").bind(eventId).first<{ value: number }>();
-  await c.env.DB.prepare(`INSERT INTO event_sections (id, event_id, title, sort_order, created_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`)
+  const order = await c.env.DB.prepare("SELECT COALESCE(MAX(sort_order), -1) + 1 AS value FROM event_scenes WHERE event_id = ?").bind(eventId).first<{ value: number }>();
+  await c.env.DB.prepare(`INSERT INTO event_scenes (id, event_id, title, sort_order, created_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`)
     .bind(id, eventId, input.title, order?.value ?? 0, c.var.currentUser.id, now, now).run();
   return c.json({ id, title: input.title, sortOrder: order?.value ?? 0 }, 201);
 });
 
-app.put("/events/:eventId/sections/:sectionId", async (c) => {
-  if (!canManageEvent(c.var.currentUser)) return c.json({ error: "セクションを編集する権限がありません" }, 403);
-  const input = sectionInputSchema.parse(await c.req.json());
-  const result = await c.env.DB.prepare("UPDATE event_sections SET title = ?, updated_at = ? WHERE id = ? AND event_id = ?")
-    .bind(input.title, new Date().toISOString(), c.req.param("sectionId"), c.req.param("eventId")).run();
-  if (!result.meta.changes) return c.json({ error: "セクションが見つかりません" }, 404);
-  return c.json({ id: c.req.param("sectionId"), title: input.title });
+app.put("/events/:eventId/scenes/:sceneId", async (c) => {
+  if (!canManageEvent(c.var.currentUser)) return c.json({ error: "シーンを編集する権限がありません" }, 403);
+  const input = sceneInputSchema.parse(await c.req.json());
+  const result = await c.env.DB.prepare("UPDATE event_scenes SET title = ?, updated_at = ? WHERE id = ? AND event_id = ?")
+    .bind(input.title, new Date().toISOString(), c.req.param("sceneId"), c.req.param("eventId")).run();
+  if (!result.meta.changes) return c.json({ error: "シーンが見つかりません" }, 404);
+  return c.json({ id: c.req.param("sceneId"), title: input.title });
 });
 
-app.delete("/events/:eventId/sections/:sectionId", async (c) => {
-  if (!canManageEvent(c.var.currentUser)) return c.json({ error: "セクションを削除する権限がありません" }, 403);
-  const used = await c.env.DB.prepare("SELECT id FROM posts WHERE section_id = ? LIMIT 1").bind(c.req.param("sectionId")).first();
-  if (used) return c.json({ error: "投稿があるセクションは削除できません" }, 409);
-  const result = await c.env.DB.prepare("DELETE FROM event_sections WHERE id = ? AND event_id = ?").bind(c.req.param("sectionId"), c.req.param("eventId")).run();
-  if (!result.meta.changes) return c.json({ error: "セクションが見つかりません" }, 404);
-  return c.json({ id: c.req.param("sectionId") });
+app.delete("/events/:eventId/scenes/:sceneId", async (c) => {
+  if (!canManageEvent(c.var.currentUser)) return c.json({ error: "シーンを削除する権限がありません" }, 403);
+  const used = await c.env.DB.prepare("SELECT id FROM posts WHERE scene_id = ? LIMIT 1").bind(c.req.param("sceneId")).first();
+  if (used) return c.json({ error: "投稿があるシーンは削除できません" }, 409);
+  const result = await c.env.DB.prepare("DELETE FROM event_scenes WHERE id = ? AND event_id = ?").bind(c.req.param("sceneId"), c.req.param("eventId")).run();
+  if (!result.meta.changes) return c.json({ error: "シーンが見つかりません" }, 404);
+  return c.json({ id: c.req.param("sceneId") });
 });
 
 app.get("/events/:eventId/cover-media", async (c) => {
@@ -532,19 +532,19 @@ app.put("/events/:eventId/cover", async (c) => {
 app.post("/posts", async (c) => {
   if (!canCreatePost(c.var.currentUser)) return c.json({ error: "投稿する権限がありません" }, 403);
   const input = postInputSchema.parse(await c.req.json());
-  if (input.sectionId && !input.eventId) return c.json({ error: "セクションにはイベントが必要です" }, 400);
+  if (input.sceneId && !input.eventId) return c.json({ error: "シーンにはイベントが必要です" }, 400);
   if (input.eventId) {
     const event = await c.env.DB.prepare("SELECT id FROM events WHERE id = ?").bind(input.eventId).first();
     if (!event) return c.json({ error: "イベントが見つかりません" }, 400);
   }
-  if (input.sectionId) {
-    const section = await c.env.DB.prepare("SELECT id FROM event_sections WHERE id = ? AND event_id = ?").bind(input.sectionId, input.eventId).first();
-    if (!section) return c.json({ error: "セクションがイベントと一致しません" }, 400);
+  if (input.sceneId) {
+    const scene = await c.env.DB.prepare("SELECT id FROM event_scenes WHERE id = ? AND event_id = ?").bind(input.sceneId, input.eventId).first();
+    if (!scene) return c.json({ error: "シーンがイベントと一致しません" }, 400);
   }
   const id = ulid();
   const now = new Date().toISOString();
-  await c.env.DB.prepare(`INSERT INTO posts (id, event_id, section_id, caption, created_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`)
-    .bind(id, input.eventId, input.sectionId, input.caption, c.var.currentUser.id, now, now).run();
+  await c.env.DB.prepare(`INSERT INTO posts (id, event_id, scene_id, caption, created_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`)
+    .bind(id, input.eventId, input.sceneId, input.caption, c.var.currentUser.id, now, now).run();
   return c.json({ id }, 201);
 });
 
@@ -560,18 +560,18 @@ app.put("/posts/:postId", async (c) => {
   const post = await c.env.DB.prepare("SELECT event_id FROM posts WHERE id = ? AND status = 'published'").bind(postId).first<{ event_id: string | null }>();
   if (!post) return c.json({ error: "投稿が見つかりません" }, 404);
   const input = postInputSchema.parse(await c.req.json());
-  if (input.sectionId && !input.eventId) return c.json({ error: "セクションにはイベントが必要です" }, 400);
+  if (input.sceneId && !input.eventId) return c.json({ error: "シーンにはイベントが必要です" }, 400);
   if (input.eventId) {
     const event = await c.env.DB.prepare("SELECT id FROM events WHERE id = ?").bind(input.eventId).first();
     if (!event) return c.json({ error: "イベントが見つかりません" }, 400);
   }
-  if (input.sectionId) {
-    const section = await c.env.DB.prepare("SELECT id FROM event_sections WHERE id = ? AND event_id = ?").bind(input.sectionId, input.eventId).first();
-    if (!section) return c.json({ error: "セクションがイベントと一致しません" }, 400);
+  if (input.sceneId) {
+    const scene = await c.env.DB.prepare("SELECT id FROM event_scenes WHERE id = ? AND event_id = ?").bind(input.sceneId, input.eventId).first();
+    if (!scene) return c.json({ error: "シーンがイベントと一致しません" }, 400);
   }
   const now = new Date().toISOString();
-  const statements = [c.env.DB.prepare("UPDATE posts SET event_id = ?, section_id = ?, caption = ?, updated_at = ? WHERE id = ? AND status = 'published'")
-    .bind(input.eventId, input.sectionId, input.caption, now, postId)];
+  const statements = [c.env.DB.prepare("UPDATE posts SET event_id = ?, scene_id = ?, caption = ?, updated_at = ? WHERE id = ? AND status = 'published'")
+    .bind(input.eventId, input.sceneId, input.caption, now, postId)];
   if (post.event_id !== input.eventId) {
     if (post.event_id) statements.push(autoEventCoverStatement(c.env.DB, post.event_id, now));
     if (input.eventId) statements.push(autoEventCoverStatement(c.env.DB, input.eventId, now));

@@ -20,7 +20,7 @@ Phase 2のLINE連携・家族招待・通知には進まないでください。
 - R2 binding
 - 開発用仮ユーザー
 - Event
-- Section
+- Scene
 - Post
 - Media
 - Timeline
@@ -171,7 +171,7 @@ UI snapshotを大量に作る必要はありません。
 
 ```text
 Event作成
-→ Section作成
+→ Scene作成
 → Post作成
 → 写真複数upload
 → Timeline
@@ -189,8 +189,8 @@ Event作成
 3. PostとしてD1へ登録できる
 4. Timelineに表示される
 5. Eventを作成できる
-6. Sectionを作成できる
-7. Event DetailでSection → Postが表示される
+6. Sceneを作成できる
+7. Event DetailでScene → Postが表示される
 8. Post Detailへ移動できる
 9. Media Viewerで写真を閲覧できる
 10. コメント追加・表示ができる

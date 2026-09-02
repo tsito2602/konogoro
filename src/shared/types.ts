@@ -78,8 +78,8 @@ export type Post = {
   caption: string;
   eventId: string | null;
   eventTitle: string | null;
-  sectionId: string | null;
-  sectionTitle: string | null;
+  sceneId: string | null;
+  sceneTitle: string | null;
   capturedAt: string | null;
   publishedAt: string | null;
   authorName: string;
@@ -107,14 +107,14 @@ export type EventSummary = {
 
 export type EventCoverMedia = Pick<Media, "id" | "kind" | "thumbnailUrl">;
 
-export type EventSection = {
+export type EventScene = {
   id: string;
   title: string;
   sortOrder: number;
 };
 
 export type EventDetail = EventSummary & {
-  sections: EventSection[];
+  scenes: EventScene[];
   posts: Post[];
 };
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { commentInputSchema, eventCoverInputSchema, eventInputSchema, memberRoleInputSchema, postInputSchema, uploadFilesSchema } from "./schemas";
+import { commentInputSchema, eventCoverInputSchema, eventInputSchema, memberRoleInputSchema, postInputSchema, sceneInputSchema, uploadFilesSchema } from "./schemas";
 
 describe("API validation", () => {
   it("終了日が開始日より前のイベントを拒否する", () => {
@@ -17,7 +17,12 @@ describe("API validation", () => {
   });
 
   it("投稿タイトルなしでひとことを受け付ける", () => {
-    expect(postInputSchema.safeParse({ caption: "旅行の思い出", eventId: null, sectionId: null }).success).toBe(true);
+    expect(postInputSchema.safeParse({ caption: "旅行の思い出", eventId: null, sceneId: null }).success).toBe(true);
+  });
+
+  it("シーン名を受け付ける", () => {
+    expect(sceneInputSchema.safeParse({ title: "1日目" }).success).toBe(true);
+    expect(sceneInputSchema.safeParse({ title: "   " }).success).toBe(false);
   });
 
   it("対応動画を許可し未対応形式を拒否する", () => {

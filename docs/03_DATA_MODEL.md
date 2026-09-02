@@ -4,7 +4,7 @@ Phase 1で想定する主要テーブル:
 
 - users
 - events
-- event_sections
+- event_scenes
 - posts
 - media
 - comments
@@ -48,7 +48,7 @@ created_at
 updated_at
 ```
 
-## event_sections
+## event_scenes
 
 ```text
 id
@@ -59,14 +59,14 @@ created_at
 updated_at
 ```
 
-Sectionのネストは禁止。
+Sceneのネストは禁止。
 
 ## posts
 
 ```text
 id
 event_id nullable
-section_id nullable
+scene_id nullable
 created_by
 caption nullable
 taken_date nullable
@@ -76,8 +76,8 @@ updated_at
 
 制約:
 
-- section_idがある場合はevent_idも存在すること
-- sectionは該当eventに属していること
+- scene_idがある場合はevent_idも存在すること
+- sceneは該当eventに属していること
 
 ## media
 

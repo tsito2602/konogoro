@@ -10,7 +10,7 @@ export const eventInputSchema = z.object({
   { message: "終了日は開始日以降にしてください", path: ["endDate"] },
 );
 
-export const sectionInputSchema = z.object({
+export const sceneInputSchema = z.object({
   title: z.string().trim().min(1).max(100),
 });
 
@@ -21,7 +21,7 @@ export const eventCoverInputSchema = z.object({
 export const postInputSchema = z.object({
   caption: z.string().trim().max(2000).default(""),
   eventId: z.string().min(1).nullable().default(null),
-  sectionId: z.string().min(1).nullable().default(null),
+  sceneId: z.string().min(1).nullable().default(null),
 });
 
 export const uploadFilesSchema = z.object({

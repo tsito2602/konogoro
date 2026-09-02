@@ -110,7 +110,7 @@ export function MediaViewerPage() {
       </div>
       {index < post.media.length - 1 && <Link className="viewer-arrow next" to={`/posts/${postId}/media/${post.media[index + 1].id}`} replace state={location.state} aria-label="次の写真"><ChevronRight /></Link>}
     </div>
-    <div className="viewer-info"><strong>{post.caption || "写真・動画"}</strong><span>{formatDate(current.capturedAt ?? post.capturedAt)} · {post.authorName}</span>{(post.eventTitle || post.sectionTitle) && <span>{[post.eventTitle, post.sectionTitle].filter(Boolean).join(" · ")}</span>}</div>
+    <div className="viewer-info"><strong>{post.caption || "写真・動画"}</strong><span>{formatDate(current.capturedAt ?? post.capturedAt)} · {post.authorName}</span>{(post.eventTitle || post.sceneTitle) && <span>{[post.eventTitle, post.sceneTitle].filter(Boolean).join(" · ")}</span>}</div>
     <div className="thumbnail-strip">{post.media.map((media) => <Link className={media.id === current.id ? "selected" : ""} key={media.id} to={`/posts/${postId}/media/${media.id}`} replace state={location.state}><img src={media.thumbnailUrl} alt="" />{media.kind === "video" && <span className="thumbnail-video-mark" aria-hidden>▶</span>}</Link>)}</div>
   </main>;
 }

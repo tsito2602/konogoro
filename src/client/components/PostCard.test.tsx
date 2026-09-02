@@ -9,8 +9,8 @@ const post = {
   caption: "旅行の思い出",
   eventId: null,
   eventTitle: null,
-  sectionId: null,
-  sectionTitle: null,
+  sceneId: null,
+  sceneTitle: null,
   capturedAt: "2026-09-01T00:00:00.000Z",
   publishedAt: "2026-09-01T00:00:00.000Z",
   authorName: "翼",
@@ -37,7 +37,7 @@ describe("PostCard", () => {
   });
 
   it("投稿者アイコンとイベント情報を写真の上に表示する", () => {
-    const html = renderToStaticMarkup(<MemoryRouter><PostCard post={{ ...post, eventId: "event-1", eventTitle: "箱根旅行", sectionTitle: "2日目" }} /></MemoryRouter>);
+    const html = renderToStaticMarkup(<MemoryRouter><PostCard post={{ ...post, eventId: "event-1", eventTitle: "箱根旅行", sceneTitle: "2日目" }} /></MemoryRouter>);
     expect(html).toContain('aria-label="翼さんの投稿を開く"');
     expect(html).toContain("箱根旅行");
     expect(html).toContain("2日目");

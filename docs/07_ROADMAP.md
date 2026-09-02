@@ -5,7 +5,7 @@
 - React / Vite / Hono / Workers
 - D1
 - R2
-- Event / Section / Post / Media
+- Event / Scene / Post / Media
 - Timeline
 - Event List / Detail
 - Post Create / Detail
@@ -25,7 +25,7 @@ Phase 1完成後、LINE連携前に実施。
 - DESIGN.mdとの整合
 - Header subtitleが紛れ込んでいないか
 - いいね / reactionが勝手に追加されていないか
-- Event / Section / Postの階層がUI上で過剰になっていないか
+- Event / Scene / Postの階層がUI上で過剰になっていないか
 - Upload UX
 - Media Grid
 - Event Cover

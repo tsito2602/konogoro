@@ -55,7 +55,7 @@ viewerには閲覧・コメントに不要な管理導線や家族情報を表�
 表示しないもの:
 
 - 投稿追加タブ・投稿作成画面
-- Event・Sectionの作成・編集・削除
+- Event・Sceneの作成・編集・削除
 - 投稿の編集、投稿・Mediaの削除操作
 - 家族タブ・メンバー一覧・role・通知状態
 - 招待・メンバー管理
@@ -73,7 +73,7 @@ viewerには閲覧・コメントに不要な管理導線や家族情報を表�
 
 ```text
 Event
-  └─ Section (optional)
+  └─ Scene (optional)
       └─ Post
           └─ Media
 ```
@@ -102,7 +102,7 @@ Event
 
 Eventは任意。
 
-### Section
+### Scene
 
 Event内の整理単位。
 
@@ -111,9 +111,9 @@ Event内の整理単位。
 - Day 1 - フランクフルト
 - Day 2 - シュトゥットガルト
 
-Sectionは任意。
+Sceneは任意。
 
-Sectionは1階層のみ。ネスト不可。
+Sceneは1階層のみ。ネスト不可。
 
 ### Post
 
@@ -147,7 +147,7 @@ Eventに属さないPostも表示する。
 Postカードには原則として以下を表示:
 
 - 投稿者のプロフィールアイコン
-- Event titleとSection title（存在する場合）
+- Event titleとScene title（存在する場合）
 - Media Grid
 - 「見た人」の人数とComment数
 - Caption（存在する場合）
@@ -156,11 +156,11 @@ Postカードには原則として以下を表示:
 
 写真1枚ごとをSNS投稿にしない。
 
-Event titleとSection titleは投稿者アイコンとともにMedia Gridの上へ表示し、Post Detailを開けることが分かる矢印を添える。Event titleにはカレンダーアイコンを付け、Section titleは装飾のない補助行としてEventとの違いを示す。Eventがない場合は「日常の投稿」と表示する。投稿者名は常時表示せず、プロフィールアイコンで表現する。「見た人」とCommentの右端には撮影日をカメラアイコン付きで表示し、撮影日がない場合は投稿日をアップロードアイコン付きで表示する。Comment数はコメントアイコンの右へ表示する。Commentが2件以上ある場合も、最新の1件の下に表示する導線は「ほかのコメントを見る」とし、Comment数を重複表示しない。
+Event titleとScene titleは投稿者アイコンとともにMedia Gridの上へ表示し、Post Detailを開けることが分かる矢印を添える。Event titleにはカレンダーアイコンを付け、Scene titleは装飾のない補助行としてEventとの違いを示す。Eventがない場合は「日常の投稿」と表示する。投稿者名は常時表示せず、プロフィールアイコンで表現する。「見た人」とCommentの右端には撮影日をカメラアイコン付きで表示し、撮影日がない場合は投稿日をアップロードアイコン付きで表示する。Comment数はコメントアイコンの右へ表示する。Commentが2件以上ある場合も、最新の1件の下に表示する導線は「ほかのコメントを見る」とし、Comment数を重複表示しない。
 
 ### 近況
 
-近況では公開投稿とコメントを新しい順に表示する。各項目には誰が、どの投稿に、いつ操作したかを表示し、対象のPost Detailへ移動できる。投稿を表す名称はCaptionではなくSection titleを優先し、Sectionがない場合はEvent title、どちらもない場合は「投稿」とする。リスト上部には、メンバーごとの最終閲覧時刻をアイコンと相対時間で表示する。
+近況では公開投稿とコメントを新しい順に表示する。各項目には誰が、どの投稿に、いつ操作したかを表示し、対象のPost Detailへ移動できる。投稿を表す名称はCaptionではなくScene titleを優先し、Sceneがない場合はEvent title、どちらもない場合は「投稿」とする。リスト上部には、メンバーごとの最終閲覧時刻をアイコンと相対時間で表示する。
 
 ---
 
@@ -204,7 +204,7 @@ Eventの状態は保存せず、日本時間の当日とstart_date・end_dateか
 3. 日付未定: 日付が両方未設定。更新が新しい順
 4. 終了: 終了日を過ぎたもの。終了日が新しい順
 
-進行中と予定のEvent Cardには状態を表示する。予定Eventも家族全員へ表示し、事前にSectionやPostを準備できるようにする。
+進行中と予定のEvent Cardには状態を表示する。予定Eventも家族全員へ表示し、事前にSceneやPostを準備できるようにする。
 
 ### カバー画像
 
@@ -236,16 +236,14 @@ Event Detailは「そのEventだけに絞ったTimeline」。
 下部:
 
 ```text
-Section
+Scene
   ↓
 Post
   ↓
 Media
 ```
 
-Section titleは1文字列として表示する。
-
-Eventを管理できるユーザーには、投稿作成を経由せずSectionを作成できる「セクションを追加」導線をEvent Detailへ表示する。導線からEvent EditのSection追加欄を直接開き、すぐ入力できる状態にする。
+Scene titleは1文字列として表示する。
 
 NG:
 
@@ -266,12 +264,12 @@ Day 2 - シュトゥットガルト
 
 Timeline / Event Detail のどちらから入っても同じPost Detailを使う。
 
-画面上部のヘッダーには共通タイトルを表示せず、戻るボタンと権限に応じた投稿メニューだけを配置する。投稿情報はTimelineと同じ順序で表示し、Event titleにはカレンダーアイコン、Section titleには装飾を付けない。CaptionとComment一覧は同じsurface上に置き、細い区切り線と余白で区別する。コメント投稿フォームはBottom Navigationの直上へ固定する。
+画面上部のヘッダーには共通タイトルを表示せず、戻るボタンと権限に応じた投稿メニューだけを配置する。投稿情報はTimelineと同じ順序で表示し、Event titleにはカレンダーアイコン、Scene titleには装飾を付けない。CaptionとComment一覧は同じsurface上に置き、細い区切り線と余白で区別する。コメント投稿フォームはBottom Navigationの直上へ固定する。
 
 表示:
 
 - Event（存在する場合）
-- Section（存在する場合）
+- Scene（存在する場合）
 - 撮影日
 - 投稿者
 - Media
@@ -279,9 +277,9 @@ Timeline / Event Detail のどちらから入っても同じPost Detailを使う
 - Seen by
 - Comments
 
-右上の3点メニューから、権限があるユーザーだけが投稿を編集・削除できる。編集対象はEvent、Section、Captionとし、既存Mediaは保持する。削除前には写真・動画とコメントも削除され、元に戻せないことを確認するモーダルを表示する。
+右上の3点メニューから、権限があるユーザーだけが投稿を編集・削除できる。編集対象はEvent、Scene、Captionとし、既存Mediaは保持する。削除前には写真・動画とコメントも削除され、元に戻せないことを確認するモーダルを表示する。
 
-Event / Sectionがない場合、空ラベルを出さない。
+Event / Sceneがない場合、空ラベルを出さない。
 
 ---
 
@@ -298,7 +296,7 @@ Event / Sectionがない場合、空ラベルを出さない。
 - サムネイル一覧
 - 撮影日時
 - 投稿者
-- Event / Section / Post情報
+- Event / Scene / Post情報
 - 保存
 
 外部共有ボタンは不要。
@@ -317,17 +315,19 @@ Event / Sectionがない場合、空ラベルを出さない。
 
 1. 写真・動画を複数選択
 2. Event選択
-3. Section選択
+3. Scene選択
 4. ひとこと
 5. 投稿
 
-Event: optional  
-Section: optional  
+Event: optional
+Scene: optional
 Caption: optional
 
-SectionはEvent選択時のみ利用可能。
+SceneはEvent選択時のみ利用可能。
 
-投稿画面からSection新規作成可能。
+投稿作成画面と投稿編集画面の両方からSceneを新規作成できる。Sceneの追加後は、そのSceneを選択した状態にする。
+
+Sceneの管理はEvent Editへ集約する。
 
 アップロード進捗を表示。
 

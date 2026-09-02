@@ -83,18 +83,6 @@ export function SettingsPage() {
           </section>
 
           <section className="settings-section">
-            <h2>表示</h2>
-            <fieldset className="settings-card theme-setting">
-              <legend className="visually-hidden">テーマ</legend>
-              <div>{themeOptions.map(({ value, label, description, icon: Icon }) => <label className={theme === value ? "selected" : ""} key={value}>
-                <input type="radio" name="theme" value={value} checked={theme === value} onChange={() => { setTheme(value); setThemePreference(value); }} />
-                <Icon aria-hidden />
-                <span><strong>{label}</strong><small>{description}</small></span>
-              </label>)}</div>
-            </fieldset>
-          </section>
-
-          <section className="settings-section">
             <h2>LINE</h2>
             <div className="settings-card">
               <label className={`notification-toggle${notificationEnabled ? " enabled" : ""}${!user.lineFriend ? " unavailable" : ""}`}>
@@ -113,6 +101,18 @@ export function SettingsPage() {
           {error && <p className="form-error" role="alert">{error}</p>}
           <button className="primary-button wide" disabled={busy || !displayName.trim()}>{busy ? "保存中…" : "設定を保存"}</button>
         </form>
+
+        <section className="settings-section">
+          <h2>表示</h2>
+          <fieldset className="settings-card theme-setting">
+            <legend className="visually-hidden">テーマ</legend>
+            <div>{themeOptions.map(({ value, label, description, icon: Icon }) => <label className={theme === value ? "selected" : ""} key={value}>
+              <input type="radio" name="theme" value={value} checked={theme === value} onChange={() => { setTheme(value); setThemePreference(value); }} />
+              <Icon aria-hidden />
+              <span><strong>{label}</strong><small>{description}</small></span>
+            </label>)}</div>
+          </fieldset>
+        </section>
 
         {user.role === "owner" && <section className="settings-section">
           <h2>メンバー</h2>

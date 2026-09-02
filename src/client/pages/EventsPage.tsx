@@ -1,4 +1,4 @@
-import { Plus } from "lucide-react";
+import { ListFilter, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import type { EventSummary } from "../../shared/types";
@@ -6,15 +6,23 @@ import { api, eventDate } from "../api";
 import { EmptyState, ErrorState } from "../components/AsyncState";
 import { PageHeader } from "../components/PageHeader";
 import { PageSkeleton } from "../components/PageSkeleton";
-import { useCurrentUser } from "../components/AppLayout";
-import { canManageEvent } from "../../shared/permissions";
-import { eventTiming } from "../../shared/event-timing";
+import { eventTiming, type EventTiming } from "../../shared/event-timing";
+
+export type EventFilters = {
+  keyword: string;
+  from: string;
+  to: string;
+  status: "all" | EventTiming;
+};
+
+const emptyFilters: EventFilters = { keyword: "", from: "", to: "", status: "all" };
 
 export function EventsPage() {
-  const currentUser = useCurrentUser();
-  const manageable = canManageEvent(currentUser);
   const [events, setEvents] = useState<EventSummary[] | null>(null);
   const [error, setError] = useState("");
+  const [filters, setFilters] = useState<EventFilters>(emptyFilters);
+  const [draftFilters, setDraftFilters] = useState<EventFilters>(emptyFilters);
+  const [filterOpen, setFilterOpen] = useState(false);
   const load = () => {
     setError("");
     void api<{ events: EventSummary[] }>("/events")
@@ -26,37 +34,51 @@ export function EventsPage() {
       .then((data) => setEvents(data.events))
       .catch((reason: Error) => setError(reason.message));
   }, []);
+  const filteredEvents = events ? filterEvents(events, filters) : null;
+  const activeFilterCount = [filters.keyword.trim(), filters.from || filters.to, filters.status !== "all"].filter(
+    Boolean,
+  ).length;
+  const invalidRange = Boolean(draftFilters.from && draftFilters.to && draftFilters.from > draftFilters.to);
+  const openFilters = () => {
+    setDraftFilters(filters);
+    setFilterOpen(true);
+  };
   return (
     <>
       <PageHeader
         title="イベント"
         action={
-          manageable ? (
-            <Link className="icon-button" to="/events/new" aria-label="イベントを作成">
-              <Plus />
-            </Link>
-          ) : undefined
+          <button
+            className={`icon-button event-filter-button${activeFilterCount ? " active" : ""}`}
+            type="button"
+            onClick={openFilters}
+            aria-label={
+              activeFilterCount ? `イベントを絞り込む、${activeFilterCount}件の条件を適用中` : "イベントを絞り込む"
+            }
+          >
+            <ListFilter />
+            {activeFilterCount > 0 && <span>{activeFilterCount}</span>}
+          </button>
         }
       />
       <main className="event-list page-content">
         {!events && !error && <PageSkeleton variant="events" />}
         {error && <ErrorState message={error} retry={load} />}
         {events?.length === 0 && (
+          <EmptyState title="イベントがありません" body="イベントが追加されると、ここに表示されます。" />
+        )}
+        {events && events.length > 0 && filteredEvents?.length === 0 && (
           <EmptyState
-            title="イベントがありません"
-            body={
-              manageable ? "旅行や大きなお出かけをまとめられます。" : "イベントが追加されると、ここに表示されます。"
-            }
+            title="条件に一致するイベントがありません"
+            body="条件を変えてもう一度探してみてください。"
             action={
-              manageable ? (
-                <Link className="primary-button" to="/events/new">
-                  イベントを作成
-                </Link>
-              ) : undefined
+              <button className="outline-button" type="button" onClick={() => setFilters(emptyFilters)}>
+                絞り込みを解除
+              </button>
             }
           />
         )}
-        {events?.map((event) => (
+        {filteredEvents?.map((event) => (
           <Link
             className={`event-card${event.coverUrl ? "" : " no-cover"}`}
             to={`/events/${event.id}`}
@@ -72,8 +94,109 @@ export function EventsPage() {
           </Link>
         ))}
       </main>
+      {filterOpen && (
+        <div className="modal-backdrop event-filter-backdrop" onClick={() => setFilterOpen(false)}>
+          <section
+            className="event-filter-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="event-filter-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <header>
+              <h2 id="event-filter-title">イベントを絞り込む</h2>
+              <button className="icon-button" type="button" onClick={() => setFilterOpen(false)} aria-label="閉じる">
+                <X />
+              </button>
+            </header>
+            <form
+              className="event-filter-form"
+              onSubmit={(event) => {
+                event.preventDefault();
+                if (invalidRange) return;
+                setFilters(draftFilters);
+                setFilterOpen(false);
+              }}
+            >
+              <label>
+                キーワード
+                <input
+                  type="search"
+                  value={draftFilters.keyword}
+                  placeholder="タイトルやメモ"
+                  onChange={(event) => setDraftFilters({ ...draftFilters, keyword: event.target.value })}
+                />
+              </label>
+              <div className="date-row">
+                <label>
+                  期間の開始
+                  <input
+                    type="date"
+                    value={draftFilters.from}
+                    max={draftFilters.to || undefined}
+                    onChange={(event) => setDraftFilters({ ...draftFilters, from: event.target.value })}
+                  />
+                </label>
+                <label>
+                  期間の終了
+                  <input
+                    type="date"
+                    value={draftFilters.to}
+                    min={draftFilters.from || undefined}
+                    onChange={(event) => setDraftFilters({ ...draftFilters, to: event.target.value })}
+                  />
+                </label>
+              </div>
+              {invalidRange && (
+                <p className="form-error" role="alert">
+                  終了日は開始日以降にしてください。
+                </p>
+              )}
+              <label>
+                状態
+                <select
+                  value={draftFilters.status}
+                  onChange={(event) =>
+                    setDraftFilters({ ...draftFilters, status: event.target.value as EventFilters["status"] })
+                  }
+                >
+                  <option value="all">すべて</option>
+                  <option value="ongoing">進行中</option>
+                  <option value="upcoming">予定</option>
+                  <option value="undated">日付未定</option>
+                  <option value="past">終了</option>
+                </select>
+              </label>
+              <div className="event-filter-actions">
+                <button className="outline-button" type="button" onClick={() => setDraftFilters(emptyFilters)}>
+                  リセット
+                </button>
+                <button className="primary-button" type="submit" disabled={invalidRange}>
+                  絞り込む
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
+      )}
     </>
   );
+}
+
+export function filterEvents(events: EventSummary[], filters: EventFilters, today?: string): EventSummary[] {
+  const keyword = filters.keyword.trim().toLocaleLowerCase();
+  return events.filter((event) => {
+    if (keyword && !`${event.title} ${event.description}`.toLocaleLowerCase().includes(keyword)) return false;
+    if (filters.status !== "all" && eventTiming(event.startDate, event.endDate, today) !== filters.status) return false;
+    if (filters.from || filters.to) {
+      const firstDate = event.startDate ?? event.endDate;
+      const lastDate = event.endDate ?? event.startDate;
+      if (!firstDate || !lastDate) return false;
+      if (filters.from && lastDate < filters.from) return false;
+      if (filters.to && firstDate > filters.to) return false;
+    }
+    return true;
+  });
 }
 
 function mediaCounts(photos: number, videos: number): string {

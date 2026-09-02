@@ -1,4 +1,4 @@
-import { ImagePlus, Pencil } from "lucide-react";
+import { Pencil } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import type { EventDetail } from "../../shared/types";
@@ -70,19 +70,10 @@ export function EventDetailPage() {
         title={detail.title}
         back
         action={
-          canAddPost || canManageEvent(currentUser) ? (
-            <div className="header-actions">
-              {canAddPost && (
-                <Link className="icon-button" to={`/posts/new?event=${detail.id}`} aria-label="投稿を追加">
-                  <ImagePlus />
-                </Link>
-              )}
-              {canManageEvent(currentUser) && (
-                <Link className="icon-button" to={`/events/${detail.id}/edit`} aria-label="イベントを編集">
-                  <Pencil />
-                </Link>
-              )}
-            </div>
+          canManageEvent(currentUser) ? (
+            <Link className="icon-button" to={`/events/${detail.id}/edit`} aria-label="イベントを編集">
+              <Pencil />
+            </Link>
           ) : undefined
         }
       />

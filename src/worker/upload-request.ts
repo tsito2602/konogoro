@@ -15,12 +15,17 @@ export type ExistingMedia = {
 };
 
 export function matchesUploadFiles(existing: ExistingMedia[], files: UploadFile[]): boolean {
-  return existing.length === files.length && existing.every((media, index) => {
-    const file = files[index];
-    return media.original_filename === file.filename
-      && media.mime_type === file.mimeType
-      && media.byte_size === file.byteSize
-      && media.captured_at === file.capturedAt
-      && media.duration_seconds === file.durationSeconds;
-  });
+  return (
+    existing.length === files.length &&
+    existing.every((media, index) => {
+      const file = files[index];
+      return (
+        media.original_filename === file.filename &&
+        media.mime_type === file.mimeType &&
+        media.byte_size === file.byteSize &&
+        media.captured_at === file.capturedAt &&
+        media.duration_seconds === file.durationSeconds
+      );
+    })
+  );
 }

@@ -5,10 +5,14 @@ import { SeenBy } from "./SeenBy";
 
 describe("SeenBy", () => {
   it("オリジナルアイコンと人数、閲覧者名を表示する", () => {
-    const html = renderToStaticMarkup(createElement(SeenBy, { users: [
-      { id: "user-1", displayName: "父", avatarUrl: "https://example.com/father.jpg" },
-      { id: "user-2", displayName: "母", avatarUrl: null },
-    ] }));
+    const html = renderToStaticMarkup(
+      createElement(SeenBy, {
+        users: [
+          { id: "user-1", displayName: "父", avatarUrl: "https://example.com/father.jpg" },
+          { id: "user-2", displayName: "母", avatarUrl: null },
+        ],
+      }),
+    );
 
     expect(html).toContain('data-icon="seen"');
     expect(html).not.toContain("👀");

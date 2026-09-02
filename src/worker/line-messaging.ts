@@ -11,7 +11,9 @@ export function buildNotificationText(counts: NotificationCounts): string {
   const media = [
     counts.photoCount > 0 ? `写真${counts.photoCount}枚` : null,
     counts.videoCount > 0 ? `動画${counts.videoCount}本` : null,
-  ].filter((value): value is string => value !== null).join("・");
+  ]
+    .filter((value): value is string => value !== null)
+    .join("・");
   const summary = media ? `（${media}）` : "";
 
   return `新しい投稿${counts.postCount}件${summary}が追加されました。\n${counts.appOrigin.replace(/\/$/, "")}/`;

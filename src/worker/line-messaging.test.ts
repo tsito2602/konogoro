@@ -3,15 +3,18 @@ import { buildNotificationText, sendLineNotification } from "./line-messaging";
 
 describe("buildNotificationText", () => {
   it("投稿と写真・動画の件数をリンク付きで案内する", () => {
-    expect(buildNotificationText({ postCount: 3, photoCount: 15, videoCount: 2, appOrigin: "https://family.example.com/" }))
-      .toBe("新しい投稿3件（写真15枚・動画2本）が追加されました。\nhttps://family.example.com/");
+    expect(
+      buildNotificationText({ postCount: 3, photoCount: 15, videoCount: 2, appOrigin: "https://family.example.com/" }),
+    ).toBe("新しい投稿3件（写真15枚・動画2本）が追加されました。\nhttps://family.example.com/");
   });
 
   it("存在するmedia種別だけを表示する", () => {
-    expect(buildNotificationText({ postCount: 1, photoCount: 0, videoCount: 1, appOrigin: "https://family.example.com" }))
-      .toBe("新しい投稿1件（動画1本）が追加されました。\nhttps://family.example.com/");
-    expect(buildNotificationText({ postCount: 1, photoCount: 0, videoCount: 0, appOrigin: "https://family.example.com" }))
-      .toBe("新しい投稿1件が追加されました。\nhttps://family.example.com/");
+    expect(
+      buildNotificationText({ postCount: 1, photoCount: 0, videoCount: 1, appOrigin: "https://family.example.com" }),
+    ).toBe("新しい投稿1件（動画1本）が追加されました。\nhttps://family.example.com/");
+    expect(
+      buildNotificationText({ postCount: 1, photoCount: 0, videoCount: 0, appOrigin: "https://family.example.com" }),
+    ).toBe("新しい投稿1件が追加されました。\nhttps://family.example.com/");
   });
 });
 
@@ -37,11 +40,18 @@ describe("sendLineNotification", () => {
   });
 
   it("失敗時はstatusだけを含み秘密値を含まないErrorを投げる", async () => {
-    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response('{"message":"private body"}', { status: 401 }));
+    const fetcher = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(new Response('{"message":"private body"}', { status: 401 }));
 
-    const request = { channelAccessToken: "secret-token", to: "U123", text: "秘密の通知本文", retryKey: crypto.randomUUID(), fetcher };
-    await expect(sendLineNotification(request))
-      .rejects.toThrow("LINE Messaging API request failed (status: 401)");
+    const request = {
+      channelAccessToken: "secret-token",
+      to: "U123",
+      text: "秘密の通知本文",
+      retryKey: crypto.randomUUID(),
+      fetcher,
+    };
+    await expect(sendLineNotification(request)).rejects.toThrow("LINE Messaging API request failed (status: 401)");
 
     try {
       await sendLineNotification(request);

@@ -18,52 +18,98 @@ export function ActivityPage() {
 
   const load = () => {
     setError("");
-    void api<ActivityResponse>("/activity").then((data) => {
-      setActivities(data.activities); setMemberLastViewed(data.memberLastViewed); setNextCursor(data.nextCursor);
-    }).catch((reason: Error) => setError(reason.message));
+    void api<ActivityResponse>("/activity")
+      .then((data) => {
+        setActivities(data.activities);
+        setMemberLastViewed(data.memberLastViewed);
+        setNextCursor(data.nextCursor);
+      })
+      .catch((reason: Error) => setError(reason.message));
   };
 
   useEffect(() => {
-    void api<ActivityResponse>("/activity").then((data) => {
-      setActivities(data.activities); setMemberLastViewed(data.memberLastViewed); setNextCursor(data.nextCursor);
-    }).catch((reason: Error) => setError(reason.message));
+    void api<ActivityResponse>("/activity")
+      .then((data) => {
+        setActivities(data.activities);
+        setMemberLastViewed(data.memberLastViewed);
+        setNextCursor(data.nextCursor);
+      })
+      .catch((reason: Error) => setError(reason.message));
   }, []);
 
   const loadMore = async () => {
     if (!nextCursor || loadingMore) return;
-    setLoadingMore(true); setMoreError("");
+    setLoadingMore(true);
+    setMoreError("");
     try {
       const data = await api<ActivityResponse>(`/activity?cursor=${encodeURIComponent(nextCursor)}`);
-      setActivities((current) => current ? appendUniqueActivities(current, data.activities) : data.activities);
+      setActivities((current) => (current ? appendUniqueActivities(current, data.activities) : data.activities));
       setNextCursor(data.nextCursor);
-    } catch (reason) { setMoreError((reason as Error).message); }
-    finally { setLoadingMore(false); }
+    } catch (reason) {
+      setMoreError((reason as Error).message);
+    } finally {
+      setLoadingMore(false);
+    }
   };
 
-  return <>
-    <PageHeader title="近況" />
-    <main className="activity-page page-content">
-      {!activities && !error && <Loading />}
-      {error && <ErrorState message={error} retry={load} />}
-      {activities && <MemberLastViewedList members={memberLastViewed} />}
-      {activities?.length === 0 && <EmptyState title="まだ近況はありません" body="投稿やコメントがここに表示されます。" />}
-      {activities && <div className="activity-list">{activities.map((activity) => <Link className="activity-row" to={`/posts/${activity.postId}`} key={activity.id}>
-        <span className={`activity-icon ${activity.kind}`} aria-hidden>{activity.kind === "post" ? <Send /> : <MessageCircle />}</span>
-        <span className="activity-copy"><span>{activityText(activity)}</span>{activity.body && <small>「{activity.body}」</small>}<time dateTime={activity.occurredAt}>{formatActivityDate(activity.occurredAt)}</time></span>
-        {activity.thumbnailUrl && <img src={activity.thumbnailUrl} alt="" loading="lazy" />}
-      </Link>)}</div>}
-      {activities && nextCursor && <div className="form-page">
-        {moreError && <p className="form-error" role="alert">{moreError}</p>}
-        <button className="outline-button wide" type="button" onClick={() => void loadMore()} disabled={loadingMore}>{loadingMore ? "読み込み中…" : "さらに読み込む"}</button>
-      </div>}
-    </main>
-  </>;
+  return (
+    <>
+      <PageHeader title="近況" />
+      <main className="activity-page page-content">
+        {!activities && !error && <Loading />}
+        {error && <ErrorState message={error} retry={load} />}
+        {activities && <MemberLastViewedList members={memberLastViewed} />}
+        {activities?.length === 0 && (
+          <EmptyState title="まだ近況はありません" body="投稿やコメントがここに表示されます。" />
+        )}
+        {activities && (
+          <div className="activity-list">
+            {activities.map((activity) => (
+              <Link className="activity-row" to={`/posts/${activity.postId}`} key={activity.id}>
+                <span className={`activity-icon ${activity.kind}`} aria-hidden>
+                  {activity.kind === "post" ? <Send /> : <MessageCircle />}
+                </span>
+                <span className="activity-copy">
+                  <span>{activityText(activity)}</span>
+                  {activity.body && <small>「{activity.body}」</small>}
+                  <time dateTime={activity.occurredAt}>{formatActivityDate(activity.occurredAt)}</time>
+                </span>
+                {activity.thumbnailUrl && <img src={activity.thumbnailUrl} alt="" loading="lazy" />}
+              </Link>
+            ))}
+          </div>
+        )}
+        {activities && nextCursor && (
+          <div className="form-page">
+            {moreError && (
+              <p className="form-error" role="alert">
+                {moreError}
+              </p>
+            )}
+            <button
+              className="outline-button wide"
+              type="button"
+              onClick={() => void loadMore()}
+              disabled={loadingMore}
+            >
+              {loadingMore ? "読み込み中…" : "さらに読み込む"}
+            </button>
+          </div>
+        )}
+      </main>
+    </>
+  );
 }
 
 export function activityText(activity: Activity): string {
   const label = activity.postLabel.length > 30 ? `${activity.postLabel.slice(0, 30)}…` : activity.postLabel;
-  if (activity.kind === "post") return label === "投稿" ? `${activity.actorName}さんが写真・動画を投稿しました` : `${activity.actorName}さんが「${label}」に写真・動画を投稿しました`;
-  return label === "投稿" ? `${activity.actorName}さんが投稿にコメントしました` : `${activity.actorName}さんが「${label}」にコメントしました`;
+  if (activity.kind === "post")
+    return label === "投稿"
+      ? `${activity.actorName}さんが写真・動画を投稿しました`
+      : `${activity.actorName}さんが「${label}」に写真・動画を投稿しました`;
+  return label === "投稿"
+    ? `${activity.actorName}さんが投稿にコメントしました`
+    : `${activity.actorName}さんが「${label}」にコメントしました`;
 }
 
 export function appendUniqueActivities(current: Activity[], incoming: Activity[]): Activity[] {
@@ -85,18 +131,31 @@ export function formatLastViewedAt(value: string | null, now = Date.now()): stri
 }
 
 function MemberLastViewedList({ members }: { members: MemberLastViewed[] }) {
-  return <section className="member-last-viewed" aria-labelledby="member-last-viewed-title">
-    <h2 id="member-last-viewed-title">最後に見た時間</h2>
-    <div className="member-last-viewed-list">
-      {members.map((member, index) => <div className="member-last-viewed-item" key={member.id}>
-        <span className={`member-last-viewed-avatar color-${index % 5}`}>{member.avatarUrl ? <img src={member.avatarUrl} alt="" /> : member.displayName.slice(0, 1)}</span>
-        <strong>{member.displayName}</strong>
-        <time dateTime={member.lastViewedAt ?? undefined}>{formatLastViewedAt(member.lastViewedAt)}</time>
-      </div>)}
-    </div>
-  </section>;
+  return (
+    <section className="member-last-viewed" aria-labelledby="member-last-viewed-title">
+      <h2 id="member-last-viewed-title">最後に見た時間</h2>
+      <div className="member-last-viewed-list">
+        {members.map((member, index) => (
+          <div className="member-last-viewed-item" key={member.id}>
+            <span className={`member-last-viewed-avatar color-${index % 5}`}>
+              {member.avatarUrl ? <img src={member.avatarUrl} alt="" /> : member.displayName.slice(0, 1)}
+            </span>
+            <strong>{member.displayName}</strong>
+            <time dateTime={member.lastViewedAt ?? undefined}>{formatLastViewedAt(member.lastViewedAt)}</time>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
 }
 
 function formatActivityDate(value: string): string {
-  return new Intl.DateTimeFormat("ja-JP", { year: "numeric", month: "short", day: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Tokyo" }).format(new Date(value));
+  return new Intl.DateTimeFormat("ja-JP", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "Asia/Tokyo",
+  }).format(new Date(value));
 }

@@ -13,8 +13,11 @@ export function getThemePreference(): ThemePreference {
 }
 
 export function setThemePreference(preference: ThemePreference) {
-  try { window.localStorage.setItem(storageKey, preference); }
-  catch { /* テーマ切替はストレージを利用できない環境でも現在の画面には反映する。 */ }
+  try {
+    window.localStorage.setItem(storageKey, preference);
+  } catch {
+    /* テーマ切替はストレージを利用できない環境でも現在の画面には反映する。 */
+  }
 
   if (preference === "system") delete document.documentElement.dataset.theme;
   else document.documentElement.dataset.theme = preference;
@@ -22,7 +25,8 @@ export function setThemePreference(preference: ThemePreference) {
   const lightMeta = document.querySelector<HTMLMetaElement>('meta[data-theme-color="light"]');
   const darkMeta = document.querySelector<HTMLMetaElement>('meta[data-theme-color="dark"]');
   if (!lightMeta || !darkMeta) return;
-  lightMeta.media = preference === "dark" ? "not all" : preference === "light" ? "all" : "(prefers-color-scheme: light)";
+  lightMeta.media =
+    preference === "dark" ? "not all" : preference === "light" ? "all" : "(prefers-color-scheme: light)";
   darkMeta.media = preference === "light" ? "not all" : preference === "dark" ? "all" : "(prefers-color-scheme: dark)";
 }
 

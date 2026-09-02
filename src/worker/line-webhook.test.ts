@@ -16,7 +16,9 @@ async function signatureFor(body: string): Promise<string> {
   return btoa(String.fromCharCode(...signature));
 }
 
-function webhookEnv(onBatch: (statements: Statement[]) => Promise<unknown[]> = vi.fn(async () => [])): Cloudflare.Env & { LINE_MESSAGING_CHANNEL_SECRET: string } {
+function webhookEnv(
+  onBatch: (statements: Statement[]) => Promise<unknown[]> = vi.fn(async () => []),
+): Cloudflare.Env & { LINE_MESSAGING_CHANNEL_SECRET: string } {
   return {
     LINE_MESSAGING_CHANNEL_SECRET: secret,
     DB: {
@@ -29,20 +31,26 @@ function webhookEnv(onBatch: (statements: Statement[]) => Promise<unknown[]> = v
 }
 
 async function webhookRequest(body: string, signature?: string, env = webhookEnv()): Promise<Response> {
-  return app.request("/api/webhooks/line", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "x-line-signature": signature ?? await signatureFor(body) },
-    body,
-  }, env);
+  return app.request(
+    "/api/webhooks/line",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-line-signature": signature ?? (await signatureFor(body)) },
+      body,
+    },
+    env,
+  );
 }
 
 describe("LINE Webhook", () => {
   it("followとunfollowを一括反映する", async () => {
     const onBatch = vi.fn<(statements: Statement[]) => Promise<unknown[]>>(async () => []);
-    const body = JSON.stringify({ events: [
-      { type: "follow", source: { type: "user", userId: "line-follow" } },
-      { type: "unfollow", source: { type: "user", userId: "line-unfollow" } },
-    ] });
+    const body = JSON.stringify({
+      events: [
+        { type: "follow", source: { type: "user", userId: "line-follow" } },
+        { type: "unfollow", source: { type: "user", userId: "line-unfollow" } },
+      ],
+    });
 
     const response = await webhookRequest(body, await signatureFor(body), webhookEnv(onBatch));
 
@@ -59,11 +67,13 @@ describe("LINE Webhook", () => {
 
   it("未知ユーザー、対象外イベント、ユーザーIDのないイベントを安全に無視する", async () => {
     const onBatch = vi.fn<(statements: Statement[]) => Promise<unknown[]>>(async () => []);
-    const body = JSON.stringify({ events: [
-      { type: "message", source: { type: "user", userId: "line-user" } },
-      { type: "follow", source: { type: "group", groupId: "group" } },
-      null,
-    ] });
+    const body = JSON.stringify({
+      events: [
+        { type: "message", source: { type: "user", userId: "line-user" } },
+        { type: "follow", source: { type: "group", groupId: "group" } },
+        null,
+      ],
+    });
 
     const response = await webhookRequest(body, await signatureFor(body), webhookEnv(onBatch));
 
@@ -90,7 +100,9 @@ describe("LINE Webhook", () => {
 
   it("Messaging APIのChannel Secretがなければ利用できない", async () => {
     const body = JSON.stringify({ events: [] });
-    const response = await app.request("/api/webhooks/line", { method: "POST", body }, { DB: {} as D1Database } as Cloudflare.Env);
+    const response = await app.request("/api/webhooks/line", { method: "POST", body }, {
+      DB: {} as D1Database,
+    } as Cloudflare.Env);
 
     expect(response.status).toBe(503);
   });

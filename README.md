@@ -147,7 +147,9 @@ LINE公式アカウントはLINE Login Channelへリンクする。Messaging API
 | コマンド | 用途 |
 |---|---|
 | `npm run dev` | ViteとWorkersの開発サーバーを起動 |
-| `npm run check` | 型検査・lint・テスト・本番ビルドを一括実行 |
+| `npm run format` | Prettierでコードを整形 |
+| `npm run format:check` | コードがPrettierで整形済みか確認 |
+| `npm run check` | フォーマット・型検査・lint・テスト・本番ビルドを一括実行 |
 | `npm run test` | Vitestを実行 |
 | `npm run db:migrate` | ローカルD1へmigrationを適用 |
 | `npm run cf-typegen` | Cloudflare binding型を再生成 |

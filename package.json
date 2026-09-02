@@ -11,11 +11,13 @@
     "deploy": "npm run build && npm run r2:cors && wrangler deploy",
     "r2:cors": "wrangler r2 bucket cors set family-timeline-media --file r2-cors.json --force",
     "typecheck": "tsc -b --pretty false",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "lint": "eslint .",
     "test": "vitest run",
     "cf-typegen": "wrangler types",
     "db:migrate": "wrangler d1 migrations apply DB --local",
-    "check": "npm run typecheck && npm run lint && npm run test && npm run build"
+    "check": "npm run format:check && npm run typecheck && npm run lint && npm run test && npm run build"
   },
   "dependencies": {
     "aws4fetch": "^1.0.20",
@@ -39,6 +41,7 @@
     "eslint": "^10.9.1",
     "eslint-plugin-react-hooks": "^7.1.1",
     "globals": "^17.11.0",
+    "prettier": "^3.9.6",
     "sharp": "^0.35.2",
     "typescript": "^5.9.2",
     "typescript-eslint": "^8.69.0",

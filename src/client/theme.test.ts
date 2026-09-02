@@ -21,7 +21,7 @@ describe("theme", () => {
     vi.stubGlobal("window", { localStorage: { setItem: vi.fn() } });
     vi.stubGlobal("document", {
       documentElement,
-      querySelector: (selector: string) => selector.includes("light") ? lightMeta : darkMeta,
+      querySelector: (selector: string) => (selector.includes("light") ? lightMeta : darkMeta),
     });
 
     setThemePreference("dark");
@@ -38,7 +38,7 @@ describe("theme", () => {
     vi.stubGlobal("window", { localStorage: { setItem: vi.fn() } });
     vi.stubGlobal("document", {
       documentElement,
-      querySelector: (selector: string) => selector.includes("light") ? lightMeta : darkMeta,
+      querySelector: (selector: string) => (selector.includes("light") ? lightMeta : darkMeta),
     });
 
     setThemePreference("system");

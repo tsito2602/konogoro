@@ -1,11 +1,23 @@
 import { describe, expect, it } from "vitest";
-import { createSession, getCurrentUser, getLineFriendship, hashToken, pkceChallenge, randomToken, safeEqual } from "./auth";
+import {
+  createSession,
+  getCurrentUser,
+  getLineFriendship,
+  hashToken,
+  pkceChallenge,
+  randomToken,
+  safeEqual,
+} from "./auth";
 
 describe("auth helpers", () => {
   it("URL-safeなtokenを生成する", () => expect(randomToken()).toMatch(/^[A-Za-z0-9_-]{43}$/));
-  it("PKCE challengeを生成する", async () => expect(await pkceChallenge("test-verifier")).toMatch(/^[A-Za-z0-9_-]{43}$/));
+  it("PKCE challengeを生成する", async () =>
+    expect(await pkceChallenge("test-verifier")).toMatch(/^[A-Za-z0-9_-]{43}$/));
   it("tokenをhash化する", async () => expect(await hashToken("token")).toHaveLength(64));
-  it("文字列を比較する", () => { expect(safeEqual("abc", "abc")).toBe(true); expect(safeEqual("abc", "abd")).toBe(false); });
+  it("文字列を比較する", () => {
+    expect(safeEqual("abc", "abc")).toBe(true);
+    expect(safeEqual("abc", "abd")).toBe(false);
+  });
   it("30日間のsessionを作成する", async () => {
     let values: unknown[] = [];
     const db = {
@@ -47,7 +59,9 @@ describe("auth helpers", () => {
   it("友だち状態を取得できない場合はnullを返す", async () => {
     const fetcher = async () => new Response(null, { status: 503 });
     expect(await getLineFriendship("access-token", fetcher as typeof fetch)).toBeNull();
-    const rejectedFetcher = async () => { throw new Error("network error"); };
+    const rejectedFetcher = async () => {
+      throw new Error("network error");
+    };
     expect(await getLineFriendship("access-token", rejectedFetcher as typeof fetch)).toBeNull();
   });
 });

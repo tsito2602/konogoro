@@ -16,6 +16,8 @@ export async function createPresignedUploadUrl(env: MediaEnv, objectKey: string,
   });
   const url = new URL(`https://${env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com/${env.R2_BUCKET_NAME}/${objectKey}`);
   url.searchParams.set("X-Amz-Expires", "900");
-  const signed = await aws.sign(new Request(url, { method: "PUT", headers: { "Content-Type": contentType } }), { aws: { signQuery: true } });
+  const signed = await aws.sign(new Request(url, { method: "PUT", headers: { "Content-Type": contentType } }), {
+    aws: { signQuery: true },
+  });
   return signed.url.toString();
 }

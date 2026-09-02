@@ -31,7 +31,9 @@ export function SettingsPage() {
   const [busy, setBusy] = useState(false);
   const [theme, setTheme] = useState<ThemePreference>(getThemePreference);
   const showToast = useToast();
-  const hasChanges = Boolean(user && (displayName !== user.displayName || notificationEnabled !== (user.notificationEnabled ?? false)));
+  const hasChanges = Boolean(
+    user && (displayName !== user.displayName || notificationEnabled !== (user.notificationEnabled ?? false)),
+  );
 
   const loadFamily = useCallback(() => {
     setFamilyError("");
@@ -40,111 +42,265 @@ export function SettingsPage() {
       .catch((reason) => setFamilyError((reason as Error).message));
   }, []);
 
-  const applyUser = useCallback((result: CurrentUser) => {
-    setUser(result); setDisplayName(result.displayName); setNotificationEnabled(result.notificationEnabled ?? false);
-    if (result.role === "owner") loadFamily();
-  }, [loadFamily]);
+  const applyUser = useCallback(
+    (result: CurrentUser) => {
+      setUser(result);
+      setDisplayName(result.displayName);
+      setNotificationEnabled(result.notificationEnabled ?? false);
+      if (result.role === "owner") loadFamily();
+    },
+    [loadFamily],
+  );
 
   const load = () => {
     setError("");
-    void api<CurrentUser>("/me").then(applyUser).catch((reason) => setError((reason as Error).message));
+    void api<CurrentUser>("/me")
+      .then(applyUser)
+      .catch((reason) => setError((reason as Error).message));
   };
 
   useEffect(() => {
-    void api<CurrentUser>("/me").then(applyUser).catch((reason) => setError((reason as Error).message));
+    void api<CurrentUser>("/me")
+      .then(applyUser)
+      .catch((reason) => setError((reason as Error).message));
   }, [applyUser]);
 
   const save = async (event: FormEvent) => {
-    event.preventDefault(); setBusy(true); setError("");
+    event.preventDefault();
+    setBusy(true);
+    setError("");
     try {
-      const result = await api<CurrentUser>("/me", { method: "PATCH", body: JSON.stringify({ displayName, notificationEnabled }) });
-      setUser(result); setDisplayName(result.displayName); setNotificationEnabled(result.notificationEnabled ?? false); showToast("設定を保存しました");
-    } catch (reason) { setError((reason as Error).message); }
-    finally { setBusy(false); }
+      const result = await api<CurrentUser>("/me", {
+        method: "PATCH",
+        body: JSON.stringify({ displayName, notificationEnabled }),
+      });
+      setUser(result);
+      setDisplayName(result.displayName);
+      setNotificationEnabled(result.notificationEnabled ?? false);
+      showToast("設定を保存しました");
+    } catch (reason) {
+      setError((reason as Error).message);
+    } finally {
+      setBusy(false);
+    }
   };
 
   const logout = async () => {
-    setBusy(true); setError("");
+    setBusy(true);
+    setError("");
     try {
       await api<void>("/auth/logout", { method: "POST" });
       navigator.serviceWorker?.controller?.postMessage({ type: "CLEAR_MEDIA_CACHE" });
       window.location.assign("/");
+    } catch (reason) {
+      setError((reason as Error).message);
+      setBusy(false);
     }
-    catch (reason) { setError((reason as Error).message); setBusy(false); }
   };
 
-  return <>
-    <PageHeader title="設定" />
-    <main className={`page-content settings-page${hasChanges ? " has-save-bar" : ""}`}>
-      {error && !user ? <ErrorState message={error} retry={load} /> : !user ? <Loading /> : <>
-        <form id="settings-save-form" className="settings-form" onSubmit={save}>
-          <section className="settings-section">
-            <h2>プロフィール</h2>
-            <div className="settings-card"><label className="settings-field"><span>表示名</span><input value={displayName} onChange={(event) => setDisplayName(event.target.value)} required maxLength={100} disabled={busy} /></label></div>
-          </section>
+  return (
+    <>
+      <PageHeader title="設定" />
+      <main className={`page-content settings-page${hasChanges ? " has-save-bar" : ""}`}>
+        {error && !user ? (
+          <ErrorState message={error} retry={load} />
+        ) : !user ? (
+          <Loading />
+        ) : (
+          <>
+            <form id="settings-save-form" className="settings-form" onSubmit={save}>
+              <section className="settings-section">
+                <h2>プロフィール</h2>
+                <div className="settings-card">
+                  <label className="settings-field">
+                    <span>表示名</span>
+                    <input
+                      value={displayName}
+                      onChange={(event) => setDisplayName(event.target.value)}
+                      required
+                      maxLength={100}
+                      disabled={busy}
+                    />
+                  </label>
+                </div>
+              </section>
 
-          <section className="settings-section">
-            <h2>LINE</h2>
-            <div className="settings-card">
-              <label className={`notification-toggle${notificationEnabled ? " enabled" : ""}${!user.lineFriend ? " unavailable" : ""}`}>
-                <input className="notification-toggle-input" type="checkbox" checked={notificationEnabled} onChange={(event) => setNotificationEnabled(event.target.checked)} disabled={busy || !user.lineFriend} />
-                <span className="notification-toggle-icon" aria-hidden><Bell className="notification-bell-on" /><BellOff className="notification-bell-off" /></span>
-                <span className="notification-toggle-copy"><strong>LINE通知 <small>{!user.lineFriend ? "利用不可" : notificationEnabled ? "オン" : "オフ"}</small></strong><span>{!user.lineFriend ? "友だち追加後に利用できる" : notificationEnabled ? "新しい投稿をLINEでお知らせします" : "新しい投稿のLINE通知は届きません"}</span></span>
-                <span className="notification-switch" aria-hidden><span><Check className="notification-switch-on" /><X className="notification-switch-off" /></span></span>
-              </label>
-              <div className="setting-status"><strong>LINEアカウント</strong><span className={user.lineConnected ? "linked" : ""}>{user.lineConnected ? "連携済み" : "未連携"}</span></div>
-              <div className="setting-status"><strong>アプリからの通知</strong><span className={user.lineFriend ? "linked" : ""}>{user.lineFriend ? "受信可能" : "受信不可"}</span></div>
-              {!user.lineFriend && <p className="settings-line-warning">LINEで「このごろ」アカウントをブロックしていないか確認してください。</p>}
+              <section className="settings-section">
+                <h2>LINE</h2>
+                <div className="settings-card">
+                  <label
+                    className={`notification-toggle${notificationEnabled ? " enabled" : ""}${!user.lineFriend ? " unavailable" : ""}`}
+                  >
+                    <input
+                      className="notification-toggle-input"
+                      type="checkbox"
+                      checked={notificationEnabled}
+                      onChange={(event) => setNotificationEnabled(event.target.checked)}
+                      disabled={busy || !user.lineFriend}
+                    />
+                    <span className="notification-toggle-icon" aria-hidden>
+                      <Bell className="notification-bell-on" />
+                      <BellOff className="notification-bell-off" />
+                    </span>
+                    <span className="notification-toggle-copy">
+                      <strong>
+                        LINE通知 <small>{!user.lineFriend ? "利用不可" : notificationEnabled ? "オン" : "オフ"}</small>
+                      </strong>
+                      <span>
+                        {!user.lineFriend
+                          ? "友だち追加後に利用できる"
+                          : notificationEnabled
+                            ? "新しい投稿をLINEでお知らせします"
+                            : "新しい投稿のLINE通知は届きません"}
+                      </span>
+                    </span>
+                    <span className="notification-switch" aria-hidden>
+                      <span>
+                        <Check className="notification-switch-on" />
+                        <X className="notification-switch-off" />
+                      </span>
+                    </span>
+                  </label>
+                  <div className="setting-status">
+                    <strong>LINEアカウント</strong>
+                    <span className={user.lineConnected ? "linked" : ""}>
+                      {user.lineConnected ? "連携済み" : "未連携"}
+                    </span>
+                  </div>
+                  <div className="setting-status">
+                    <strong>アプリからの通知</strong>
+                    <span className={user.lineFriend ? "linked" : ""}>{user.lineFriend ? "受信可能" : "受信不可"}</span>
+                  </div>
+                  {!user.lineFriend && (
+                    <p className="settings-line-warning">
+                      LINEで「このごろ」アカウントをブロックしていないか確認してください。
+                    </p>
+                  )}
+                </div>
+              </section>
+
+              {error && (
+                <p className="form-error" role="alert">
+                  {error}
+                </p>
+              )}
+            </form>
+
+            <div className={`change-save-bar${hasChanges ? " visible" : ""}`} aria-hidden={!hasChanges}>
+              <button
+                className="primary-button wide"
+                type="submit"
+                form="settings-save-form"
+                disabled={busy || !displayName.trim()}
+              >
+                {busy ? "保存中…" : "変更を保存"}
+              </button>
             </div>
-          </section>
 
-          {error && <p className="form-error" role="alert">{error}</p>}
-        </form>
+            <section className="settings-section">
+              <h2>表示</h2>
+              <fieldset className="settings-card theme-setting">
+                <legend className="visually-hidden">テーマ</legend>
+                <div>
+                  {themeOptions.map(({ value, label, description, icon: Icon }) => (
+                    <label className={theme === value ? "selected" : ""} key={value}>
+                      <input
+                        type="radio"
+                        name="theme"
+                        value={value}
+                        checked={theme === value}
+                        onChange={() => {
+                          setTheme(value);
+                          setThemePreference(value);
+                        }}
+                      />
+                      <Icon aria-hidden />
+                      <span>
+                        <strong>{label}</strong>
+                        <small>{description}</small>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+            </section>
 
-        <div className={`change-save-bar${hasChanges ? " visible" : ""}`} aria-hidden={!hasChanges}>
-          <button className="primary-button wide" type="submit" form="settings-save-form" disabled={busy || !displayName.trim()}>{busy ? "保存中…" : "変更を保存"}</button>
-        </div>
+            {user.role === "owner" && (
+              <section className="settings-section">
+                <h2>メンバー</h2>
+                <div className="settings-card">
+                  {familyError ? (
+                    <div className="settings-family-error">
+                      <p>{familyError}</p>
+                      <button className="text-button" type="button" onClick={loadFamily}>
+                        再読み込み
+                      </button>
+                    </div>
+                  ) : members === null ? (
+                    <div className="settings-card-loading" role="status">
+                      <span className="spinner" />
+                      読み込み中
+                    </div>
+                  ) : (
+                    members.map((member) => (
+                      <article className="member-row" key={member.id}>
+                        <div className="member-avatar">
+                          {member.avatarUrl ? <img src={member.avatarUrl} alt="" /> : member.displayName.slice(0, 1)}
+                        </div>
+                        <div className="member-copy">
+                          <strong>{member.displayName}</strong>
+                          <span>{roleLabels[member.role]}</span>
+                        </div>
+                        <span className={`notification-state${member.notificationEnabled ? " enabled" : ""}`}>
+                          {member.notificationEnabled ? <Bell /> : <BellOff />}LINE通知
+                          {member.notificationEnabled ? "ON" : "OFF"}
+                        </span>
+                      </article>
+                    ))
+                  )}
+                  <Link className="settings-menu-row" to="/settings/family">
+                    <Users aria-hidden />
+                    <span>
+                      <strong>メンバーの管理</strong>
+                      <small>権限設定・招待URL発行</small>
+                    </span>
+                    <ChevronRight aria-hidden />
+                  </Link>
+                </div>
+              </section>
+            )}
 
-        <section className="settings-section">
-          <h2>表示</h2>
-          <fieldset className="settings-card theme-setting">
-            <legend className="visually-hidden">テーマ</legend>
-            <div>{themeOptions.map(({ value, label, description, icon: Icon }) => <label className={theme === value ? "selected" : ""} key={value}>
-              <input type="radio" name="theme" value={value} checked={theme === value} onChange={() => { setTheme(value); setThemePreference(value); }} />
-              <Icon aria-hidden />
-              <span><strong>{label}</strong><small>{description}</small></span>
-            </label>)}</div>
-          </fieldset>
-        </section>
+            <section className="settings-section">
+              <h2>その他</h2>
+              <div className="settings-card">
+                <button className="settings-menu-row settings-logout" type="button" onClick={logout} disabled={busy}>
+                  <LogOut aria-hidden />
+                  <span>
+                    <strong>ログアウト</strong>
+                  </span>
+                </button>
+              </div>
+            </section>
 
-        {user.role === "owner" && <section className="settings-section">
-          <h2>メンバー</h2>
-          <div className="settings-card">
-            {familyError ? <div className="settings-family-error"><p>{familyError}</p><button className="text-button" type="button" onClick={loadFamily}>再読み込み</button></div>
-              : members === null ? <div className="settings-card-loading" role="status"><span className="spinner" />読み込み中</div>
-              : members.map((member) => <article className="member-row" key={member.id}>
-                <div className="member-avatar">{member.avatarUrl ? <img src={member.avatarUrl} alt="" /> : member.displayName.slice(0, 1)}</div>
-                <div className="member-copy"><strong>{member.displayName}</strong><span>{roleLabels[member.role]}</span></div>
-                <span className={`notification-state${member.notificationEnabled ? " enabled" : ""}`}>{member.notificationEnabled ? <Bell /> : <BellOff />}LINE通知{member.notificationEnabled ? "ON" : "OFF"}</span>
-              </article>)}
-            <Link className="settings-menu-row" to="/settings/family"><Users aria-hidden /><span><strong>メンバーの管理</strong><small>権限設定・招待URL発行</small></span><ChevronRight aria-hidden /></Link>
-          </div>
-        </section>}
-
-        <section className="settings-section">
-          <h2>その他</h2>
-          <div className="settings-card"><button className="settings-menu-row settings-logout" type="button" onClick={logout} disabled={busy}><LogOut aria-hidden /><span><strong>ログアウト</strong></span></button></div>
-        </section>
-
-        <section className="settings-app-info" aria-label="アプリ情報">
-          <span aria-hidden>
-            <img className="settings-app-icon settings-app-icon-light" src="/icons/icon-light-transparent.png" alt="" />
-            <img className="settings-app-icon settings-app-icon-dark" src="/icons/icon-dark-transparent.png" alt="" />
-          </span>
-          <strong>このごろ</strong>
-          <small>バージョン {packageInfo.version}</small>
-        </section>
-      </>}
-    </main>
-  </>;
+            <section className="settings-app-info" aria-label="アプリ情報">
+              <span aria-hidden>
+                <img
+                  className="settings-app-icon settings-app-icon-light"
+                  src="/icons/icon-light-transparent.png"
+                  alt=""
+                />
+                <img
+                  className="settings-app-icon settings-app-icon-dark"
+                  src="/icons/icon-dark-transparent.png"
+                  alt=""
+                />
+              </span>
+              <strong>このごろ</strong>
+              <small>バージョン {packageInfo.version}</small>
+            </section>
+          </>
+        )}
+      </main>
+    </>
+  );
 }

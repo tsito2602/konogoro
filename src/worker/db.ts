@@ -49,21 +49,38 @@ export async function loadPosts(db: D1Database, rows: PostRow[], currentUser: Us
   if (rows.length === 0) return [];
 
   const placeholders = rows.map(() => "?").join(",");
-  const [mediaResult, commentsResult, seenResult] = await Promise.all([db.prepare(
-    `SELECT id, post_id, kind, mime_type, original_filename, byte_size,
+  const [mediaResult, commentsResult, seenResult] = await Promise.all([
+    db
+      .prepare(
+        `SELECT id, post_id, kind, mime_type, original_filename, byte_size,
             width, height, duration_seconds, captured_at, position
        FROM media
       WHERE status = 'uploaded' AND post_id IN (${placeholders})
       ORDER BY post_id, position`,
-  ).bind(...rows.map(({ id }) => id)).all<MediaRow>(), db.prepare(`
+      )
+      .bind(...rows.map(({ id }) => id))
+      .all<MediaRow>(),
+    db
+      .prepare(
+        `
     SELECT c.id, c.post_id, c.user_id, c.body, c.created_at, u.display_name AS author_name, u.avatar_url
       FROM comments c JOIN users u ON u.id = c.user_id
      WHERE c.post_id IN (${placeholders}) ORDER BY c.created_at, c.id
-  `).bind(...rows.map(({ id }) => id)).all<CommentRow>(), db.prepare(`
+  `,
+      )
+      .bind(...rows.map(({ id }) => id))
+      .all<CommentRow>(),
+    db
+      .prepare(
+        `
     SELECT v.post_id, v.user_id, u.display_name, u.avatar_url
       FROM view_histories v JOIN users u ON u.id = v.user_id
      WHERE v.post_id IN (${placeholders}) ORDER BY v.first_viewed_at, v.id
-  `).bind(...rows.map(({ id }) => id)).all<SeenRow>()]);
+  `,
+      )
+      .bind(...rows.map(({ id }) => id))
+      .all<SeenRow>(),
+  ]);
 
   const mediaByPost = new Map<string, Media[]>();
   for (const item of mediaResult.results) {
@@ -89,7 +106,15 @@ export async function loadPosts(db: D1Database, rows: PostRow[], currentUser: Us
 
   const commentsByPost = new Map<string, Comment[]>();
   for (const item of commentsResult.results) {
-    const comment: Comment = { id: item.id, body: item.body, userId: item.user_id, authorName: item.author_name, avatarUrl: item.avatar_url, createdAt: item.created_at, canDelete: canDeleteComment(currentUser, item.user_id) };
+    const comment: Comment = {
+      id: item.id,
+      body: item.body,
+      userId: item.user_id,
+      authorName: item.author_name,
+      avatarUrl: item.avatar_url,
+      createdAt: item.created_at,
+      canDelete: canDeleteComment(currentUser, item.user_id),
+    };
     const list = commentsByPost.get(item.post_id) ?? [];
     list.push(comment);
     commentsByPost.set(item.post_id, list);

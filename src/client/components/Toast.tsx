@@ -17,14 +17,24 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     }, 2800);
   }, []);
 
-  useEffect(() => () => {
-    if (timer.current !== null) window.clearTimeout(timer.current);
-  }, []);
+  useEffect(
+    () => () => {
+      if (timer.current !== null) window.clearTimeout(timer.current);
+    },
+    [],
+  );
 
-  return <ToastContext.Provider value={showToast}>
-    {children}
-    {toast && <div className="toast" key={toast.id} role="status" aria-live="polite"><Check aria-hidden /><span>{toast.message}</span></div>}
-  </ToastContext.Provider>;
+  return (
+    <ToastContext.Provider value={showToast}>
+      {children}
+      {toast && (
+        <div className="toast" key={toast.id} role="status" aria-live="polite">
+          <Check aria-hidden />
+          <span>{toast.message}</span>
+        </div>
+      )}
+    </ToastContext.Provider>
+  );
 }
 
 export function useToast() {

@@ -11,7 +11,10 @@ const member = {
   notification_enabled: 1,
 };
 
-function ownerEnv(updatedMember: typeof member | null = member, onUpdate?: (values: unknown[]) => void): Cloudflare.Env {
+function ownerEnv(
+  updatedMember: typeof member | null = member,
+  onUpdate?: (values: unknown[]) => void,
+): Cloudflare.Env {
   return {
     APP_ORIGIN: "http://localhost:5173",
     DB: {
@@ -33,41 +36,61 @@ function ownerEnv(updatedMember: typeof member | null = member, onUpdate?: (valu
 describe("member role API", () => {
   it("ownerが他のメンバーの権限を変更できる", async () => {
     const onUpdate = vi.fn();
-    const response = await app.request("/api/family/members/member-1", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ role: "uploader" }),
-    }, ownerEnv(member, onUpdate));
+    const response = await app.request(
+      "/api/family/members/member-1",
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role: "uploader" }),
+      },
+      ownerEnv(member, onUpdate),
+    );
 
     expect(response.status).toBe(200);
-    expect(await response.json()).toMatchObject({ id: "member-1", role: "uploader", lineConnected: true, notificationEnabled: true });
+    expect(await response.json()).toMatchObject({
+      id: "member-1",
+      role: "uploader",
+      lineConnected: true,
+      notificationEnabled: true,
+    });
     expect(onUpdate).toHaveBeenCalledWith(["uploader", expect.any(String), "member-1"]);
   });
 
   it("自分自身の権限変更を拒否する", async () => {
     const onUpdate = vi.fn();
-    const response = await app.request(`/api/family/members/${owner.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ role: "viewer" }),
-    }, ownerEnv(member, onUpdate));
+    const response = await app.request(
+      `/api/family/members/${owner.id}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role: "viewer" }),
+      },
+      ownerEnv(member, onUpdate),
+    );
 
     expect(response.status).toBe(400);
     expect(onUpdate).not.toHaveBeenCalled();
   });
 
   it("存在しないメンバーを404にする", async () => {
-    const response = await app.request("/api/family/members/missing", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ role: "viewer" }),
-    }, ownerEnv(null));
+    const response = await app.request(
+      "/api/family/members/missing",
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role: "viewer" }),
+      },
+      ownerEnv(null),
+    );
 
     expect(response.status).toBe(404);
   });
 });
 
-function memberDeletionEnv(memberExists = true, onBatch?: (statements: Array<{ sql: string; values: unknown[] }>) => void): Cloudflare.Env {
+function memberDeletionEnv(
+  memberExists = true,
+  onBatch?: (statements: Array<{ sql: string; values: unknown[] }>) => void,
+): Cloudflare.Env {
   const statements: Array<{ sql: string; values: unknown[] }> = [];
   return {
     APP_ORIGIN: "http://localhost:5173",
@@ -77,7 +100,8 @@ function memberDeletionEnv(memberExists = true, onBatch?: (statements: Array<{ s
           const statement = {
             sql,
             values,
-            first: async () => sql.includes("SELECT id FROM users") ? (memberExists ? { id: "member-1" } : null) : owner,
+            first: async () =>
+              sql.includes("SELECT id FROM users") ? (memberExists ? { id: "member-1" } : null) : owner,
           };
           statements.push(statement);
           return statement;
@@ -94,7 +118,11 @@ function memberDeletionEnv(memberExists = true, onBatch?: (statements: Array<{ s
 describe("member deletion API", () => {
   it("履歴を残してメンバーを無効化しsessionと未使用招待を失効する", async () => {
     const onBatch = vi.fn();
-    const response = await app.request("/api/family/members/member-1", { method: "DELETE" }, memberDeletionEnv(true, onBatch));
+    const response = await app.request(
+      "/api/family/members/member-1",
+      { method: "DELETE" },
+      memberDeletionEnv(true, onBatch),
+    );
 
     expect(response.status).toBe(204);
     const batched = onBatch.mock.calls[0]?.[0] as Array<{ sql: string; values: unknown[] }>;
@@ -106,7 +134,11 @@ describe("member deletion API", () => {
 
   it("自分自身の削除を拒否する", async () => {
     const onBatch = vi.fn();
-    const response = await app.request(`/api/family/members/${owner.id}`, { method: "DELETE" }, memberDeletionEnv(true, onBatch));
+    const response = await app.request(
+      `/api/family/members/${owner.id}`,
+      { method: "DELETE" },
+      memberDeletionEnv(true, onBatch),
+    );
 
     expect(response.status).toBe(400);
     expect(onBatch).not.toHaveBeenCalled();
@@ -114,7 +146,11 @@ describe("member deletion API", () => {
 
   it("存在しないメンバーを404にする", async () => {
     const onBatch = vi.fn();
-    const response = await app.request("/api/family/members/missing", { method: "DELETE" }, memberDeletionEnv(false, onBatch));
+    const response = await app.request(
+      "/api/family/members/missing",
+      { method: "DELETE" },
+      memberDeletionEnv(false, onBatch),
+    );
 
     expect(response.status).toBe(404);
     expect(onBatch).not.toHaveBeenCalled();

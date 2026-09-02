@@ -21,26 +21,32 @@ import "./styles.css";
 
 initializeTheme();
 
-const router = createBrowserRouter([{
-  element: <AppLayout />,
-  children: [
-    { path: "/", element: <TimelinePage /> },
-    { path: "/activity", element: <ActivityPage /> },
-    { path: "/timeline", element: <TimelinePage /> },
-    { path: "/album", element: <AlbumPage /> },
-    { path: "/events", element: <EventsPage /> },
-    { path: "/events/new", element: <EventCreatePage /> },
-    { path: "/events/:eventId", element: <EventDetailPage /> },
-    { path: "/events/:eventId/edit", element: <EventEditPage /> },
-    { path: "/posts/new", element: <PostCreatePage /> },
-    { path: "/posts/:postId", element: <PostDetailPage /> },
-    { path: "/posts/:postId/edit", element: <PostEditPage /> },
-    { path: "/posts/:postId/media/:mediaId", element: <MediaViewerPage /> },
-    { path: "/family", element: <Navigate to="/settings" replace /> },
-    { path: "/invite/:token", element: <InvitePage /> },
-    { path: "/settings", element: <SettingsPage /> },
-    { path: "/settings/family", element: <FamilySettingsPage /> },
-  ],
-}]);
+const router = createBrowserRouter([
+  {
+    element: <AppLayout />,
+    children: [
+      { path: "/", element: <TimelinePage /> },
+      { path: "/activity", element: <ActivityPage /> },
+      { path: "/timeline", element: <TimelinePage /> },
+      { path: "/album", element: <AlbumPage /> },
+      { path: "/events", element: <EventsPage /> },
+      { path: "/events/new", element: <EventCreatePage /> },
+      { path: "/events/:eventId", element: <EventDetailPage /> },
+      { path: "/events/:eventId/edit", element: <EventEditPage /> },
+      { path: "/posts/new", element: <PostCreatePage /> },
+      { path: "/posts/:postId", element: <PostDetailPage /> },
+      { path: "/posts/:postId/edit", element: <PostEditPage /> },
+      { path: "/posts/:postId/media/:mediaId", element: <MediaViewerPage /> },
+      { path: "/family", element: <Navigate to="/settings" replace /> },
+      { path: "/invite/:token", element: <InvitePage /> },
+      { path: "/settings", element: <SettingsPage /> },
+      { path: "/settings/family", element: <FamilySettingsPage /> },
+    ],
+  },
+]);
 
-createRoot(document.getElementById("root")!).render(<StrictMode><RouterProvider router={router} /></StrictMode>);
+createRoot(document.getElementById("root")!).render(
+  <StrictMode>
+    <RouterProvider router={router} />
+  </StrictMode>,
+);

@@ -8,12 +8,23 @@ export function hasLineConfig(env: LineSecrets): env is Required<LineSecrets> {
   return Boolean(env.LINE_CHANNEL_ID && env.LINE_CHANNEL_SECRET && env.APP_ORIGIN);
 }
 
-export async function getCurrentUser(db: D1Database, sessionToken?: string, allowDevFallback = true): Promise<User | null> {
+export async function getCurrentUser(
+  db: D1Database,
+  sessionToken?: string,
+  allowDevFallback = true,
+): Promise<User | null> {
   const user = sessionToken
-    ? await db.prepare("SELECT u.id, u.display_name, u.role, u.avatar_url FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ? AND s.expires_at > ? AND u.is_active = 1")
-      .bind(await hashToken(sessionToken), new Date().toISOString()).first<{ id: string; display_name: string; role: User["role"]; avatar_url: string | null }>()
+    ? await db
+        .prepare(
+          "SELECT u.id, u.display_name, u.role, u.avatar_url FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ? AND s.expires_at > ? AND u.is_active = 1",
+        )
+        .bind(await hashToken(sessionToken), new Date().toISOString())
+        .first<{ id: string; display_name: string; role: User["role"]; avatar_url: string | null }>()
     : allowDevFallback
-      ? await db.prepare("SELECT id, display_name, role, avatar_url FROM users WHERE id = ? AND is_active = 1").bind(DEV_USER_ID).first<{ id: string; display_name: string; role: User["role"]; avatar_url: string | null }>()
+      ? await db
+          .prepare("SELECT id, display_name, role, avatar_url FROM users WHERE id = ? AND is_active = 1")
+          .bind(DEV_USER_ID)
+          .first<{ id: string; display_name: string; role: User["role"]; avatar_url: string | null }>()
       : null;
   return user ? { id: user.id, displayName: user.display_name, role: user.role, avatarUrl: user.avatar_url } : null;
 }
@@ -21,8 +32,10 @@ export async function getCurrentUser(db: D1Database, sessionToken?: string, allo
 export async function createSession(db: D1Database, userId: string): Promise<string> {
   const session = randomToken();
   const now = new Date();
-  await db.prepare("INSERT INTO sessions (token_hash, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)")
-    .bind(await hashToken(session), userId, new Date(now.getTime() + 30 * 86400000).toISOString(), now.toISOString()).run();
+  await db
+    .prepare("INSERT INTO sessions (token_hash, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)")
+    .bind(await hashToken(session), userId, new Date(now.getTime() + 30 * 86400000).toISOString(), now.toISOString())
+    .run();
   return session;
 }
 
@@ -60,5 +73,8 @@ export async function getLineFriendship(accessToken: string, fetcher: typeof fet
 }
 
 function bytesToBase64Url(bytes: Uint8Array): string {
-  return btoa(String.fromCharCode(...bytes)).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
+  return btoa(String.fromCharCode(...bytes))
+    .replaceAll("+", "-")
+    .replaceAll("/", "_")
+    .replaceAll("=", "");
 }

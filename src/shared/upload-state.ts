@@ -5,5 +5,5 @@ export function canPublishMedia(statuses: MediaUploadStatus[]): boolean {
 }
 
 export function retryableMediaIndexes(statuses: MediaUploadStatus[]): number[] {
-  return statuses.flatMap((status, index) => status === "failed" ? [index] : []);
+  return statuses.flatMap((status, index) => (status === "failed" ? [index] : []));
 }

@@ -1,6 +1,9 @@
 export async function createInviteToken(): Promise<{ token: string; tokenHash: string }> {
   const bytes = crypto.getRandomValues(new Uint8Array(32));
-  const token = btoa(String.fromCharCode(...bytes)).replaceAll("+", "-").replaceAll("/", "_").replaceAll("=", "");
+  const token = btoa(String.fromCharCode(...bytes))
+    .replaceAll("+", "-")
+    .replaceAll("/", "_")
+    .replaceAll("=", "");
   return { token, tokenHash: await hashInviteToken(token) };
 }
 

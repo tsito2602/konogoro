@@ -1,9 +1,20 @@
 import { describe, expect, it } from "vitest";
-import { commentInputSchema, eventCoverInputSchema, eventInputSchema, eventManagementInputSchema, memberRoleInputSchema, postInputSchema, sceneInputSchema, uploadFilesSchema } from "./schemas";
+import {
+  commentInputSchema,
+  eventCoverInputSchema,
+  eventInputSchema,
+  eventManagementInputSchema,
+  memberRoleInputSchema,
+  postInputSchema,
+  sceneInputSchema,
+  uploadFilesSchema,
+} from "./schemas";
 
 describe("API validation", () => {
   it("終了日が開始日より前のイベントを拒否する", () => {
-    expect(eventInputSchema.safeParse({ title: "旅行", startDate: "2026-09-10", endDate: "2026-09-01" }).success).toBe(false);
+    expect(eventInputSchema.safeParse({ title: "旅行", startDate: "2026-09-10", endDate: "2026-09-01" }).success).toBe(
+      false,
+    );
   });
 
   it("accepts manual and automatic event covers", () => {
@@ -14,8 +25,23 @@ describe("API validation", () => {
 
   it("イベント編集内容をまとめて受け付け、重複シーンを拒否する", () => {
     const event = { title: "旅行", description: "", startDate: null, endDate: null };
-    expect(eventManagementInputSchema.safeParse({ event, scenes: [{ id: "scene-1", title: "1日目" }, { title: "2日目" }], coverMediaId: null }).success).toBe(true);
-    expect(eventManagementInputSchema.safeParse({ event, scenes: [{ id: "scene-1", title: "1日目" }, { id: "scene-1", title: "重複" }], coverMediaId: null }).success).toBe(false);
+    expect(
+      eventManagementInputSchema.safeParse({
+        event,
+        scenes: [{ id: "scene-1", title: "1日目" }, { title: "2日目" }],
+        coverMediaId: null,
+      }).success,
+    ).toBe(true);
+    expect(
+      eventManagementInputSchema.safeParse({
+        event,
+        scenes: [
+          { id: "scene-1", title: "1日目" },
+          { id: "scene-1", title: "重複" },
+        ],
+        coverMediaId: null,
+      }).success,
+    ).toBe(false);
   });
 
   it("空コメントを拒否する", () => {

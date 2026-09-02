@@ -7,7 +7,11 @@ type LineWebhookEvent = {
   };
 };
 
-export async function verifyLineWebhookSignature(body: string, signature: string, channelSecret: string): Promise<boolean> {
+export async function verifyLineWebhookSignature(
+  body: string,
+  signature: string,
+  channelSecret: string,
+): Promise<boolean> {
   let signatureBytes: Uint8Array<ArrayBuffer>;
   try {
     const decoded = atob(signature);
@@ -33,17 +37,27 @@ export function lineFriendshipStatements(db: D1Database, events: unknown[], upda
     const { type, source } = event as LineWebhookEvent;
     const userId = source?.userId;
     if ((type !== "follow" && type !== "unfollow") || typeof userId !== "string" || !userId) continue;
-    statements.push(type === "follow"
-      ? db.prepare(`
+    statements.push(
+      type === "follow"
+        ? db
+            .prepare(
+              `
           UPDATE users
              SET line_friend_enabled = 1, updated_at = ?
            WHERE line_user_id = ? AND is_active = 1
-        `).bind(updatedAt, userId)
-      : db.prepare(`
+        `,
+            )
+            .bind(updatedAt, userId)
+        : db
+            .prepare(
+              `
           UPDATE users
              SET line_friend_enabled = 0, notification_enabled = 0, updated_at = ?
            WHERE line_user_id = ? AND is_active = 1
-        `).bind(updatedAt, userId));
+        `,
+            )
+            .bind(updatedAt, userId),
+    );
   }
   return statements;
 }

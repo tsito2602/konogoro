@@ -16,16 +16,20 @@ export function TimelinePage() {
   const [loadingMore, setLoadingMore] = useState(false);
   const load = () => {
     setError("");
-    void api<TimelineResponse>("/timeline").then((data) => {
-      setPosts(data.posts);
-      setNextCursor(data.nextCursor);
-    }).catch((reason: Error) => setError(reason.message));
+    void api<TimelineResponse>("/timeline")
+      .then((data) => {
+        setPosts(data.posts);
+        setNextCursor(data.nextCursor);
+      })
+      .catch((reason: Error) => setError(reason.message));
   };
   useEffect(() => {
-    void api<TimelineResponse>("/timeline").then((data) => {
-      setPosts(data.posts);
-      setNextCursor(data.nextCursor);
-    }).catch((reason: Error) => setError(reason.message));
+    void api<TimelineResponse>("/timeline")
+      .then((data) => {
+        setPosts(data.posts);
+        setNextCursor(data.nextCursor);
+      })
+      .catch((reason: Error) => setError(reason.message));
   }, []);
 
   const loadMore = async () => {
@@ -34,7 +38,7 @@ export function TimelinePage() {
     setMoreError("");
     try {
       const data = await api<TimelineResponse>(`/timeline?cursor=${encodeURIComponent(nextCursor)}`);
-      setPosts((current) => current ? appendUniquePosts(current, data.posts) : data.posts);
+      setPosts((current) => (current ? appendUniquePosts(current, data.posts) : data.posts));
       setNextCursor(data.nextCursor);
     } catch (reason) {
       setMoreError((reason as Error).message);
@@ -43,19 +47,52 @@ export function TimelinePage() {
     }
   };
 
-  return <>
-    <PageHeader title="タイムライン" />
-    <main className="feed">
-      {!posts && !error && <Loading />}
-      {error && <ErrorState message={error} retry={load} />}
-      {posts?.length === 0 && <EmptyState title="まだ投稿がありません" body={currentUser.role === "viewer" ? "新しい思い出が追加されると、ここに表示されます。" : "写真をまとめて、最初の思い出を追加できます。"} action={currentUser.role === "viewer" ? undefined : <Link className="primary-button" to="/posts/new">写真を追加</Link>} />}
-      {posts?.map((post) => <PostCard post={post} key={post.id} />)}
-      {posts && nextCursor && <div className="form-page">
-        {moreError && <p className="form-error" role="alert">{moreError}</p>}
-        <button className="outline-button wide" type="button" onClick={() => void loadMore()} disabled={loadingMore}>{loadingMore ? "読み込み中…" : "さらに読み込む"}</button>
-      </div>}
-    </main>
-  </>;
+  return (
+    <>
+      <PageHeader title="タイムライン" />
+      <main className="feed">
+        {!posts && !error && <Loading />}
+        {error && <ErrorState message={error} retry={load} />}
+        {posts?.length === 0 && (
+          <EmptyState
+            title="まだ投稿がありません"
+            body={
+              currentUser.role === "viewer"
+                ? "新しい思い出が追加されると、ここに表示されます。"
+                : "写真をまとめて、最初の思い出を追加できます。"
+            }
+            action={
+              currentUser.role === "viewer" ? undefined : (
+                <Link className="primary-button" to="/posts/new">
+                  写真を追加
+                </Link>
+              )
+            }
+          />
+        )}
+        {posts?.map((post) => (
+          <PostCard post={post} key={post.id} />
+        ))}
+        {posts && nextCursor && (
+          <div className="form-page">
+            {moreError && (
+              <p className="form-error" role="alert">
+                {moreError}
+              </p>
+            )}
+            <button
+              className="outline-button wide"
+              type="button"
+              onClick={() => void loadMore()}
+              disabled={loadingMore}
+            >
+              {loadingMore ? "読み込み中…" : "さらに読み込む"}
+            </button>
+          </div>
+        )}
+      </main>
+    </>
+  );
 }
 
 type TimelineResponse = { posts: Post[]; nextCursor: string | null };

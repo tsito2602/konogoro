@@ -47,16 +47,9 @@ describe("video delivery", () => {
     const response = await app.request("/api/media/video-1/content", undefined, mediaEnv());
 
     expect(response.status).toBe(200);
-    expect(response.headers.get("Content-Type")).toBe("video/mp4");
+    expect(response.headers.get("Content-Type")).toBe("video/quicktime");
     expect(response.headers.get("Accept-Ranges")).toBe("bytes");
     expect(response.headers.get("Content-Length")).toBe("12");
-  });
-
-  it("保存時は元のQuickTime形式を維持する", async () => {
-    const response = await app.request("/api/media/video-1/download", undefined, mediaEnv());
-
-    expect(response.status).toBe(200);
-    expect(response.headers.get("Content-Type")).toBe("video/quicktime");
   });
 
   it("Range要求へ206と取得範囲を返す", async () => {

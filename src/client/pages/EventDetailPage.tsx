@@ -1,5 +1,5 @@
 import { ImagePlus, Pencil } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import type { EventDetail } from "../../shared/types";
 import { api, eventDate } from "../api";
@@ -16,6 +16,7 @@ export function EventDetailPage() {
   const { eventId = "" } = useParams();
   const [detail, setDetail] = useState<EventDetail | null>(null);
   const [error, setError] = useState("");
+  const coverImageRef = useRef<HTMLDivElement>(null);
   const load = () => {
     setError("");
     void api<EventDetail>(`/events/${eventId}`)
@@ -27,6 +28,25 @@ export function EventDetailPage() {
       .then(setDetail)
       .catch((reason: Error) => setError(reason.message));
   }, [eventId]);
+  useEffect(() => {
+    const coverImage = coverImageRef.current;
+    if (!coverImage) return;
+    let animationFrame = 0;
+    const updateScale = () => {
+      animationFrame = 0;
+      const scale = 1 + Math.min(Math.max(window.scrollY, 0), 400) / 5000;
+      coverImage.style.setProperty("--event-cover-scale", scale.toFixed(3));
+    };
+    const handleScroll = () => {
+      if (!animationFrame) animationFrame = window.requestAnimationFrame(updateScale);
+    };
+    updateScale();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      if (animationFrame) window.cancelAnimationFrame(animationFrame);
+    };
+  }, [detail?.coverUrl]);
   if (!detail && !error)
     return (
       <>
@@ -65,10 +85,15 @@ export function EventDetailPage() {
         }
       />
       <main className="event-detail">
-        <section
-          className={`event-cover${detail.coverUrl ? "" : " no-cover"}`}
-          style={detail.coverUrl ? { backgroundImage: `url(${detail.coverUrl})` } : undefined}
-        >
+        <section className={`event-cover${detail.coverUrl ? "" : " no-cover"}`}>
+          {detail.coverUrl && (
+            <div
+              ref={coverImageRef}
+              className="event-cover-image"
+              style={{ backgroundImage: `url(${detail.coverUrl})` }}
+              aria-hidden
+            />
+          )}
           <div>
             <p>{eventDate(detail.startDate, detail.endDate)}</p>
             <h2>{detail.title}</h2>

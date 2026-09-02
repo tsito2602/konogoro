@@ -1447,9 +1447,16 @@ a.icon-button {
   display: flex;
   align-items: flex-end;
   overflow: hidden;
-  background-size: cover;
-  background-position: center;
   color: white;
+}
+.event-cover-image {
+  position: absolute;
+  inset: 0;
+  background-position: center;
+  background-size: cover;
+  transform: scale(var(--event-cover-scale, 1));
+  transform-origin: center;
+  will-change: transform;
 }
 .event-cover::after {
   content: "";
@@ -2922,6 +2929,9 @@ textarea:focus {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .event-cover-image {
+    transform: none;
+  }
   .page-skeleton *,
   .skeleton-comment-composer * {
     animation: none !important;

@@ -1,11 +1,12 @@
 import * as exifr from "exifr";
 
-export type UploadStatus = "ready" | "uploading" | "uploaded" | "failed";
+export type UploadStatus = "preparing" | "preparation-failed" | "ready" | "uploading" | "uploaded" | "failed";
 
 export type SelectedMediaFile = {
+  id: string;
   file: File;
   previewUrl: string;
-  thumbnail: Blob;
+  thumbnail: Blob | null;
   optimizedPreview?: Blob;
   capturedAt: string | null;
   width: number | null;
@@ -27,44 +28,89 @@ export function validateMediaFiles(files: File[], currentCount: number): string 
   return null;
 }
 
-export async function readMediaFile(file: File): Promise<SelectedMediaFile> {
+export function createPendingMediaFile(file: File): SelectedMediaFile {
   const previewUrl = URL.createObjectURL(file);
+  return {
+    id: previewUrl,
+    file,
+    previewUrl,
+    thumbnail: null,
+    capturedAt: null,
+    width: null,
+    height: null,
+    durationSeconds: null,
+    status: "preparing",
+  };
+}
+
+export async function prepareMediaFiles(
+  files: SelectedMediaFile[],
+  onPrepared: (file: SelectedMediaFile) => void,
+  concurrency = 2,
+): Promise<void> {
+  let nextFile = 0;
+  await Promise.all(
+    Array.from({ length: Math.min(concurrency, files.length) }, async () => {
+      while (nextFile < files.length) {
+        const file = files[nextFile++];
+        try {
+          onPrepared(await prepareMediaFile(file));
+        } catch {
+          onPrepared({ ...file, status: "preparation-failed" });
+        }
+        await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
+      }
+    }),
+  );
+}
+
+async function prepareMediaFile(item: SelectedMediaFile): Promise<SelectedMediaFile> {
+  const capturedAtPromise = captureDate(item.file);
   try {
-    const capturedAt = await captureDate(file);
-    if (file.type.startsWith("video/")) {
-      const video = await loadVideo(previewUrl);
+    if (item.file.type.startsWith("video/")) {
+      const video = await loadVideo(item.previewUrl);
+      const width = video.videoWidth;
+      const height = video.videoHeight;
+      const durationSeconds = Number.isFinite(video.duration) ? video.duration : null;
       const thumbnail = await drawOptimizedImage(video, video.videoWidth, video.videoHeight, 480, 0.78);
+      video.removeAttribute("src");
+      video.load();
+      const previewUrl = URL.createObjectURL(thumbnail);
+      URL.revokeObjectURL(item.previewUrl);
       return {
-        file,
+        ...item,
         previewUrl,
         thumbnail,
-        capturedAt,
-        width: video.videoWidth,
-        height: video.videoHeight,
-        durationSeconds: Number.isFinite(video.duration) ? video.duration : null,
+        capturedAt: await capturedAtPromise,
+        width,
+        height,
+        durationSeconds,
         status: "ready",
       };
     }
-    const bitmap = await createImageBitmap(file);
-    const [thumbnail, optimizedPreview] = await Promise.all([
-      drawOptimizedImage(bitmap, bitmap.width, bitmap.height, 480, 0.78),
-      drawOptimizedImage(bitmap, bitmap.width, bitmap.height, 1800, 0.86),
-    ]);
-    const result = {
-      file,
-      previewUrl,
-      thumbnail,
-      optimizedPreview,
-      capturedAt,
-      width: bitmap.width,
-      height: bitmap.height,
-      durationSeconds: null,
-      status: "ready" as const,
-    };
-    bitmap.close();
-    return result;
+    const bitmap = await createImageBitmap(item.file);
+    try {
+      const thumbnail = await drawOptimizedImage(bitmap, bitmap.width, bitmap.height, 480, 0.78);
+      const optimizedPreview = await drawOptimizedImage(bitmap, bitmap.width, bitmap.height, 1800, 0.86);
+      const previewUrl = URL.createObjectURL(thumbnail);
+      const result: SelectedMediaFile = {
+        ...item,
+        previewUrl,
+        thumbnail,
+        optimizedPreview,
+        capturedAt: await capturedAtPromise,
+        width: bitmap.width,
+        height: bitmap.height,
+        durationSeconds: null,
+        status: "ready",
+      };
+      URL.revokeObjectURL(item.previewUrl);
+      return result;
+    } finally {
+      bitmap.close();
+    }
   } catch (error) {
-    URL.revokeObjectURL(previewUrl);
+    await capturedAtPromise;
     throw error;
   }
 }

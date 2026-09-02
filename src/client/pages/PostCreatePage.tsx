@@ -1,13 +1,15 @@
-import { AlertCircle, ImagePlus, Plus, RotateCcw, X } from "lucide-react";
+import { AlertCircle, ImagePlus, LoaderCircle, Plus, RotateCcw, Video, X } from "lucide-react";
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import type { EventDetail, EventScene, EventSummary, UploadTarget } from "../../shared/types";
 import { api } from "../api";
+import { MediaProcessingStatus } from "../components/MediaProcessingStatus";
 import { PageHeader } from "../components/PageHeader";
 import { useToast } from "../components/Toast";
 import {
   acceptedMediaTypes,
-  readMediaFile,
+  createPendingMediaFile,
+  prepareMediaFiles,
   uploadFile,
   validateMediaFiles,
   type SelectedMediaFile,
@@ -25,11 +27,11 @@ export function PostCreatePage() {
   const [draftPostId, setDraftPostId] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
   const [busy, setBusy] = useState(false);
-  const [preparing, setPreparing] = useState(false);
   const [error, setError] = useState("");
   const [newScene, setNewScene] = useState("");
   const [showSceneForm, setShowSceneForm] = useState(false);
   const filesRef = useRef(files);
+  const mountedRef = useRef(true);
 
   useEffect(() => {
     void api<{ events: EventSummary[] }>("/events").then(({ events: result }) => setEvents(result));
@@ -40,10 +42,33 @@ export function PostCreatePage() {
   useEffect(() => {
     filesRef.current = files;
   }, [files]);
-  useEffect(() => () => filesRef.current.forEach(({ previewUrl }) => URL.revokeObjectURL(previewUrl)), []);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      filesRef.current.forEach(({ previewUrl }) => URL.revokeObjectURL(previewUrl));
+    };
+  }, []);
 
   const updateFile = (index: number, values: Partial<SelectedMediaFile>) =>
     setFiles((current) => current.map((item, itemIndex) => (itemIndex === index ? { ...item, ...values } : item)));
+
+  const applyPreparedFile = (prepared: SelectedMediaFile) => {
+    if (!mountedRef.current) {
+      URL.revokeObjectURL(prepared.previewUrl);
+      return;
+    }
+    setFiles((current) => {
+      if (!current.some((item) => item.id === prepared.id)) {
+        URL.revokeObjectURL(prepared.previewUrl);
+        return current;
+      }
+      return current.map((item) => (item.id === prepared.id ? prepared : item));
+    });
+    if (prepared.status === "preparation-failed") {
+      setError("準備できなかった項目があります。写真・動画の上から再試行してください。");
+    }
+  };
 
   const selectFiles = async (event: ChangeEvent<HTMLInputElement>) => {
     const chosen = Array.from(event.target.files ?? []);
@@ -54,21 +79,25 @@ export function PostCreatePage() {
       return;
     }
     setError("");
-    setPreparing(true);
-    try {
-      const selected = await Promise.all(chosen.map(readMediaFile));
-      setFiles((current) => [...current, ...selected]);
-    } catch {
-      setError("選択したメディアを読み込めませんでした");
-    } finally {
-      setPreparing(false);
-    }
+    const selected = chosen.map(createPendingMediaFile);
+    setFiles((current) => [...current, ...selected]);
+    await prepareMediaFiles(selected, applyPreparedFile);
   };
 
-  const removeFile = (index: number) => {
+  const retryPreparation = async (id: string) => {
+    const item = files.find((file) => file.id === id);
+    if (!item) return;
+    const pending = { ...item, status: "preparing" as const };
+    setError("");
+    setFiles((current) => current.map((file) => (file.id === id ? pending : file)));
+    await prepareMediaFiles([pending], applyPreparedFile, 1);
+  };
+
+  const removeFile = (id: string) => {
     setFiles((current) => {
-      URL.revokeObjectURL(current[index].previewUrl);
-      return current.filter((_, itemIndex) => itemIndex !== index);
+      const removed = current.find((item) => item.id === id);
+      if (removed) URL.revokeObjectURL(removed.previewUrl);
+      return current.filter((item) => item.id !== id);
     });
   };
 
@@ -96,7 +125,7 @@ export function PostCreatePage() {
       (total, { item, target }) =>
         total +
         item.file.size +
-        item.thumbnail.size +
+        (item.thumbnail?.size ?? 0) +
         (target.previewUploadUrl && item.optimizedPreview ? item.optimizedPreview.size : 0),
       0,
     );
@@ -114,13 +143,19 @@ export function PostCreatePage() {
       Array.from({ length: Math.min(2, entries.length) }, async () => {
         while (nextEntry < entries.length) {
           const { item, index, target } = entries[nextEntry++];
+          const thumbnail = item.thumbnail;
+          if (!thumbnail) {
+            failed = true;
+            updateFile(index, { status: "preparation-failed" });
+            continue;
+          }
           updateFile(index, { status: "uploading", mediaId: target.id });
           try {
             await Promise.all([
               uploadFile(target.uploadUrl, item.file, item.file.type, (loaded) =>
                 reportProgress(`${index}:original`, loaded),
               ),
-              uploadFile(target.thumbnailUploadUrl, item.thumbnail, "image/webp", (loaded) =>
+              uploadFile(target.thumbnailUploadUrl, thumbnail, "image/webp", (loaded) =>
                 reportProgress(`${index}:thumbnail`, loaded),
               ),
               ...(target.previewUploadUrl && item.optimizedPreview
@@ -179,6 +214,10 @@ export function PostCreatePage() {
     event.preventDefault();
     if (files.length === 0) {
       setError("写真・動画を1件以上選択してください");
+      return;
+    }
+    if (files.some((item) => item.status === "preparing" || item.status === "preparation-failed")) {
+      setError("すべての写真・動画の準備が完了してから投稿してください");
       return;
     }
     setBusy(true);
@@ -250,28 +289,50 @@ export function PostCreatePage() {
 
   const photos = files.filter((item) => item.file.type.startsWith("image/")).length;
   const videos = files.length - photos;
+  const preparing = files.some((item) => item.status === "preparing");
+  const hasPreparationFailure = files.some((item) => item.status === "preparation-failed");
 
   return (
     <>
       <PageHeader title="写真・動画を追加" back />
       <main className="form-page page-content">
         <form onSubmit={submit} className="form-stack">
+          <MediaProcessingStatus files={files} uploading={busy} uploadProgress={progress} />
           <section className="photo-picker">
             <div className="selected-photos">
-              {files.map((item, index) => (
-                <div
-                  className={`selected-photo ${item.status}`}
-                  key={`${item.file.name}-${item.file.lastModified}-${index}`}
-                >
-                  <img src={item.previewUrl} alt="" />
+              {files.map((item) => (
+                <div className={`selected-photo ${item.status}`} key={item.id}>
+                  {item.file.type.startsWith("video/") && !item.thumbnail ? (
+                    <span className="video-preview-placeholder" aria-hidden="true">
+                      <Video />
+                    </span>
+                  ) : (
+                    <img src={item.previewUrl} alt="" loading="lazy" decoding="async" />
+                  )}
                   {item.file.type.startsWith("video/") && <span className="video-badge">動画</span>}
+                  {item.status === "preparing" && (
+                    <span className="preparing-badge" aria-label="準備中">
+                      <LoaderCircle />
+                    </span>
+                  )}
+                  {item.status === "preparation-failed" && (
+                    <button className="preparation-retry" type="button" onClick={() => void retryPreparation(item.id)}>
+                      <RotateCcw />
+                      再試行
+                    </button>
+                  )}
                   {item.status === "failed" && (
                     <span className="failed-badge">
                       <AlertCircle />
                     </span>
                   )}
                   {!draftPostId && (
-                    <button type="button" onClick={() => removeFile(index)} aria-label={`${item.file.name}を外す`}>
+                    <button
+                      className="remove-selected-photo"
+                      type="button"
+                      onClick={() => removeFile(item.id)}
+                      aria-label={`${item.file.name}を外す`}
+                    >
                       <X />
                     </button>
                   )}
@@ -363,20 +424,6 @@ export function PostCreatePage() {
               disabled={busy || !!draftPostId}
             />
           </label>
-          {preparing && (
-            <p className="muted" role="status">
-              画像を準備中…
-            </p>
-          )}
-          {(busy || progress > 0) && (
-            <div className="upload-progress" role="status">
-              <div>
-                <span>{progress === 100 ? "処理中" : "アップロード中"}</span>
-                <strong>{progress}%</strong>
-              </div>
-              <progress value={progress} max={100} />
-            </div>
-          )}
           {error && (
             <p className="form-error" role="alert">
               {error}
@@ -398,7 +445,7 @@ export function PostCreatePage() {
               アップロードを再開
             </button>
           ) : (
-            <button className="primary-button wide" disabled={preparing || files.length === 0}>
+            <button className="primary-button wide" disabled={preparing || hasPreparationFailure || files.length === 0}>
               投稿
             </button>
           )}

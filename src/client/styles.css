@@ -2430,8 +2430,9 @@ textarea:focus {
   height: 100%;
   object-fit: cover;
 }
-.selected-photo button {
+.selected-photo .remove-selected-photo {
   position: absolute;
+  z-index: 3;
   top: 0;
   right: 0;
   width: 44px;
@@ -2442,13 +2443,14 @@ textarea:focus {
   color: white;
   background: transparent;
 }
-.selected-photo button svg {
+.selected-photo .remove-selected-photo svg {
   width: 28px;
   height: 28px;
   padding: 6px;
   border-radius: 50%;
   background: rgba(0, 0, 0, 0.62);
 }
+.selected-photo.preparation-failed::after,
 .selected-photo.failed::after {
   content: "";
   position: absolute;
@@ -2456,6 +2458,18 @@ textarea:focus {
   border: 2px solid var(--danger);
   border-radius: var(--radius);
   pointer-events: none;
+}
+.video-preview-placeholder {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  color: var(--ash);
+  background: var(--surface-muted);
+}
+.video-preview-placeholder svg {
+  width: 30px;
+  height: 30px;
 }
 .video-badge {
   position: absolute;
@@ -2466,6 +2480,40 @@ textarea:focus {
   color: #fff;
   background: rgba(0, 0, 0, 0.68);
   font-size: 10px;
+}
+.preparing-badge {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.28);
+  pointer-events: none;
+}
+.preparing-badge svg {
+  width: 25px;
+  height: 25px;
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.35));
+  animation: spin 0.8s linear infinite;
+}
+.selected-photo .preparation-retry {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border: 0;
+  color: #fff;
+  background: rgba(180, 35, 24, 0.62);
+  font-size: 11px;
+  font-weight: 600;
+}
+.selected-photo .preparation-retry svg {
+  width: 23px;
+  height: 23px;
 }
 .failed-badge {
   position: absolute;
@@ -2504,13 +2552,23 @@ textarea:focus {
   color: var(--ash);
   font-size: 13px;
 }
-.upload-progress > div {
+.media-processing-status {
+  position: sticky;
+  z-index: 19;
+  top: 56px;
+  margin: -24px -16px 0;
+  padding: 10px 16px 12px;
+  border-bottom: 1px solid var(--separator);
+  background: var(--header-background);
+  backdrop-filter: blur(20px) saturate(180%);
+}
+.media-processing-status > div {
   display: flex;
   justify-content: space-between;
   margin-bottom: 7px;
   font-size: 14px;
 }
-.upload-progress progress {
+.media-processing-status progress {
   display: block;
   width: 100%;
   height: 5px;
@@ -2518,10 +2576,13 @@ textarea:focus {
   border-radius: 5px;
   overflow: hidden;
 }
-.upload-progress progress::-webkit-progress-bar {
+.media-processing-status progress::-webkit-progress-bar {
   background: var(--placeholder);
 }
-.upload-progress progress::-webkit-progress-value {
+.media-processing-status progress::-webkit-progress-value {
+  background: var(--accent);
+}
+.media-processing-status progress::-moz-progress-bar {
   background: var(--accent);
 }
 .outline-button.wide {

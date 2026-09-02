@@ -2535,6 +2535,38 @@ textarea:focus {
   height: 100%;
   object-fit: cover;
 }
+.selected-photo.dragging {
+  opacity: 0.58;
+  transform: scale(0.96);
+}
+.media-drag-handle {
+  position: absolute;
+  z-index: 3;
+  right: 5px;
+  bottom: 5px;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.62);
+  cursor: grab;
+  touch-action: none;
+}
+.media-drag-handle:active {
+  cursor: grabbing;
+}
+.media-drag-handle:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.media-drag-handle svg {
+  width: 19px;
+  height: 19px;
+}
 .selected-photo .remove-selected-photo {
   position: absolute;
   z-index: 3;

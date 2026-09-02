@@ -52,6 +52,25 @@ describe("API validation", () => {
     expect(postInputSchema.safeParse({ caption: "旅行の思い出", eventId: null, sceneId: null }).success).toBe(true);
   });
 
+  it("投稿メディアの並び順を受け付け、重複を拒否する", () => {
+    expect(
+      postInputSchema.safeParse({
+        caption: "",
+        eventId: null,
+        sceneId: null,
+        mediaIds: ["media-2", "media-1"],
+      }).success,
+    ).toBe(true);
+    expect(
+      postInputSchema.safeParse({
+        caption: "",
+        eventId: null,
+        sceneId: null,
+        mediaIds: ["media-1", "media-1"],
+      }).success,
+    ).toBe(false);
+  });
+
   it("シーン名を受け付ける", () => {
     expect(sceneInputSchema.safeParse({ title: "1日目" }).success).toBe(true);
     expect(sceneInputSchema.safeParse({ title: "   " }).success).toBe(false);

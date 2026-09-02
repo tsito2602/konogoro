@@ -978,15 +978,38 @@ app.put("/posts/:postId", async (c) => {
       .first();
     if (!scene) return c.json({ error: "シーンがイベントと一致しません" }, 400);
   }
+  let mediaPositionOffset = 0;
+  if (input.mediaIds) {
+    const media = await c.env.DB.prepare("SELECT id, position, status FROM media WHERE post_id = ?")
+      .bind(postId)
+      .all<{ id: string; position: number; status: string }>();
+    const uploadedMediaIds = new Set(media.results.filter(({ status }) => status === "uploaded").map(({ id }) => id));
+    if (input.mediaIds.some((id) => !uploadedMediaIds.has(id))) {
+      return c.json({ error: "写真・動画の並び順が投稿と一致しません" }, 400);
+    }
+    mediaPositionOffset = Math.max(...media.results.map(({ position }) => position), -1) + 1;
+  }
   const now = new Date().toISOString();
   const statements = [
     c.env.DB.prepare(
       "UPDATE posts SET event_id = ?, scene_id = ?, caption = ?, updated_at = ? WHERE id = ? AND status = 'published'",
     ).bind(input.eventId, input.sceneId, input.caption, now, postId),
   ];
+  if (input.mediaIds) {
+    statements.push(
+      c.env.DB.prepare("UPDATE media SET position = position + ? WHERE post_id = ?").bind(mediaPositionOffset, postId),
+    );
+    statements.push(
+      ...input.mediaIds.map((mediaId, position) =>
+        c.env.DB.prepare("UPDATE media SET position = ? WHERE id = ? AND post_id = ?").bind(position, mediaId, postId),
+      ),
+    );
+  }
   if (post.event_id !== input.eventId) {
     if (post.event_id) statements.push(autoEventCoverStatement(c.env.DB, post.event_id, now));
     if (input.eventId) statements.push(autoEventCoverStatement(c.env.DB, input.eventId, now));
+  } else if (input.mediaIds && input.eventId) {
+    statements.push(autoEventCoverStatement(c.env.DB, input.eventId, now));
   }
   await c.env.DB.batch(statements);
   return c.json({ id: postId });

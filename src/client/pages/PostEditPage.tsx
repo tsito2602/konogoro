@@ -1,5 +1,12 @@
-import { AlertCircle, ImagePlus, LoaderCircle, Plus, RotateCcw, Video, X } from "lucide-react";
-import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import { AlertCircle, GripVertical, ImagePlus, LoaderCircle, Plus, RotateCcw, Video, X } from "lucide-react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import type { EventDetail, EventScene, EventSummary, Post, UploadTarget } from "../../shared/types";
 import { api } from "../api";
@@ -8,6 +15,7 @@ import { MediaProcessingStatus } from "../components/MediaProcessingStatus";
 import { PageHeader } from "../components/PageHeader";
 import { PageSkeleton } from "../components/PageSkeleton";
 import { useToast } from "../components/Toast";
+import { moveMediaItem } from "../media-order";
 import {
   acceptedMediaTypes,
   createPendingMediaFile,
@@ -16,6 +24,8 @@ import {
   validateMediaFiles,
   type SelectedMediaFile,
 } from "../media-upload";
+
+type OrderedMedia = { type: "existing"; media: Post["media"][number] } | { type: "new"; file: SelectedMediaFile };
 
 export function PostEditPage() {
   const { postId = "" } = useParams();
@@ -31,10 +41,14 @@ export function PostEditPage() {
   const [showSceneForm, setShowSceneForm] = useState(false);
   const [removedMediaIds, setRemovedMediaIds] = useState<string[]>([]);
   const [files, setFiles] = useState<SelectedMediaFile[]>([]);
+  const [mediaOrder, setMediaOrder] = useState<string[]>([]);
+  const [draggedMediaId, setDraggedMediaId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [progress, setProgress] = useState(0);
   const filesRef = useRef(files);
+  const draggedMediaIdRef = useRef<string | null>(null);
+  const dragTargetMediaIdRef = useRef<string | null>(null);
   const mountedRef = useRef(true);
 
   const load = () => {
@@ -45,6 +59,7 @@ export function PostEditPage() {
         setEvents(eventResult.events);
         setEventId(result.eventId ?? "");
         setSceneId(result.sceneId ?? "");
+        setMediaOrder(result.media.map((media) => media.id));
       })
       .catch((reason: Error) => setError(reason.message));
   };
@@ -56,6 +71,7 @@ export function PostEditPage() {
         setEvents(eventResult.events);
         setEventId(result.eventId ?? "");
         setSceneId(result.sceneId ?? "");
+        setMediaOrder(result.media.map((media) => media.id));
       })
       .catch((reason: Error) => setError(reason.message));
   }, [postId]);
@@ -124,6 +140,7 @@ export function PostEditPage() {
     setError("");
     const selected = chosen.map(createPendingMediaFile);
     setFiles((current) => [...current, ...selected]);
+    setMediaOrder((current) => [...current, ...selected.map((item) => item.id)]);
     await prepareMediaFiles(selected, applyPreparedFile);
   };
 
@@ -149,6 +166,44 @@ export function PostEditPage() {
     }
     URL.revokeObjectURL(item.previewUrl);
     setFiles((current) => current.filter((file) => file.id !== id));
+    setMediaOrder((current) => current.filter((mediaId) => mediaId !== id));
+  };
+
+  const removeExistingMedia = (id: string) => {
+    setRemovedMediaIds((current) => [...current, id]);
+    setMediaOrder((current) => current.filter((mediaId) => mediaId !== id));
+  };
+
+  const reorderMedia = (targetId: string) => {
+    const sourceId = draggedMediaIdRef.current;
+    if (!sourceId || sourceId === targetId) return;
+    setMediaOrder((current) => moveMediaItem(current, sourceId, targetId));
+  };
+
+  const moveMediaByOffset = (id: string, offset: number) => {
+    setMediaOrder((current) => {
+      const index = current.indexOf(id);
+      const targetId = current[index + offset];
+      return targetId ? moveMediaItem(current, id, targetId) : current;
+    });
+  };
+
+  const startMediaDrag = (id: string) => {
+    draggedMediaIdRef.current = id;
+    dragTargetMediaIdRef.current = id;
+    setDraggedMediaId(id);
+  };
+
+  const finishMediaDrag = () => {
+    draggedMediaIdRef.current = null;
+    dragTargetMediaIdRef.current = null;
+    setDraggedMediaId(null);
+  };
+
+  const movePointerMedia = (event: ReactPointerEvent<HTMLElement>) => {
+    const targetId = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("[data-media-id]")
+      ?.dataset.mediaId;
+    if (targetId) dragTargetMediaIdRef.current = targetId;
   };
 
   const createScene = async () => {
@@ -229,10 +284,10 @@ export function PostEditPage() {
     return !failed;
   };
 
-  const finishSave = async (caption: FormDataEntryValue | null) => {
+  const finishSave = async (caption: FormDataEntryValue | null, mediaIds: string[]) => {
     await api(`/posts/${post.id}`, {
       method: "PUT",
-      body: JSON.stringify({ caption, eventId: eventId || null, sceneId: sceneId || null }),
+      body: JSON.stringify({ caption, eventId: eventId || null, sceneId: sceneId || null, mediaIds }),
     });
     for (const mediaId of removedMediaIds) await api(`/posts/${post.id}/media/${mediaId}`, { method: "DELETE" });
     showToast("投稿を更新しました");
@@ -291,7 +346,13 @@ export function PostEditPage() {
         setSaving(false);
         return;
       }
-      await finishSave(caption);
+      const uploadedMediaIds = new Map(entries.map(({ item, target }) => [item.id, target.id]));
+      const orderedMediaIds = mediaOrder.flatMap((id) => {
+        if (post.media.some((media) => media.id === id)) return [id];
+        const mediaId = uploadedMediaIds.get(id) ?? files.find((item) => item.id === id)?.mediaId;
+        return mediaId ? [mediaId] : [];
+      });
+      await finishSave(caption, orderedMediaIds);
     } catch (reason) {
       setError((reason as Error).message);
       setSaving(false);
@@ -304,6 +365,12 @@ export function PostEditPage() {
   const videoCount = totalCount - photoCount;
   const preparing = files.some((item) => item.status === "preparing");
   const hasPreparationFailure = files.some((item) => item.status === "preparation-failed");
+  const orderedMedia = mediaOrder.flatMap<OrderedMedia>((id) => {
+    const media = remainingMedia.find((item) => item.id === id);
+    if (media) return [{ type: "existing" as const, media }];
+    const file = files.find((item) => item.id === id);
+    return file ? [{ type: "new" as const, file }] : [];
+  });
 
   return (
     <>
@@ -312,59 +379,107 @@ export function PostEditPage() {
         <form className="form-stack" onSubmit={submit}>
           <MediaProcessingStatus files={files} uploading={saving && files.length > 0} uploadProgress={progress} />
           <section className="photo-picker">
-            <div className="selected-photos">
-              {remainingMedia.map((media) => (
-                <div className="selected-photo" key={media.id}>
-                  <img src={media.thumbnailUrl} alt="" />
-                  {media.kind === "video" && <span className="video-badge">動画</span>}
-                  <button
-                    className="remove-selected-photo"
-                    type="button"
-                    onClick={() => setRemovedMediaIds((current) => [...current, media.id])}
-                    aria-label={`${media.originalFilename}を削除`}
-                    disabled={saving}
+            <div
+              className="selected-photos"
+              onPointerMove={movePointerMedia}
+              onPointerUp={() => {
+                if (dragTargetMediaIdRef.current) reorderMedia(dragTargetMediaIdRef.current);
+                finishMediaDrag();
+              }}
+              onPointerCancel={finishMediaDrag}
+            >
+              {orderedMedia.map((entry) => {
+                const id = entry.type === "existing" ? entry.media.id : entry.file.id;
+                const filename = entry.type === "existing" ? entry.media.originalFilename : entry.file.file.name;
+                return (
+                  <div
+                    className={`selected-photo${entry.type === "new" ? ` ${entry.file.status}` : ""}${
+                      draggedMediaId === id ? " dragging" : ""
+                    }`}
+                    data-media-id={id}
+                    key={id}
                   >
-                    <X />
-                  </button>
-                </div>
-              ))}
-              {files.map((item) => (
-                <div className={`selected-photo ${item.status}`} key={item.id}>
-                  {item.file.type.startsWith("video/") && !item.thumbnail ? (
-                    <span className="video-preview-placeholder" aria-hidden="true">
-                      <Video />
-                    </span>
-                  ) : (
-                    <img src={item.previewUrl} alt="" loading="lazy" decoding="async" />
-                  )}
-                  {item.file.type.startsWith("video/") && <span className="video-badge">動画</span>}
-                  {item.status === "preparing" && (
-                    <span className="preparing-badge" aria-label="準備中">
-                      <LoaderCircle />
-                    </span>
-                  )}
-                  {item.status === "preparation-failed" && (
-                    <button className="preparation-retry" type="button" onClick={() => void retryPreparation(item.id)}>
-                      <RotateCcw />
-                      再試行
+                    {entry.type === "existing" ? (
+                      <>
+                        <img src={entry.media.thumbnailUrl} alt="" draggable={false} />
+                        {entry.media.kind === "video" && <span className="video-badge">動画</span>}
+                        <button
+                          className="remove-selected-photo"
+                          type="button"
+                          onClick={() => removeExistingMedia(entry.media.id)}
+                          aria-label={`${filename}を削除`}
+                          disabled={saving}
+                        >
+                          <X />
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        {entry.file.file.type.startsWith("video/") && !entry.file.thumbnail ? (
+                          <span className="video-preview-placeholder" aria-hidden="true">
+                            <Video />
+                          </span>
+                        ) : (
+                          <img src={entry.file.previewUrl} alt="" loading="lazy" decoding="async" draggable={false} />
+                        )}
+                        {entry.file.file.type.startsWith("video/") && <span className="video-badge">動画</span>}
+                        {entry.file.status === "preparing" && (
+                          <span className="preparing-badge" aria-label="準備中">
+                            <LoaderCircle />
+                          </span>
+                        )}
+                        {entry.file.status === "preparation-failed" && (
+                          <button
+                            className="preparation-retry"
+                            type="button"
+                            onClick={() => void retryPreparation(entry.file.id)}
+                          >
+                            <RotateCcw />
+                            再試行
+                          </button>
+                        )}
+                        {entry.file.status === "failed" && (
+                          <span className="failed-badge">
+                            <AlertCircle />
+                          </span>
+                        )}
+                        <button
+                          className="remove-selected-photo"
+                          type="button"
+                          onClick={() => void removeNewFile(entry.file.id)}
+                          aria-label={`${filename}を外す`}
+                          disabled={saving}
+                        >
+                          <X />
+                        </button>
+                      </>
+                    )}
+                    <button
+                      className="media-drag-handle"
+                      type="button"
+                      aria-label={`${filename}を並び替え`}
+                      disabled={saving}
+                      draggable={false}
+                      onPointerDown={(event) => {
+                        event.preventDefault();
+                        startMediaDrag(id);
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+                          event.preventDefault();
+                          moveMediaByOffset(id, -1);
+                        }
+                        if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+                          event.preventDefault();
+                          moveMediaByOffset(id, 1);
+                        }
+                      }}
+                    >
+                      <GripVertical />
                     </button>
-                  )}
-                  {item.status === "failed" && (
-                    <span className="failed-badge">
-                      <AlertCircle />
-                    </span>
-                  )}
-                  <button
-                    className="remove-selected-photo"
-                    type="button"
-                    onClick={() => void removeNewFile(item.id)}
-                    aria-label={`${item.file.name}を外す`}
-                    disabled={saving}
-                  >
-                    <X />
-                  </button>
-                </div>
-              ))}
+                  </div>
+                );
+              })}
               {totalCount < 30 && (
                 <label className="photo-add">
                   <ImagePlus />

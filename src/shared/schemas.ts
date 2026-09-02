@@ -45,6 +45,12 @@ export const postInputSchema = z.object({
   caption: z.string().trim().max(2000).default(""),
   eventId: z.string().min(1).nullable().default(null),
   sceneId: z.string().min(1).nullable().default(null),
+  mediaIds: z
+    .array(z.string().min(1))
+    .min(1)
+    .max(30)
+    .refine((ids) => new Set(ids).size === ids.length, "同じ写真・動画が重複しています")
+    .optional(),
 });
 
 export const uploadFilesSchema = z.object({

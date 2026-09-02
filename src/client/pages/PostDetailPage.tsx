@@ -1,17 +1,25 @@
 import { CalendarDays, Camera, Ellipsis, MessageCircle, Pencil, Send, Trash2, Upload } from "lucide-react";
-import { useEffect, useLayoutEffect, useState, type FormEvent } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from "react";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import type { Comment, Post } from "../../shared/types";
 import { api, formatDate } from "../api";
 import { ErrorState, Loading } from "../components/AsyncState";
 import { useCurrentUser } from "../components/AppLayout";
-import { PageHeader } from "../components/PageHeader";
 import { SeenBy } from "../components/SeenBy";
 import { useToast } from "../components/Toast";
 
 export function PostDetailPage() {
   const { postId = "" } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const currentUser = useCurrentUser();
   const showToast = useToast();
   const [post, setPost] = useState<Post | null>(null);
@@ -21,9 +29,11 @@ export function PostDetailPage() {
   const [deleting, setDeleting] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
-  useLayoutEffect(() => {
-    window.scrollTo(0, 0);
-  }, [postId]);
+  const fallbackPath = post?.eventId ? `/events/${post.eventId}` : "/";
+  const closeSheet = useCallback(() => {
+    if ((location.state as { postSheet?: boolean } | null)?.postSheet) navigate(-1);
+    else navigate(fallbackPath, { replace: true });
+  }, [fallbackPath, location.state, navigate]);
   const load = () => {
     setError("");
     void api<Post>(`/posts/${postId}`)
@@ -37,17 +47,15 @@ export function PostDetailPage() {
   }, [postId]);
   if (!post && !error)
     return (
-      <>
-        <PageHeader title="" back />
+      <PostSheet onClose={closeSheet}>
         <Loading />
-      </>
+      </PostSheet>
     );
   if (error)
     return (
-      <>
-        <PageHeader title="" back />
+      <PostSheet onClose={closeSheet}>
         <ErrorState message={error} retry={load} />
-      </>
+      </PostSheet>
     );
   if (!post) return null;
   const deletePost = async () => {
@@ -63,58 +71,141 @@ export function PostDetailPage() {
     }
   };
   return (
-    <>
-      <PageHeader
-        title=""
-        back
-        action={
-          (post.canEdit || post.canDelete) && (
-            <div className="post-actions">
-              <button
-                className="icon-button"
-                type="button"
-                onClick={() => setMenuOpen((open) => !open)}
-                aria-label="投稿メニュー"
-                aria-expanded={menuOpen}
-              >
-                <Ellipsis />
-              </button>
-              {menuOpen && (
-                <>
-                  <button
-                    className="post-menu-backdrop"
-                    type="button"
-                    aria-label="投稿メニューを閉じる"
-                    onClick={() => setMenuOpen(false)}
-                  />
-                  <div className="post-action-menu" role="menu">
-                    {post.canEdit && (
-                      <Link to={`/posts/${post.id}/edit`} role="menuitem" onClick={() => setMenuOpen(false)}>
-                        <Pencil />
-                        編集
-                      </Link>
-                    )}
-                    {post.canDelete && (
-                      <button
-                        type="button"
-                        role="menuitem"
-                        onClick={() => {
-                          setMenuOpen(false);
-                          setDeleteOpen(true);
-                        }}
-                      >
-                        <Trash2 />
-                        削除
-                      </button>
-                    )}
-                  </div>
-                </>
+    <PostSheet
+      onClose={closeSheet}
+      overlay={
+        deleteOpen && (
+          <div
+            className="modal-backdrop"
+            onClick={() => {
+              if (!deleting) setDeleteOpen(false);
+            }}
+          >
+            <section
+              className="confirmation-modal"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="delete-post-title"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <h2 id="delete-post-title">この投稿を削除する？</h2>
+              <p>写真・動画とコメントもすべて削除される。この操作は元に戻せない。</p>
+              {deleteError && (
+                <p className="form-error" role="alert">
+                  {deleteError}
+                </p>
               )}
-            </div>
-          )
-        }
-      />
-      <main className="post-detail page-content">
+              <div>
+                <button
+                  className="outline-button"
+                  type="button"
+                  disabled={deleting}
+                  onClick={() => setDeleteOpen(false)}
+                >
+                  キャンセル
+                </button>
+                <button
+                  className="danger-confirm-button"
+                  type="button"
+                  disabled={deleting}
+                  onClick={() => void deletePost()}
+                >
+                  {deleting ? "削除中…" : "削除する"}
+                </button>
+              </div>
+            </section>
+          </div>
+        )
+      }
+      action={
+        (post.canEdit || post.canDelete) && (
+          <div className="post-actions">
+            <button
+              className="icon-button"
+              type="button"
+              onClick={() => setMenuOpen((open) => !open)}
+              aria-label="投稿メニュー"
+              aria-expanded={menuOpen}
+            >
+              <Ellipsis />
+            </button>
+            {menuOpen && (
+              <>
+                <button
+                  className="post-menu-backdrop"
+                  type="button"
+                  aria-label="投稿メニューを閉じる"
+                  onClick={() => setMenuOpen(false)}
+                />
+                <div className="post-action-menu" role="menu">
+                  {post.canEdit && (
+                    <Link
+                      to={`/posts/${post.id}/edit`}
+                      state={location.state}
+                      role="menuitem"
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      <Pencil />
+                      編集
+                    </Link>
+                  )}
+                  {post.canDelete && (
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        setDeleteOpen(true);
+                      }}
+                    >
+                      <Trash2 />
+                      削除
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        )
+      }
+      footer={
+        <div className="comment-composer">
+          {commentError && (
+            <p className="form-error" role="alert">
+              {commentError}
+            </p>
+          )}
+          <form
+            className="comment-form"
+            onSubmit={async (event: FormEvent<HTMLFormElement>) => {
+              event.preventDefault();
+              setCommentError("");
+              const form = event.currentTarget;
+              const body = new FormData(form).get("body");
+              try {
+                const comment = await api<Comment>(`/posts/${post.id}/comments`, {
+                  method: "POST",
+                  body: JSON.stringify({ body }),
+                });
+                setPost((current) => (current ? { ...current, comments: [...current.comments, comment] } : current));
+                form.reset();
+              } catch (reason) {
+                setCommentError((reason as Error).message);
+              }
+            }}
+          >
+            <span className="comment-composer-avatar" aria-hidden>
+              {currentUser.avatarUrl ? <img src={currentUser.avatarUrl} alt="" /> : currentUser.displayName.slice(0, 1)}
+            </span>
+            <input name="body" aria-label="コメント" placeholder="コメントを書く" maxLength={1000} required />
+            <button type="submit" aria-label="コメントを送信">
+              <Send aria-hidden />
+            </button>
+          </form>
+        </div>
+      }
+    >
+      <main className="post-detail">
         <div className="post-detail-head">
           <span className="post-author-row">
             <span className="post-author-avatar" aria-hidden>
@@ -141,7 +232,7 @@ export function PostDetailPage() {
               className="media-cell detail-media"
               key={media.id}
               to={`/posts/${post.id}/media/${media.id}`}
-              state={{ returnToPrevious: true }}
+              state={{ ...(location.state as object | null), returnToPrevious: true }}
             >
               <img src={media.thumbnailUrl} alt={`投稿の${media.kind === "video" ? "動画" : "写真"}`} />
               {media.kind === "video" && (
@@ -192,78 +283,122 @@ export function PostDetailPage() {
           </div>
         </section>
       </main>
-      <div className="comment-composer">
-        {commentError && (
-          <p className="form-error" role="alert">
-            {commentError}
-          </p>
-        )}
-        <form
-          className="comment-form"
-          onSubmit={async (event: FormEvent<HTMLFormElement>) => {
-            event.preventDefault();
-            setCommentError("");
-            const form = event.currentTarget;
-            const body = new FormData(form).get("body");
-            try {
-              const comment = await api<Comment>(`/posts/${post.id}/comments`, {
-                method: "POST",
-                body: JSON.stringify({ body }),
-              });
-              setPost((current) => (current ? { ...current, comments: [...current.comments, comment] } : current));
-              form.reset();
-            } catch (reason) {
-              setCommentError((reason as Error).message);
-            }
-          }}
-        >
-          <span className="comment-composer-avatar" aria-hidden>
-            {currentUser.avatarUrl ? <img src={currentUser.avatarUrl} alt="" /> : currentUser.displayName.slice(0, 1)}
-          </span>
-          <input name="body" aria-label="コメント" placeholder="コメントを書く" maxLength={1000} required />
-          <button type="submit" aria-label="コメントを送信">
-            <Send aria-hidden />
-          </button>
-        </form>
-      </div>
-      {deleteOpen && (
-        <div
-          className="modal-backdrop"
-          onClick={() => {
-            if (!deleting) setDeleteOpen(false);
-          }}
-        >
-          <section
-            className="confirmation-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="delete-post-title"
-            onClick={(event) => event.stopPropagation()}
+    </PostSheet>
+  );
+}
+
+export function shouldClosePostSheet(deltaY: number): boolean {
+  return deltaY >= 72;
+}
+
+function PostSheet({
+  children,
+  action,
+  footer,
+  overlay,
+  onClose,
+}: {
+  children: ReactNode;
+  action?: ReactNode;
+  footer?: ReactNode;
+  overlay?: ReactNode;
+  onClose: () => void;
+}) {
+  const [dragOffset, setDragOffset] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const [closing, setClosing] = useState(false);
+  const dragStart = useRef<{ y: number; pointerId: number } | null>(null);
+  const closeTimer = useRef<number | null>(null);
+
+  const close = useCallback(() => {
+    if (closing) return;
+    setDragging(false);
+    setDragOffset(0);
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      onClose();
+      return;
+    }
+    setClosing(true);
+    closeTimer.current = window.setTimeout(onClose, 220);
+  }, [closing, onClose]);
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, []);
+  useEffect(() => {
+    const keydown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") close();
+    };
+    window.addEventListener("keydown", keydown);
+    return () => window.removeEventListener("keydown", keydown);
+  }, [close]);
+  useEffect(
+    () => () => {
+      if (closeTimer.current !== null) window.clearTimeout(closeTimer.current);
+    },
+    [],
+  );
+
+  const startDrag = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    if (closing || !event.isPrimary || (event.pointerType === "mouse" && event.button !== 0)) return;
+    dragStart.current = { y: event.clientY, pointerId: event.pointerId };
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setDragging(true);
+  };
+  const moveDrag = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    const start = dragStart.current;
+    if (!start || start.pointerId !== event.pointerId) return;
+    setDragOffset(Math.max(0, event.clientY - start.y));
+  };
+  const finishDrag = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    const start = dragStart.current;
+    dragStart.current = null;
+    if (!start || start.pointerId !== event.pointerId) return;
+    if (shouldClosePostSheet(event.clientY - start.y)) close();
+    else {
+      setDragging(false);
+      setDragOffset(0);
+    }
+  };
+  const cancelDrag = () => {
+    dragStart.current = null;
+    setDragging(false);
+    setDragOffset(0);
+  };
+
+  return (
+    <div className={`post-sheet-layer${closing ? " closing" : ""}`}>
+      <button className="post-sheet-backdrop" type="button" onClick={close} aria-label="投稿詳細を閉じる" />
+      <section
+        className={`post-sheet${dragging ? " dragging" : ""}`}
+        role="dialog"
+        aria-modal="true"
+        aria-label="投稿詳細"
+        style={dragging ? { transform: `translate3d(0, ${dragOffset}px, 0)` } : undefined}
+      >
+        <header className="post-sheet-header">
+          <button
+            className="post-sheet-handle"
+            type="button"
+            aria-label="下にスワイプして閉じる"
+            onPointerDown={startDrag}
+            onPointerMove={moveDrag}
+            onPointerUp={finishDrag}
+            onPointerCancel={cancelDrag}
           >
-            <h2 id="delete-post-title">この投稿を削除する？</h2>
-            <p>写真・動画とコメントもすべて削除される。この操作は元に戻せない。</p>
-            {deleteError && (
-              <p className="form-error" role="alert">
-                {deleteError}
-              </p>
-            )}
-            <div>
-              <button className="outline-button" type="button" disabled={deleting} onClick={() => setDeleteOpen(false)}>
-                キャンセル
-              </button>
-              <button
-                className="danger-confirm-button"
-                type="button"
-                disabled={deleting}
-                onClick={() => void deletePost()}
-              >
-                {deleting ? "削除中…" : "削除する"}
-              </button>
-            </div>
-          </section>
-        </div>
-      )}
-    </>
+            <span aria-hidden />
+          </button>
+          {action && <div className="post-sheet-action">{action}</div>}
+        </header>
+        <div className="post-sheet-scroll">{children}</div>
+        {footer}
+      </section>
+      {overlay}
+    </div>
   );
 }
 

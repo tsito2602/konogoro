@@ -1,6 +1,6 @@
 import { AlertCircle, ImagePlus, Plus, RotateCcw, X } from "lucide-react";
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import type { EventDetail, EventScene, EventSummary, Post, UploadTarget } from "../../shared/types";
 import { api } from "../api";
 import { ErrorState, Loading } from "../components/AsyncState";
@@ -16,6 +16,7 @@ import {
 
 export function PostEditPage() {
   const { postId = "" } = useParams();
+  const location = useLocation();
   const navigate = useNavigate();
   const showToast = useToast();
   const [post, setPost] = useState<Post | null>(null);
@@ -199,7 +200,7 @@ export function PostEditPage() {
     });
     for (const mediaId of removedMediaIds) await api(`/posts/${post.id}/media/${mediaId}`, { method: "DELETE" });
     showToast("投稿を更新しました");
-    navigate(`/posts/${post.id}`, { replace: true });
+    navigate(`/posts/${post.id}`, { replace: true, state: location.state });
   };
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {

@@ -1,6 +1,6 @@
 import { Bell, CalendarDays, CalendarPlus, GalleryVerticalEnd, ImagePlus, Images, Plus, Settings } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { Link, Navigate, NavLink, Outlet, useLocation, useOutletContext } from "react-router-dom";
+import { Link, Navigate, NavLink, useLocation, useOutlet, useOutletContext } from "react-router-dom";
 import type { CurrentUser } from "../../shared/types";
 import { canCreatePost, canInviteFamily, canManageEvent } from "../../shared/permissions";
 import { api } from "../api";
@@ -20,12 +20,23 @@ export function useCurrentUser(): CurrentUser {
 }
 
 export function AppLayout() {
-  const { pathname } = useLocation();
+  const location = useLocation();
+  const { pathname } = location;
   const invite = pathname.startsWith("/invite/");
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [authError, setAuthError] = useState("");
   const [addMenuOpen, setAddMenuOpen] = useState(false);
+  const routedContent = useOutlet(currentUser);
+  const postSheetNavigation = Boolean((location.state as { postSheet?: boolean } | null)?.postSheet);
+  const showPostSheet = /^\/posts\/[^/]+$/.test(pathname) && postSheetNavigation;
+  const routeIdentity = `${location.key}:${currentUser?.id ?? ""}`;
+  const [backgroundSnapshot, setBackgroundSnapshot] = useState(() => ({ routeIdentity, content: routedContent }));
+  let backgroundContent = backgroundSnapshot.content;
+  if (!postSheetNavigation && backgroundSnapshot.routeIdentity !== routeIdentity) {
+    backgroundContent = routedContent;
+    setBackgroundSnapshot({ routeIdentity, content: routedContent });
+  }
   const hideNavigation = viewerPattern.test(pathname);
   const hideAddButton =
     /^\/posts\/[^/]+$/.test(pathname) ||
@@ -59,12 +70,7 @@ export function AppLayout() {
     return () => document.removeEventListener("visibilitychange", resumeAuth);
   }, [invite, loadAuth]);
 
-  if (invite)
-    return (
-      <div className="app-shell">
-        <Outlet />
-      </div>
-    );
+  if (invite) return <div className="app-shell">{routedContent}</div>;
   if (authenticated === null && !authError)
     return (
       <div className="app-shell">
@@ -89,7 +95,8 @@ export function AppLayout() {
   return (
     <ToastProvider>
       <div className={hideNavigation ? "app-shell viewer-shell" : "app-shell"}>
-        <Outlet context={currentUser} />
+        {showPostSheet && backgroundContent ? backgroundContent : routedContent}
+        {showPostSheet && backgroundContent ? routedContent : null}
         {!hideNavigation && (
           <nav className="tab-bar" aria-label="メインナビゲーション">
             <NavItem to="/" label="タイムライン" icon={<Images />} end />

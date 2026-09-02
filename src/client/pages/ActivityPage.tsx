@@ -1,6 +1,6 @@
 import { MessageCircle, Send } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import type { Activity, MemberLastViewed } from "../../shared/types";
 import { api } from "../api";
 import { EmptyState, ErrorState, Loading } from "../components/AsyncState";
@@ -9,6 +9,8 @@ import { PageHeader } from "../components/PageHeader";
 type ActivityResponse = { activities: Activity[]; memberLastViewed: MemberLastViewed[]; nextCursor: string | null };
 
 export function ActivityPage() {
+  const location = useLocation();
+  const postSheetState = { postSheet: true, backgroundPath: `${location.pathname}${location.search}` };
   const [activities, setActivities] = useState<Activity[] | null>(null);
   const [memberLastViewed, setMemberLastViewed] = useState<MemberLastViewed[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
@@ -65,7 +67,7 @@ export function ActivityPage() {
         {activities && (
           <div className="activity-list">
             {activities.map((activity) => (
-              <Link className="activity-row" to={`/posts/${activity.postId}`} key={activity.id}>
+              <Link className="activity-row" to={`/posts/${activity.postId}`} state={postSheetState} key={activity.id}>
                 <span className={`activity-icon ${activity.kind}`} aria-hidden>
                   {activity.kind === "post" ? <Send /> : <MessageCircle />}
                 </span>

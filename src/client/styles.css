@@ -289,12 +289,6 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-ink); box
 .inline-action { align-self: flex-start; display: flex; gap: 5px; align-items: center; margin-top: -14px; padding-left: 0; }
 .inline-action svg { width: 17px; }
 .inline-form { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-top: -12px; }
-.post-edit-media { display: flex; gap: 5px; overflow-x: auto; scrollbar-width: none; }
-.post-edit-media::-webkit-scrollbar { display: none; }
-.post-edit-media > div { position: relative; width: 92px; aspect-ratio: 1; flex: 0 0 92px; overflow: hidden; border-radius: 9px; background: var(--placeholder); }
-.post-edit-media img { width: 100%; height: 100%; object-fit: cover; }
-.post-edit-media span { position: absolute; inset: 50% auto auto 50%; width: 30px; height: 30px; display: grid; place-items: center; transform: translate(-50%,-50%); border-radius: 50%; color: #fff; background: rgba(0,0,0,.58); font-size: 12px; }
-.post-edit-media-note { margin: -14px 0 0; }
 .event-edit { display: flex; flex-direction: column; gap: 32px; }
 .management-section { padding-top: 28px; border-top: 1px solid var(--separator); }
 .management-section h2 { margin: 0 0 14px; font-size: 20px; }

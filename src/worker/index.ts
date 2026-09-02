@@ -5,6 +5,7 @@ import { ZodError } from "zod";
 import {
   eventInputSchema,
   eventCoverInputSchema,
+  editUploadFilesSchema,
   commentInputSchema,
   mediaCompleteSchema,
   postInputSchema,
@@ -661,21 +662,23 @@ app.delete("/posts/:postId", async (c) => {
 app.post("/posts/:postId/media/upload-urls", async (c) => {
   if (!canCreatePost(c.var.currentUser)) return c.json({ error: "投稿する権限がありません" }, 403);
   const postId = c.req.param("postId");
-  const input = uploadFilesSchema.parse(await c.req.json());
-  const post = await c.env.DB.prepare("SELECT id, status FROM posts WHERE id = ? AND created_by = ?").bind(postId, c.var.currentUser.id).first<{ id: string; status: string }>();
-  if (!post || post.status !== "draft") return c.json({ error: "下書き投稿が見つかりません" }, 404);
+  const body = await c.req.json();
+  const post = await c.env.DB.prepare("SELECT id, status, created_by FROM posts WHERE id = ?").bind(postId).first<{ id: string; status: string; created_by: string }>();
+  if (!post || (post.status === "draft" && post.created_by !== c.var.currentUser.id)) return c.json({ error: "投稿が見つかりません" }, 404);
+  const editInput = post.status === "published" ? editUploadFilesSchema.parse(body) : null;
+  const input = editInput ?? uploadFilesSchema.parse(body);
   if (!hasUploadCredentials(c.env)) {
     return c.json({ error: "R2アップロード用secretが設定されていません" }, 503);
   }
 
   const existing = await c.env.DB.prepare(`
-    SELECT id, original_filename, mime_type, original_object_key, preview_object_key, thumbnail_object_key,
+    SELECT id, status, original_filename, mime_type, original_object_key, preview_object_key, thumbnail_object_key,
            byte_size, captured_at, duration_seconds
       FROM media
      WHERE post_id = ?
      ORDER BY position, id
-  `).bind(postId).all<ExistingMedia & { id: string; original_object_key: string; preview_object_key: string | null; thumbnail_object_key: string }>();
-  if (existing.results.length > 0) {
+  `).bind(postId).all<ExistingMedia & { id: string; status: string; original_object_key: string; preview_object_key: string | null; thumbnail_object_key: string }>();
+  if (post.status === "draft" && existing.results.length > 0) {
     if (!matchesUploadFiles(existing.results, input.files)) {
       return c.json({ error: "下書きの写真・動画が選択内容と一致しません" }, 409);
     }
@@ -688,6 +691,17 @@ app.post("/posts/:postId/media/upload-urls", async (c) => {
       return { id: media.id, uploadUrl, thumbnailUploadUrl, previewUploadUrl, contentType: media.mime_type } satisfies UploadTarget;
     }));
     return c.json({ media: targets });
+  }
+
+  if (post.status === "published") {
+    const uploaded = existing.results.filter((media) => media.status === "uploaded");
+    const replacing = new Set(editInput!.replacingMediaIds);
+    if (replacing.size !== editInput!.replacingMediaIds.length || uploaded.filter((media) => replacing.has(media.id)).length !== replacing.size) {
+      return c.json({ error: "削除対象の写真・動画が投稿と一致しません" }, 400);
+    }
+    if (uploaded.length - replacing.size + input.files.length > 30) {
+      return c.json({ error: "写真・動画は合計30件までです" }, 400);
+    }
   }
 
   const lastPosition = await c.env.DB.prepare("SELECT COALESCE(MAX(position), -1) AS value FROM media WHERE post_id = ?").bind(postId).first<{ value: number }>();
@@ -717,7 +731,7 @@ app.post("/media/:mediaId/upload-url", async (c) => {
   const media = await c.env.DB.prepare(`
     SELECT m.id, m.original_object_key, m.preview_object_key, m.thumbnail_object_key, m.mime_type
       FROM media m JOIN posts p ON p.id = m.post_id
-     WHERE m.id = ? AND m.created_by = ? AND p.status = 'draft' AND m.status IN ('pending', 'failed')
+     WHERE m.id = ? AND m.created_by = ? AND p.status IN ('draft', 'published') AND m.status IN ('pending', 'failed')
   `).bind(c.req.param("mediaId"), c.var.currentUser.id).first<{ id: string; original_object_key: string; preview_object_key: string | null; thumbnail_object_key: string; mime_type: string }>();
   if (!media) return c.json({ error: "再試行できるメディアが見つかりません" }, 404);
   const [uploadUrl, thumbnailUploadUrl, previewUploadUrl] = await Promise.all([createPresignedUploadUrl(c.env, media.original_object_key, media.mime_type), createPresignedUploadUrl(c.env, media.thumbnail_object_key, "image/webp"), media.preview_object_key ? createPresignedUploadUrl(c.env, media.preview_object_key, "image/webp") : undefined]);
@@ -736,14 +750,62 @@ app.post("/media/:mediaId/complete", async (c) => {
   if (!canCreatePost(c.var.currentUser)) return c.json({ error: "投稿する権限がありません" }, 403);
   const input = mediaCompleteSchema.parse(await c.req.json());
   const mediaId = c.req.param("mediaId");
-  const media = await c.env.DB.prepare("SELECT original_object_key, preview_object_key, thumbnail_object_key, byte_size, status FROM media WHERE id = ? AND created_by = ?").bind(mediaId, c.var.currentUser.id).first<{ original_object_key: string; preview_object_key: string | null; thumbnail_object_key: string; byte_size: number; status: string }>();
+  const media = await c.env.DB.prepare(`
+    SELECT m.post_id, m.original_object_key, m.preview_object_key, m.thumbnail_object_key, m.byte_size, m.status,
+           p.status AS post_status, p.event_id
+      FROM media m JOIN posts p ON p.id = m.post_id
+     WHERE m.id = ? AND m.created_by = ?
+  `).bind(mediaId, c.var.currentUser.id).first<{ post_id: string; original_object_key: string; preview_object_key: string | null; thumbnail_object_key: string; byte_size: number; status: string; post_status: string; event_id: string | null }>();
   if (!media) return c.json({ error: "メディアが見つかりません" }, 404);
   if (media.status === "uploaded") return c.json({ id: mediaId, status: "uploaded" });
   const [object, preview, thumbnail] = await Promise.all([c.env.MEDIA.head(media.original_object_key), media.preview_object_key ? c.env.MEDIA.head(media.preview_object_key) : undefined, c.env.MEDIA.head(media.thumbnail_object_key)]);
   if (!object || object.size !== media.byte_size || (media.preview_object_key && !preview) || !thumbnail) return c.json({ error: "アップロードしたファイルを確認できません" }, 409);
-  await c.env.DB.prepare("UPDATE media SET status = 'uploaded', width = ?, height = ?, uploaded_at = ? WHERE id = ?")
-    .bind(input.width, input.height, new Date().toISOString(), mediaId).run();
+  const now = new Date().toISOString();
+  const statements = [
+    c.env.DB.prepare("UPDATE media SET status = 'uploaded', width = ?, height = ?, uploaded_at = ? WHERE id = ?").bind(input.width, input.height, now, mediaId),
+  ];
+  if (media.post_status === "published") {
+    statements.push(c.env.DB.prepare(`UPDATE posts SET captured_at = (
+      SELECT MIN(COALESCE(captured_at, uploaded_at)) FROM media WHERE post_id = ? AND status = 'uploaded'
+    ), updated_at = ? WHERE id = ?`).bind(media.post_id, now, media.post_id));
+    if (media.event_id) statements.push(autoEventCoverStatement(c.env.DB, media.event_id, now));
+  }
+  await c.env.DB.batch(statements);
   return c.json({ id: mediaId, status: "uploaded" });
+});
+
+app.delete("/posts/:postId/media/:mediaId", async (c) => {
+  if (!canCreatePost(c.var.currentUser)) return c.json({ error: "投稿を編集する権限がありません" }, 403);
+  const postId = c.req.param("postId");
+  const mediaId = c.req.param("mediaId");
+  const media = await c.env.DB.prepare(`
+    SELECT m.original_object_key, m.preview_object_key, m.thumbnail_object_key, m.status, p.event_id
+      FROM media m JOIN posts p ON p.id = m.post_id
+     WHERE m.id = ? AND m.post_id = ? AND p.status = 'published'
+  `).bind(mediaId, postId).first<{ original_object_key: string; preview_object_key: string | null; thumbnail_object_key: string | null; status: string; event_id: string | null }>();
+  if (!media) return c.json({ error: "写真・動画が見つかりません" }, 404);
+  if (media.status === "uploaded") {
+    const count = await c.env.DB.prepare("SELECT COUNT(*) AS value FROM media WHERE post_id = ? AND status = 'uploaded'").bind(postId).first<{ value: number }>();
+    if ((count?.value ?? 0) <= 1) return c.json({ error: "投稿には写真・動画を1件以上残してください" }, 409);
+  }
+
+  const now = new Date().toISOString();
+  const statements = [
+    c.env.DB.prepare("DELETE FROM media WHERE id = ? AND post_id = ?").bind(mediaId, postId),
+    c.env.DB.prepare(`UPDATE posts SET captured_at = (
+      SELECT MIN(COALESCE(captured_at, uploaded_at)) FROM media WHERE post_id = ? AND status = 'uploaded' AND id <> ?
+    ), updated_at = ? WHERE id = ?`).bind(postId, mediaId, now, postId),
+  ];
+  if (media.event_id) statements.push(autoEventCoverStatement(c.env.DB, media.event_id, now));
+  await c.env.DB.batch(statements);
+
+  const keys = [media.original_object_key, media.preview_object_key, media.thumbnail_object_key].filter((key): key is string => Boolean(key));
+  try {
+    await c.env.MEDIA.delete(keys);
+  } catch (error) {
+    console.error({ event: "r2_delete_error", message: "メディア削除後のR2オブジェクト削除に失敗しました", postId, mediaId, error: error instanceof Error ? error.message : String(error) });
+  }
+  return c.body(null, 204);
 });
 
 app.post("/posts/:postId/publish", async (c) => {

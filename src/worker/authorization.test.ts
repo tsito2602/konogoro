@@ -24,6 +24,7 @@ describe("viewer API authorization", () => {
     ["PUT", "/api/events/event-1/scenes/scene-1", { title: "2日目" }],
     ["DELETE", "/api/events/event-1/scenes/scene-1", undefined],
     ["POST", "/api/posts/post-1/media/upload-urls", { files: [] }],
+    ["DELETE", "/api/posts/post-1/media/media-1", undefined],
     ["PUT", "/api/posts/post-1", { caption: "", eventId: null, sceneId: null }],
     ["POST", "/api/media/media-1/upload-url", undefined],
     ["POST", "/api/media/media-1/failed", undefined],

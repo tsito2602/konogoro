@@ -1,4 +1,3 @@
-import * as exifr from "exifr";
 import { AlertCircle, ImagePlus, Plus, RotateCcw, X } from "lucide-react";
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -6,22 +5,7 @@ import type { EventDetail, EventScene, EventSummary, UploadTarget } from "../../
 import { api } from "../api";
 import { PageHeader } from "../components/PageHeader";
 import { useToast } from "../components/Toast";
-
-type UploadStatus = "ready" | "uploading" | "uploaded" | "failed";
-type SelectedFile = {
-  file: File;
-  previewUrl: string;
-  thumbnail: Blob;
-  optimizedPreview?: Blob;
-  capturedAt: string | null;
-  width: number | null;
-  height: number | null;
-  durationSeconds: number | null;
-  mediaId?: string;
-  status: UploadStatus;
-};
-
-const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp", "video/mp4", "video/webm", "video/quicktime"]);
+import { acceptedMediaTypes, readMediaFile, uploadFile, validateMediaFiles, type SelectedMediaFile } from "../media-upload";
 
 export function PostCreatePage() {
   const navigate = useNavigate();
@@ -31,7 +15,7 @@ export function PostCreatePage() {
   const [scenes, setScenes] = useState<EventScene[]>([]);
   const [eventId, setEventId] = useState(searchParams.get("event") ?? "");
   const [sceneId, setSceneId] = useState("");
-  const [files, setFiles] = useState<SelectedFile[]>([]);
+  const [files, setFiles] = useState<SelectedMediaFile[]>([]);
   const [draftPostId, setDraftPostId] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
   const [busy, setBusy] = useState(false);
@@ -48,17 +32,16 @@ export function PostCreatePage() {
   useEffect(() => { filesRef.current = files; }, [files]);
   useEffect(() => () => filesRef.current.forEach(({ previewUrl }) => URL.revokeObjectURL(previewUrl)), []);
 
-  const updateFile = (index: number, values: Partial<SelectedFile>) => setFiles((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, ...values } : item));
+  const updateFile = (index: number, values: Partial<SelectedMediaFile>) => setFiles((current) => current.map((item, itemIndex) => itemIndex === index ? { ...item, ...values } : item));
 
   const selectFiles = async (event: ChangeEvent<HTMLInputElement>) => {
     const chosen = Array.from(event.target.files ?? []);
     event.target.value = "";
-    const invalid = chosen.find((file) => !allowedTypes.has(file.type) || file.size > (file.type.startsWith("video/") ? 500 : 25) * 1024 * 1024);
-    if (invalid) { setError("JPEG・PNG・WebP・MP4・WebM・MOVを選択してください。写真25MB、動画500MBまでです。"); return; }
-    if (files.length + chosen.length > 30) { setError("一度に選べる写真・動画は30件までです。"); return; }
+    const validationError = validateMediaFiles(chosen, files.length);
+    if (validationError) { setError(validationError); return; }
     setError("");
     setPreparing(true);
-    try { const selected = await Promise.all(chosen.map(readFileMetadata)); setFiles((current) => [...current, ...selected]); }
+    try { const selected = await Promise.all(chosen.map(readMediaFile)); setFiles((current) => [...current, ...selected]); }
     catch { setError("選択したメディアを読み込めませんでした"); }
     finally { setPreparing(false); }
   };
@@ -75,7 +58,7 @@ export function PostCreatePage() {
     } catch (reason) { setError((reason as Error).message); }
   };
 
-  const uploadEntries = async (postId: string, entries: Array<{ item: SelectedFile; index: number; target: UploadTarget }>) => {
+  const uploadEntries = async (postId: string, entries: Array<{ item: SelectedMediaFile; index: number; target: UploadTarget }>) => {
     const totalBytes = entries.reduce((total, { item, target }) => total + item.file.size + item.thumbnail.size + (target.previewUploadUrl && item.optimizedPreview ? item.optimizedPreview.size : 0), 0);
     const loadedByRequest = new Map<string, number>();
     let loadedBytes = 0;
@@ -168,7 +151,7 @@ export function PostCreatePage() {
     <main className="form-page page-content"><form onSubmit={submit} className="form-stack">
       <section className="photo-picker"><div className="selected-photos">
         {files.map((item, index) => <div className={`selected-photo ${item.status}`} key={`${item.file.name}-${item.file.lastModified}-${index}`}><img src={item.previewUrl} alt="" />{item.file.type.startsWith("video/") && <span className="video-badge">動画</span>}{item.status === "failed" && <span className="failed-badge"><AlertCircle /></span>}{!draftPostId && <button type="button" onClick={() => removeFile(index)} aria-label={`${item.file.name}を外す`}><X /></button>}</div>)}
-        {!draftPostId && <label className="photo-add"><ImagePlus /><span>{files.length ? "さらに選択" : "写真・動画を選択"}</span><input type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm,video/quicktime" multiple onChange={selectFiles} disabled={busy || preparing} /></label>}
+        {!draftPostId && <label className="photo-add"><ImagePlus /><span>{files.length ? "さらに選択" : "写真・動画を選択"}</span><input type="file" accept={acceptedMediaTypes} multiple onChange={selectFiles} disabled={busy || preparing} /></label>}
       </div>{files.length > 0 && <p className="selection-count">{[photos ? `写真${photos}枚` : "", videos ? `動画${videos}本` : ""].filter(Boolean).join(" · ")}</p>}</section>
       <label>イベント<select value={eventId} onChange={(event) => { setEventId(event.target.value); setSceneId(""); setScenes([]); }} disabled={busy || !!draftPostId}><option value="">イベントなし</option>{events.map((item) => <option value={item.id} key={item.id}>{item.title}</option>)}</select></label>
       {eventId && <label>シーン<select value={sceneId} onChange={(event) => setSceneId(event.target.value)} disabled={busy || !!draftPostId}><option value="">シーンなし</option>{scenes.map((item) => <option value={item.id} key={item.id}>{item.title}</option>)}</select></label>}
@@ -183,73 +166,4 @@ export function PostCreatePage() {
         : <button className="primary-button wide" disabled={preparing || files.length === 0}>投稿</button>}
     </form></main>
   </>;
-}
-
-async function readFileMetadata(file: File): Promise<SelectedFile> {
-  const previewUrl = URL.createObjectURL(file);
-  const capturedAt = await captureDate(file);
-  if (file.type.startsWith("video/")) {
-    const video = await loadVideo(previewUrl);
-    const thumbnail = await drawOptimizedImage(video, video.videoWidth, video.videoHeight, 480, 0.78);
-    return { file, previewUrl, thumbnail, capturedAt, width: video.videoWidth, height: video.videoHeight, durationSeconds: Number.isFinite(video.duration) ? video.duration : null, status: "ready" };
-  }
-  const bitmap = await createImageBitmap(file);
-  const [thumbnail, optimizedPreview] = await Promise.all([
-    drawOptimizedImage(bitmap, bitmap.width, bitmap.height, 480, 0.78),
-    drawOptimizedImage(bitmap, bitmap.width, bitmap.height, 1800, 0.86),
-  ]);
-  const result = { file, previewUrl, thumbnail, optimizedPreview, capturedAt, width: bitmap.width, height: bitmap.height, durationSeconds: null, status: "ready" as const };
-  bitmap.close();
-  return result;
-}
-
-async function captureDate(file: File): Promise<string | null> {
-  if (file.type.startsWith("image/")) {
-    try {
-      const metadata = await exifr.parse(file, ["DateTimeOriginal", "CreateDate"]);
-      const date = metadata?.DateTimeOriginal ?? metadata?.CreateDate;
-      if (date instanceof Date && !Number.isNaN(date.getTime())) return date.toISOString();
-    } catch { /* metadata is optional */ }
-  }
-  return file.lastModified ? new Date(file.lastModified).toISOString() : null;
-}
-
-function loadVideo(url: string): Promise<HTMLVideoElement> {
-  return new Promise((resolve, reject) => {
-    const video = document.createElement("video");
-    video.preload = "metadata"; video.muted = true; video.playsInline = true;
-    video.addEventListener("loadeddata", () => {
-      const seekTime = Number.isFinite(video.duration) && video.duration > 0 ? Math.min(1, video.duration / 3) : 0;
-      if (seekTime === 0) resolve(video);
-      else {
-        video.currentTime = seekTime;
-        window.setTimeout(() => resolve(video), 1000);
-      }
-    }, { once: true });
-    video.addEventListener("seeked", () => resolve(video), { once: true });
-    video.addEventListener("error", () => reject(new Error("動画を読み込めません")), { once: true });
-    video.src = url;
-  });
-}
-
-async function drawOptimizedImage(source: CanvasImageSource, width: number, height: number, max: number, quality: number): Promise<Blob> {
-  const scale = Math.min(1, max / Math.max(width, height));
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.max(1, Math.round(width * scale)); canvas.height = Math.max(1, Math.round(height * scale));
-  canvas.getContext("2d")?.drawImage(source, 0, 0, canvas.width, canvas.height);
-  return new Promise((resolve, reject) => canvas.toBlob((blob) => blob ? resolve(blob) : reject(new Error("プレビュー画像を作成できません")), "image/webp", quality));
-}
-
-function uploadFile(url: string, body: Blob, contentType = body.type, onProgress?: (loaded: number) => void): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const request = new XMLHttpRequest();
-    request.open("PUT", url); request.setRequestHeader("Content-Type", contentType);
-    request.upload.addEventListener("progress", (event) => onProgress?.(event.loaded));
-    request.addEventListener("load", () => {
-      if (request.status >= 200 && request.status < 300) { onProgress?.(body.size); resolve(); }
-      else reject(new Error("アップロードに失敗しました"));
-    });
-    request.addEventListener("error", () => reject(new Error("アップロードに失敗しました")));
-    request.send(body);
-  });
 }

@@ -34,6 +34,10 @@ export const uploadFilesSchema = z.object({
   })).min(1).max(30),
 });
 
+export const editUploadFilesSchema = uploadFilesSchema.extend({
+  replacingMediaIds: z.array(z.string().min(1)).max(30).default([]),
+});
+
 export const mediaCompleteSchema = z.object({
   width: z.number().int().positive().nullable().default(null),
   height: z.number().int().positive().nullable().default(null),

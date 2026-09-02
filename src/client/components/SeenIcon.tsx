@@ -4,12 +4,10 @@ export function SeenIcon() {
       <g transform="rotate(-7 7 10)">
         <ellipse cx="7" cy="10" rx="4.8" ry="7" />
         <circle cx="8.3" cy="8.8" r="2.15" />
-        <circle className="seen-icon-highlight" cx="9" cy="8" r="0.65" />
       </g>
       <g transform="rotate(7 18.5 10)">
         <ellipse cx="18.5" cy="10" rx="4.8" ry="7" />
         <circle cx="19.8" cy="8.8" r="2.15" />
-        <circle className="seen-icon-highlight" cx="20.5" cy="8" r="0.65" />
       </g>
     </svg>
   );

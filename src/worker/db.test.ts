@@ -63,6 +63,6 @@ describe("loadPosts", () => {
     const [result] = await loadPosts(db, [post], currentUser);
 
     expect(result.media[0].contentUrl).toBe("/api/media/image-1/content?variant=preview");
-    expect(result.media[1].contentUrl).toBe("/api/media/video-1/content");
+    expect(result.media[1].contentUrl).toBe("/api/media/video-1/content?variant=original");
   });
 });

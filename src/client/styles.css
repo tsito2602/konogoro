@@ -182,12 +182,13 @@ img { display: block; max-width: 100%; }
 .album-year-picker svg { width: 20px; height: 20px; }
 .album-month-picker { min-height: 52px; padding: 0 10px; display: flex; gap: 3px; overflow-x: auto; border-bottom: 1px solid var(--separator); scrollbar-width: none; }
 .album-month-picker::-webkit-scrollbar { display: none; }
-.album-month-picker button { position: relative; min-width: 50px; padding: 5px 9px 9px; display: grid; place-items: center; gap: 1px; border: 0; color: var(--ash); background: transparent; }
+.album-month-picker button { position: relative; min-width: 50px; padding: 5px 9px 9px; display: grid; place-items: center; border: 0; color: var(--ash); background: transparent; }
 .album-month-picker button::after { content: ""; position: absolute; right: 7px; bottom: 0; left: 7px; height: 3px; border-radius: 3px 3px 0 0; background: transparent; }
-.album-month-picker button.active { color: var(--accent); }
-.album-month-picker button.active::after { background: var(--accent); }
+.album-month-picker button.active { color: var(--tab-active); }
+.album-month-picker button.active::after { background: var(--tab-active); }
 .album-month-picker span { font-size: 17px; font-weight: 650; }
-.album-month-picker small { font-size: 9px; }
+.album-month-picker .album-all-button { min-width: 46px; padding-inline: 7px; }
+.album-all-button svg { width: 20px; height: 20px; stroke-width: 1.7; }
 .album-cover { position: relative; aspect-ratio: 4 / 3; display: block; overflow: hidden; background: var(--placeholder); }
 .album-cover::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(0,0,0,.34), transparent 58%); pointer-events: none; }
 .album-cover > img { width: 100%; height: 100%; object-fit: cover; }

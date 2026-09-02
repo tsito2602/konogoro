@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Grid2X2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import type { AlbumMedia } from "../../shared/types";
@@ -48,13 +48,16 @@ export function AlbumPage() {
   };
 
   const groups = media ? groupAlbumMedia(media) : [];
-  const selectedMonth = groups.find((group) => group.key === selectedMonthKey) ?? groups[0];
+  const selectedAllYear = selectedMonthKey.startsWith("all-") ? Number(selectedMonthKey.slice(4)) : null;
+  const selectedMonth = groups.find((group) => group.key === selectedMonthKey) ?? (selectedAllYear ? undefined : groups[0]);
+  const selectedYear = selectedAllYear ?? selectedMonth?.year;
   const years = [...new Set(groups.map((group) => group.year))];
-  const selectedYearIndex = selectedMonth ? years.indexOf(selectedMonth.year) : -1;
-  const months = selectedMonth ? groups.filter((group) => group.year === selectedMonth.year) : [];
+  const selectedYearIndex = selectedYear ? years.indexOf(selectedYear) : -1;
+  const months = selectedYear ? groups.filter((group) => group.year === selectedYear) : [];
+  const allSelected = selectedYear !== undefined && selectedMonthKey === `all-${selectedYear}`;
   const selectYear = (year: number) => {
     const firstMonth = groups.find((group) => group.year === year);
-    if (firstMonth) setSelectedMonthKey(firstMonth.key);
+    if (firstMonth) setSelectedMonthKey(allSelected ? `all-${year}` : firstMonth.key);
   };
 
   return <>
@@ -63,18 +66,23 @@ export function AlbumPage() {
       {!media && !error && <Loading />}
       {error && <ErrorState message={error} retry={load} />}
       {media?.length === 0 && <EmptyState title="まだ写真がありません" body="投稿した写真や動画が、撮影した月ごとに表示されます。" />}
-      {selectedMonth && <>
+      {selectedYear && <>
         <div className="album-year-picker">
           <button type="button" onClick={() => selectYear(years[selectedYearIndex + 1])} disabled={selectedYearIndex >= years.length - 1} aria-label="前年を表示"><ChevronLeft /></button>
-          <strong>{selectedMonth.year}</strong>
+          <strong>{selectedYear}</strong>
           <button type="button" onClick={() => selectYear(years[selectedYearIndex - 1])} disabled={selectedYearIndex <= 0} aria-label="翌年を表示"><ChevronRight /></button>
         </div>
-        <div className="album-month-picker" aria-label={`${selectedMonth.year}年の月`}>
-          {months.map((group) => <button className={group.key === selectedMonth.key ? "active" : ""} type="button" key={group.key} onClick={() => setSelectedMonthKey(group.key)} aria-pressed={group.key === selectedMonth.key}>
-            <span>{group.month}</span><small>{group.media.length}</small>
+        <div className="album-month-picker" aria-label={`${selectedYear}年の月`}>
+          <button className={`album-all-button${allSelected ? " active" : ""}`} type="button" onClick={() => setSelectedMonthKey(`all-${selectedYear}`)} aria-label={`${selectedYear}年をすべて表示`} aria-pressed={allSelected}><Grid2X2 /></button>
+          {months.map((group) => <button className={group.key === selectedMonth?.key ? "active" : ""} type="button" key={group.key} onClick={() => setSelectedMonthKey(group.key)} aria-pressed={group.key === selectedMonth?.key}>
+            <span>{group.month}</span>
           </button>)}
         </div>
-        <section className="album-month" aria-label={selectedMonth.label}>
+        {allSelected ? <section className="album-month" aria-label={`${selectedYear}年のすべて`}>
+          <div className="album-grid">{months.flatMap((group) => group.media).map((item) => <AlbumMediaLink item={item} key={item.id}>
+            <img src={item.thumbnailUrl} alt="" loading="lazy" />
+          </AlbumMediaLink>)}</div>
+        </section> : selectedMonth && <section className="album-month" aria-label={selectedMonth.label}>
           <AlbumMediaLink item={selectedMonth.media[0]} className="album-cover">
             <img src={selectedMonth.media[0].previewUrl} alt="" />
             <span className="album-cover-label"><strong>{selectedMonth.month}月</strong><small>{selectedMonth.year}</small><small>{selectedMonth.media.length}件の思い出</small></span>
@@ -82,7 +90,7 @@ export function AlbumPage() {
           {selectedMonth.media.length > 1 && <div className="album-grid">{selectedMonth.media.slice(1).map((item) => <AlbumMediaLink item={item} key={item.id}>
             <img src={item.thumbnailUrl} alt="" loading="lazy" />
           </AlbumMediaLink>)}</div>}
-        </section>
+        </section>}
       </>}
       {media && nextCursor && <div className="form-page">
         {moreError && <p className="form-error" role="alert">{moreError}</p>}

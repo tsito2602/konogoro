@@ -6,10 +6,12 @@ import { api, formatDate } from "../api";
 import { ErrorState, Loading } from "../components/AsyncState";
 import { PageHeader } from "../components/PageHeader";
 import { SeenBy } from "../components/SeenBy";
+import { useToast } from "../components/Toast";
 
 export function PostDetailPage() {
   const { postId = "" } = useParams();
   const navigate = useNavigate();
+  const showToast = useToast();
   const [post, setPost] = useState<Post | null>(null);
   const [error, setError] = useState("");
   const [commentError, setCommentError] = useState("");
@@ -34,6 +36,7 @@ export function PostDetailPage() {
     setDeleting(true); setDeleteError("");
     try {
       await api(`/posts/${post.id}`, { method: "DELETE" });
+      showToast("投稿を削除しました");
       navigate(post.eventId ? `/events/${post.eventId}` : "/", { replace: true });
     } catch (reason) { setDeleteError((reason as Error).message); setDeleting(false); }
   };

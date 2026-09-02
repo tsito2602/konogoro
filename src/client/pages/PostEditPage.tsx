@@ -4,10 +4,12 @@ import type { EventDetail, EventSection, EventSummary, Post } from "../../shared
 import { api } from "../api";
 import { ErrorState, Loading } from "../components/AsyncState";
 import { PageHeader } from "../components/PageHeader";
+import { useToast } from "../components/Toast";
 
 export function PostEditPage() {
   const { postId = "" } = useParams();
   const navigate = useNavigate();
+  const showToast = useToast();
   const [post, setPost] = useState<Post | null>(null);
   const [events, setEvents] = useState<EventSummary[]>([]);
   const [sections, setSections] = useState<EventSection[]>([]);
@@ -46,6 +48,7 @@ export function PostEditPage() {
     const form = new FormData(event.currentTarget);
     try {
       await api(`/posts/${post.id}`, { method: "PUT", body: JSON.stringify({ title: form.get("title"), caption: form.get("caption"), eventId: eventId || null, sectionId: sectionId || null }) });
+      showToast("投稿を更新しました");
       navigate(`/posts/${post.id}`, { replace: true });
     } catch (reason) { setError((reason as Error).message); setSaving(false); }
   };

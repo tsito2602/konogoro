@@ -5,6 +5,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import type { EventDetail, EventSection, EventSummary, UploadTarget } from "../../shared/types";
 import { api } from "../api";
 import { PageHeader } from "../components/PageHeader";
+import { useToast } from "../components/Toast";
 
 type UploadStatus = "ready" | "uploading" | "uploaded" | "failed";
 type SelectedFile = {
@@ -24,6 +25,7 @@ const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp", "video/mp
 
 export function PostCreatePage() {
   const navigate = useNavigate();
+  const showToast = useToast();
   const [searchParams] = useSearchParams();
   const [events, setEvents] = useState<EventSummary[]>([]);
   const [sections, setSections] = useState<EventSection[]>([]);
@@ -108,6 +110,7 @@ export function PostCreatePage() {
       setError("一部のアップロードに失敗しました。失敗した項目だけ再試行できます。"); setBusy(false); return;
     }
     await api(`/posts/${postId}/publish`, { method: "POST" });
+    showToast("投稿しました");
     navigate(`/posts/${postId}`, { replace: true });
   };
 
@@ -152,6 +155,7 @@ export function PostCreatePage() {
     setBusy(true); setError("");
     try {
       await api(`/posts/${draftPostId}/publish`, { method: "POST" });
+      showToast("投稿しました");
       navigate(`/posts/${draftPostId}`, { replace: true });
     } catch (reason) { setError((reason as Error).message); setBusy(false); }
   };

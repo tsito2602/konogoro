@@ -2,9 +2,11 @@ import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api";
 import { PageHeader } from "../components/PageHeader";
+import { useToast } from "../components/Toast";
 
 export function EventCreatePage() {
   const navigate = useNavigate();
+  const showToast = useToast();
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const submit = async (event: FormEvent<HTMLFormElement>) => {
@@ -13,6 +15,7 @@ export function EventCreatePage() {
     const data = new FormData(event.currentTarget);
     try {
       const result = await api<{ id: string }>("/events", { method: "POST", body: JSON.stringify({ title: data.get("title"), description: data.get("description"), startDate: data.get("startDate") || null, endDate: data.get("endDate") || null }) });
+      showToast("イベントを作成しました");
       navigate(`/events/${result.id}`, { replace: true });
     } catch (reason) { setError((reason as Error).message); setSaving(false); }
   };

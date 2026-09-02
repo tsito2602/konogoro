@@ -6,6 +6,7 @@ import type { CurrentUser } from "../../shared/types";
 import { api } from "../api";
 import { ErrorState, Loading } from "../components/AsyncState";
 import { PageHeader } from "../components/PageHeader";
+import { useToast } from "../components/Toast";
 import { getThemePreference, setThemePreference, type ThemePreference } from "../theme";
 
 const themeOptions = [
@@ -19,9 +20,9 @@ export function SettingsPage() {
   const [displayName, setDisplayName] = useState("");
   const [notificationEnabled, setNotificationEnabled] = useState(false);
   const [error, setError] = useState("");
-  const [saved, setSaved] = useState(false);
   const [busy, setBusy] = useState(false);
   const [theme, setTheme] = useState<ThemePreference>(getThemePreference);
+  const showToast = useToast();
 
   const load = () => {
     setError("");
@@ -37,10 +38,10 @@ export function SettingsPage() {
   }, []);
 
   const save = async (event: FormEvent) => {
-    event.preventDefault(); setBusy(true); setError(""); setSaved(false);
+    event.preventDefault(); setBusy(true); setError("");
     try {
       const result = await api<CurrentUser>("/me", { method: "PATCH", body: JSON.stringify({ displayName, notificationEnabled }) });
-      setUser(result); setDisplayName(result.displayName); setNotificationEnabled(result.notificationEnabled ?? false); setSaved(true);
+      setUser(result); setDisplayName(result.displayName); setNotificationEnabled(result.notificationEnabled ?? false); showToast("設定を保存しました");
     } catch (reason) { setError((reason as Error).message); }
     finally { setBusy(false); }
   };
@@ -79,7 +80,6 @@ export function SettingsPage() {
         <div className="setting-status"><strong>LINE連携状態</strong><span className={user.lineConnected ? "linked" : ""}>{user.lineConnected ? "連携済み" : "未連携"}</span></div>
         <div className="setting-status"><strong>公式アカウント</strong><span className={user.lineFriend ? "linked" : ""}>{user.lineFriend ? "友だち追加済み" : "未追加"}</span></div>
         {user.lineConnected && !user.lineFriend && <a className="outline-button wide" href="/api/auth/line">友だち追加を確認</a>}
-        {saved && <p className="save-message" role="status">設定を保存しました</p>}
         {error && <p className="form-error" role="alert">{error}</p>}
         <button className="primary-button wide" disabled={busy || !displayName.trim()}>{busy ? "保存中…" : "保存"}</button>
         <button className="danger-button settings-logout" type="button" onClick={logout} disabled={busy}>ログアウト</button>

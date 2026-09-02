@@ -5,6 +5,7 @@ import { api } from "../api";
 import { useCurrentUser } from "../components/AppLayout";
 import { EmptyState, ErrorState, Loading } from "../components/AsyncState";
 import { PageHeader } from "../components/PageHeader";
+import { useToast } from "../components/Toast";
 
 const roleLabels: Record<User["role"], string> = {
   owner: "管理者",
@@ -14,6 +15,7 @@ const roleLabels: Record<User["role"], string> = {
 
 export function FamilySettingsPage() {
   const currentUser = useCurrentUser();
+  const showToast = useToast();
   const [members, setMembers] = useState<FamilyMember[] | null>(null);
   const [error, setError] = useState("");
   const [memberError, setMemberError] = useState("");
@@ -56,7 +58,7 @@ export function FamilySettingsPage() {
   };
 
   const copyInvite = async () => {
-    try { await navigator.clipboard.writeText(inviteUrl); }
+    try { await navigator.clipboard.writeText(inviteUrl); showToast("招待URLをコピーしました"); }
     catch { setInviteError("招待URLをコピーできませんでした"); }
   };
 

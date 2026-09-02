@@ -5,10 +5,12 @@ import type { EventCoverMedia, EventDetail, EventSection } from "../../shared/ty
 import { api } from "../api";
 import { ErrorState, Loading } from "../components/AsyncState";
 import { PageHeader } from "../components/PageHeader";
+import { useToast } from "../components/Toast";
 
 export function EventEditPage() {
   const { eventId = "" } = useParams();
   const navigate = useNavigate();
+  const showToast = useToast();
   const [detail, setDetail] = useState<EventDetail | null>(null);
   const [media, setMedia] = useState<EventCoverMedia[]>([]);
   const [error, setError] = useState("");
@@ -35,6 +37,7 @@ export function EventEditPage() {
     const data = new FormData(event.currentTarget);
     try {
       await api(`/events/${eventId}`, { method: "PUT", body: JSON.stringify({ title: data.get("title"), description: data.get("description"), startDate: data.get("startDate") || null, endDate: data.get("endDate") || null }) });
+      showToast("イベントを更新しました");
       navigate(`/events/${eventId}`);
     } catch (reason) { setError((reason as Error).message); setSaving(false); }
   };
@@ -71,7 +74,7 @@ export function EventEditPage() {
 
   const deleteEvent = async () => {
     if (!confirm(`「${detail.title}」を削除しますか？投稿はイベントなしになります。`)) return;
-    try { await api(`/events/${eventId}`, { method: "DELETE" }); navigate("/events", { replace: true }); }
+    try { await api(`/events/${eventId}`, { method: "DELETE" }); showToast("イベントを削除しました"); navigate("/events", { replace: true }); }
     catch (reason) { setError((reason as Error).message); }
   };
 

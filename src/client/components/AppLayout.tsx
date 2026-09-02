@@ -5,6 +5,7 @@ import type { CurrentUser } from "../../shared/types";
 import { canCreatePost, canInviteFamily, canManageEvent } from "../../shared/permissions";
 import { api } from "../api";
 import { ErrorState, Loading } from "./AsyncState";
+import { ToastProvider } from "./Toast";
 
 const viewerPattern = /^\/posts\/[^/]+\/media\//;
 const postDetailPattern = /^\/posts\/[^/]+$/;
@@ -56,7 +57,7 @@ export function AppLayout() {
   if (!canAccessPath(currentUser, pathname)) return <Navigate to="/" replace />;
 
   return (
-    <div className={hideNavigation ? "app-shell viewer-shell" : "app-shell"}>
+    <ToastProvider><div className={hideNavigation ? "app-shell viewer-shell" : "app-shell"}>
       <Outlet context={currentUser} />
       {!hideNavigation && (
         <nav className="tab-bar" aria-label="メインナビゲーション">
@@ -76,7 +77,7 @@ export function AppLayout() {
         </div></>}
         <button className={`floating-add-button${addMenuOpen ? " open" : ""}`} type="button" onClick={() => setAddMenuOpen((open) => !open)} aria-expanded={addMenuOpen} aria-label={addMenuOpen ? "追加メニューを閉じる" : "追加メニューを開く"}><Plus /></button>
       </> : <Link className="floating-add-button" to="/posts/new" aria-label="写真・動画を追加"><Plus /></Link>)}
-    </div>
+    </div></ToastProvider>
   );
 }
 

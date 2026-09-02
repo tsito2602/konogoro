@@ -457,23 +457,30 @@ a.icon-button {
   border-bottom: 8px solid var(--surface-subtle);
 }
 .post-head {
-  min-height: 70px;
+  min-height: 54px;
   padding: 10px 12px;
-  display: grid;
-  grid-template-columns: 38px minmax(0, 1fr);
-  gap: 9px;
-  align-items: start;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 5px;
+}
+.post-author-row {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 .post-author-avatar {
-  width: 38px;
-  height: 38px;
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
   display: grid;
   place-items: center;
   overflow: hidden;
   border-radius: 50%;
   color: var(--carbon);
   background: var(--placeholder);
-  font-size: 13px;
+  font-size: 8px;
   font-weight: 600;
 }
 .post-author-avatar img {
@@ -481,13 +488,7 @@ a.icon-button {
   height: 100%;
   object-fit: cover;
 }
-.post-head-copy {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-.post-head-copy > strong,
+.post-author-name,
 .post-context > span {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -497,25 +498,12 @@ a.icon-button {
   font-size: 14px;
   font-weight: 650;
 }
-.post-head-date {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  color: var(--ash);
-  font-size: 11px;
-}
-.post-head-date svg {
-  width: 13px;
-  height: 13px;
-  flex: 0 0 auto;
-  stroke-width: 1.7;
-}
 .post-context {
   min-width: 0;
   display: flex;
   align-items: center;
   gap: 4px;
-  color: var(--accent-ink);
+  color: var(--carbon);
   font-size: 12px;
   font-weight: 550;
 }
@@ -632,6 +620,20 @@ a.icon-button {
   width: 22px;
   height: 22px;
   stroke-width: 1.8;
+}
+.post-date {
+  min-height: 42px;
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--ash);
+  font-size: 11px;
+}
+.post-date svg {
+  width: 16px;
+  height: 16px;
+  stroke-width: 1.7;
 }
 .post-caption {
   display: block;

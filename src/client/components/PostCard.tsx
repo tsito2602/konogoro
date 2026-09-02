@@ -12,32 +12,24 @@ export function PostCard({ post, showContext = true }: { post: Post; showContext
   return (
     <article className="post-card" ref={seenRef}>
       <Link className="post-head" to={`/posts/${post.id}`} aria-label={`${post.authorName}さんの投稿を開く`}>
-        <span className="post-author-avatar" aria-hidden>
-          {post.authorAvatarUrl ? <img src={post.authorAvatarUrl} alt="" /> : post.authorName.slice(0, 1)}
-        </span>
-        <span className="post-head-copy">
+        <span className="post-author-row">
+          <span className="post-author-avatar" aria-hidden>
+            {post.authorAvatarUrl ? <img src={post.authorAvatarUrl} alt="" /> : post.authorName.slice(0, 1)}
+          </span>
           <strong className="post-author-name">{post.authorName}</strong>
-          <time
-            className="post-head-date"
-            dateTime={date ?? undefined}
-            aria-label={`${dateLabel} ${formatPostDate(date)}`}
-          >
-            {post.capturedAt ? <Camera aria-hidden /> : <Upload aria-hidden />}
-            <span>{formatPostDate(date)}</span>
-          </time>
-          {(showContext ? post.eventTitle || post.sceneTitle : post.sceneTitle) && (
-            <span className="post-context">
-              {showContext && post.eventTitle && (
-                <>
-                  <CalendarDays aria-hidden />
-                  <span>{post.eventTitle}</span>
-                </>
-              )}
-              {showContext && post.eventTitle && post.sceneTitle && <span aria-hidden>›</span>}
-              {post.sceneTitle && <span>{post.sceneTitle}</span>}
-            </span>
-          )}
         </span>
+        {(showContext ? post.eventTitle || post.sceneTitle : post.sceneTitle) && (
+          <span className="post-context">
+            {showContext && post.eventTitle && (
+              <>
+                <CalendarDays aria-hidden />
+                <span>{post.eventTitle}</span>
+              </>
+            )}
+            {showContext && post.eventTitle && post.sceneTitle && <span aria-hidden>›</span>}
+            {post.sceneTitle && <span>{post.sceneTitle}</span>}
+          </span>
+        )}
       </Link>
       <Link
         to={`/posts/${post.id}`}
@@ -68,6 +60,10 @@ export function PostCard({ post, showContext = true }: { post: Post; showContext
             <MessageCircle aria-hidden />
             <span>{post.comments.length}</span>
           </Link>
+          <time className="post-date" dateTime={date ?? undefined} aria-label={`${dateLabel} ${formatPostDate(date)}`}>
+            {post.capturedAt ? <Camera aria-hidden /> : <Upload aria-hidden />}
+            <span>{formatPostDate(date)}</span>
+          </time>
         </div>
         {post.caption && (
           <Link className="post-caption" to={`/posts/${post.id}`} aria-label="投稿の詳細を開く">

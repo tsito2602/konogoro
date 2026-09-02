@@ -32,7 +32,10 @@ export function EventDetailPage() {
       <section className={`event-cover${detail.coverUrl ? "" : " no-cover"}`} style={detail.coverUrl ? { backgroundImage: `url(${detail.coverUrl})` } : undefined}>
         <div><p>{eventDate(detail.startDate, detail.endDate)}</p><h2>{detail.title}</h2><span>{eventCounts(detail.postCount, detail.photoCount, detail.videoCount)}</span></div>
       </section>
-      {canAddPost && <div className="event-actions"><Link className="primary-button" to={`/posts/new?event=${detail.id}`}>投稿を追加</Link></div>}
+      {(canAddPost || canManageEvent(currentUser)) && <div className="event-actions">
+        {canManageEvent(currentUser) && <Link className="outline-button" to={`/events/${detail.id}/edit#event-sections`}>セクションを追加</Link>}
+        {canAddPost && <Link className="primary-button" to={`/posts/new?event=${detail.id}`}>投稿を追加</Link>}
+      </div>}
       {groups.length === 0 && <EmptyState title="まだ投稿がありません" body={canAddPost ? "このイベントの写真を追加できます。" : "投稿が追加されると、ここに表示されます。"} action={canAddPost ? <Link className="primary-button" to={`/posts/new?event=${detail.id}`}>写真を追加</Link> : undefined} />}
       {groups.map((group) => <section className="event-section" key={group.id ?? "none"}>
         {group.title && <h2>{group.title}</h2>}

@@ -245,6 +245,8 @@ Media
 
 Section titleは1文字列として表示する。
 
+Eventを管理できるユーザーには、投稿作成を経由せずSectionを作成できる「セクションを追加」導線をEvent Detailへ表示する。導線からEvent EditのSection追加欄を直接開き、すぐ入力できる状態にする。
+
 NG:
 
 ```text

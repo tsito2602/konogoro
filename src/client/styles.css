@@ -267,7 +267,7 @@ img { display: block; max-width: 100%; }
 .event-detail { max-width: 760px; margin: 0 auto; background: var(--surface); }
 .event-section { padding-top: 28px; }
 .event-section > h2 { margin: 0 16px 4px; font-size: 20px; letter-spacing: -.01em; }
-.event-actions { padding: 16px; display: flex; justify-content: flex-end; }
+.event-actions { padding: 16px; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
 
 .form-page { padding: 24px 16px 40px; }
 .form-stack { display: flex; flex-direction: column; gap: 22px; }
@@ -297,6 +297,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-ink); box
 .post-edit-media-note { margin: -14px 0 0; }
 .event-edit { display: flex; flex-direction: column; gap: 32px; }
 .management-section { padding-top: 28px; border-top: 1px solid var(--separator); }
+#event-sections { scroll-margin-top: 72px; }
 .management-section h2 { margin: 0 0 14px; font-size: 20px; }
 .management-section .inline-form { margin-top: 12px; }
 .section-editor { display: grid; grid-template-columns: minmax(0,1fr) 44px; gap: 6px; margin-bottom: 8px; }

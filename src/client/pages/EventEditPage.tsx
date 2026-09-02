@@ -28,6 +28,9 @@ export function EventEditPage() {
       api<{ media: EventCoverMedia[] }>(`/events/${eventId}/cover-media`),
     ]).then(([event, cover]) => { setDetail(event); setMedia(cover.media); }).catch((reason: Error) => setError(reason.message));
   }, [eventId]);
+  useEffect(() => {
+    if (detail && window.location.hash === "#event-sections") document.querySelector<HTMLInputElement>("#new-section-title")?.focus();
+  }, [detail]);
 
   if (!detail && !error) return <><PageHeader title="イベントを編集" back /><Loading /></>;
   if (!detail) return <><PageHeader title="イベントを編集" back /><ErrorState message={error} retry={() => void load()} /></>;
@@ -88,12 +91,12 @@ export function EventEditPage() {
         <button className="primary-button wide" disabled={saving}>{saving ? "保存中…" : "変更を保存"}</button>
       </form>
 
-      <section className="management-section"><h2>セクション</h2>
+      <section className="management-section" id="event-sections"><h2>セクション</h2>
         {detail.sections.map((section) => <div className="section-editor" key={section.id}>
           <input aria-label={`${section.title}の名前`} defaultValue={section.title} onBlur={(event) => { const title = event.target.value.trim(); if (title && title !== section.title) void renameSection(section, title); }} maxLength={100} />
           <button className="icon-button" type="button" aria-label={`${section.title}を削除`} onClick={() => void deleteSection(section)}><Trash2 /></button>
         </div>)}
-        <form className="inline-form" onSubmit={(event) => { event.preventDefault(); void addSection(event.currentTarget); }}><input name="title" required maxLength={100} placeholder="新しいセクション" /><button className="outline-button"><Plus />追加</button></form>
+        <form className="inline-form" onSubmit={(event) => { event.preventDefault(); void addSection(event.currentTarget); }}><input id="new-section-title" name="title" required maxLength={100} placeholder="新しいセクション" /><button className="outline-button"><Plus />追加</button></form>
       </section>
 
       <section className="management-section"><div className="section-heading"><h2>カバー</h2><button className="text-button" type="button" onClick={() => void selectCover(null)}>自動選択に戻す</button></div>

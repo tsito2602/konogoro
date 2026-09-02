@@ -65,29 +65,31 @@ export function EventDetailPage() {
             <span>{eventCounts(detail.postCount, detail.photoCount, detail.videoCount)}</span>
           </div>
         </section>
-        {canAddPost && (
-          <div className="event-actions">
-            <Link className="primary-button" to={`/posts/new?event=${detail.id}`}>
-              投稿を追加
-            </Link>
-          </div>
-        )}
-        {detail.posts.length === 0 && (
-          <EmptyState
-            title="まだ投稿がありません"
-            body={canAddPost ? "このイベントの写真を追加できます。" : "投稿が追加されると、ここに表示されます。"}
-            action={
-              canAddPost ? (
-                <Link className="primary-button" to={`/posts/new?event=${detail.id}`}>
-                  写真を追加
-                </Link>
-              ) : undefined
-            }
-          />
-        )}
-        {detail.posts.map((post) => (
-          <PostCard key={post.id} post={post} showContext={false} />
-        ))}
+        <section className="event-post-feed" aria-label="イベントの投稿">
+          {canAddPost && (
+            <div className="event-actions">
+              <Link className="primary-button" to={`/posts/new?event=${detail.id}`}>
+                投稿を追加
+              </Link>
+            </div>
+          )}
+          {detail.posts.length === 0 && (
+            <EmptyState
+              title="まだ投稿がありません"
+              body={canAddPost ? "このイベントの写真を追加できます。" : "投稿が追加されると、ここに表示されます。"}
+              action={
+                canAddPost ? (
+                  <Link className="primary-button" to={`/posts/new?event=${detail.id}`}>
+                    写真を追加
+                  </Link>
+                ) : undefined
+              }
+            />
+          )}
+          {detail.posts.map((post) => (
+            <PostCard key={post.id} post={post} showContext={false} />
+          ))}
+        </section>
       </main>
     </>
   );

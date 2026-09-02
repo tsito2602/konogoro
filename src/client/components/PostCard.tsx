@@ -1,4 +1,4 @@
-import { CalendarDays, Camera, ChevronRight, MessageCircle, Upload } from "lucide-react";
+import { CalendarDays, Camera, MessageCircle, Upload } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { Post } from "../../shared/types";
 import { useSeenTracking } from "../hooks/useSeenTracking";
@@ -7,8 +7,6 @@ import { SeenBy } from "./SeenBy";
 export function PostCard({ post, showContext = true }: { post: Post; showContext?: boolean }) {
   const { ref: seenRef, viewed } = useSeenTracking(post.id, post.viewedByCurrentUser);
   const latestComment = post.comments.at(-1);
-  const contextTitle = showContext ? (post.eventTitle ?? "日常の投稿") : (post.sceneTitle ?? "投稿");
-  const contextSubtitle = showContext ? post.sceneTitle : null;
   const date = post.capturedAt ?? post.publishedAt;
   const dateLabel = post.capturedAt ? "撮影日" : "投稿日";
   return (
@@ -18,13 +16,28 @@ export function PostCard({ post, showContext = true }: { post: Post; showContext
           {post.authorAvatarUrl ? <img src={post.authorAvatarUrl} alt="" /> : post.authorName.slice(0, 1)}
         </span>
         <span className="post-head-copy">
-          <strong className="post-event-title">
-            {showContext && post.eventTitle && <CalendarDays aria-hidden />}
-            {contextTitle}
-          </strong>
-          {contextSubtitle && <span>{contextSubtitle}</span>}
+          <strong className="post-author-name">{post.authorName}</strong>
+          <time
+            className="post-head-date"
+            dateTime={date ?? undefined}
+            aria-label={`${dateLabel} ${formatPostDate(date)}`}
+          >
+            {post.capturedAt ? <Camera aria-hidden /> : <Upload aria-hidden />}
+            <span>{formatPostDate(date)}</span>
+          </time>
+          {(showContext ? post.eventTitle || post.sceneTitle : post.sceneTitle) && (
+            <span className="post-context">
+              {showContext && post.eventTitle && (
+                <>
+                  <CalendarDays aria-hidden />
+                  <span>{post.eventTitle}</span>
+                </>
+              )}
+              {showContext && post.eventTitle && post.sceneTitle && <span aria-hidden>›</span>}
+              {post.sceneTitle && <span>{post.sceneTitle}</span>}
+            </span>
+          )}
         </span>
-        <ChevronRight aria-hidden />
       </Link>
       <Link
         to={`/posts/${post.id}`}
@@ -55,10 +68,6 @@ export function PostCard({ post, showContext = true }: { post: Post; showContext
             <MessageCircle aria-hidden />
             <span>{post.comments.length}</span>
           </Link>
-          <time className="post-date" dateTime={date ?? undefined} aria-label={`${dateLabel} ${formatPostDate(date)}`}>
-            {post.capturedAt ? <Camera aria-hidden /> : <Upload aria-hidden />}
-            <span>{formatPostDate(date)}</span>
-          </time>
         </div>
         {post.caption && (
           <Link className="post-caption" to={`/posts/${post.id}`} aria-label="投稿の詳細を開く">

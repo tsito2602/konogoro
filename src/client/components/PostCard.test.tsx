@@ -44,13 +44,15 @@ describe("PostCard", () => {
     expect(html).not.toContain('class="media-grid unseen"');
   });
 
-  it("投稿者アイコンとイベント情報を写真の上に表示する", () => {
+  it("投稿者名、撮影日、イベントとシーンを写真の上に表示する", () => {
     const html = renderToStaticMarkup(
       <MemoryRouter>
         <PostCard post={{ ...post, eventId: "event-1", eventTitle: "箱根旅行", sceneTitle: "2日目" }} />
       </MemoryRouter>,
     );
     expect(html).toContain('aria-label="翼さんの投稿を開く"');
+    expect(html).toContain('class="post-author-name">翼</strong>');
+    expect(html).toContain('class="post-head-date"');
     expect(html).toContain("箱根旅行");
     expect(html).toContain("2日目");
     expect(html).toContain('class="post-author-avatar"');
@@ -58,17 +60,17 @@ describe("PostCard", () => {
     expect(html).not.toContain("lucide-folder");
   });
 
-  it("イベントがない投稿は日常の投稿として表示する", () => {
+  it("イベントがない投稿はコンテキスト行を表示しない", () => {
     const html = renderToStaticMarkup(
       <MemoryRouter>
         <PostCard post={post} />
       </MemoryRouter>,
     );
-    expect(html).toContain("日常の投稿");
+    expect(html).not.toContain('class="post-context"');
     expect(html).toContain("旅行の思い出");
   });
 
-  it("イベント詳細ではシーン名をアイコンなしで投稿カードへ表示する", () => {
+  it("イベント詳細では投稿者名とシーン名だけをコンテキストに表示する", () => {
     const html = renderToStaticMarkup(
       <MemoryRouter>
         <PostCard
@@ -78,6 +80,7 @@ describe("PostCard", () => {
       </MemoryRouter>,
     );
     expect(html).toContain("2日目");
+    expect(html).not.toContain("箱根旅行");
     expect(html).not.toContain("lucide-calendar-days");
   });
 

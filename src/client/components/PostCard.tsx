@@ -6,6 +6,7 @@ import { SeenBy } from "./SeenBy";
 
 export function PostCard({ post, showContext = true }: { post: Post; showContext?: boolean }) {
   const postPageState = { postPage: true };
+  const mediaViewerState = { returnToPrevious: true };
   const { ref: seenRef, viewed } = useSeenTracking(post.id, post.viewedByCurrentUser);
   const latestComment = post.comments.at(-1);
   const date = post.capturedAt ?? post.publishedAt;
@@ -37,15 +38,15 @@ export function PostCard({ post, showContext = true }: { post: Post; showContext
           </span>
         )}
       </Link>
-      <Link
-        to={`/posts/${post.id}`}
-        state={postPageState}
-        className={`media-grid${viewed ? "" : " unseen"}`}
-        data-count={Math.min(post.media.length, 4)}
-        aria-label={`${viewed ? "" : "未閲覧の"}投稿を開く`}
-      >
+      <div className={`media-grid${viewed ? "" : " unseen"}`} data-count={Math.min(post.media.length, 4)}>
         {post.media.slice(0, 4).map((media, index) => (
-          <div className="media-cell" key={media.id}>
+          <Link
+            className="media-cell"
+            key={media.id}
+            to={`/posts/${post.id}/media/${media.id}`}
+            state={mediaViewerState}
+            aria-label={`${viewed ? "" : "未閲覧の"}投稿の${media.kind === "video" ? "動画" : "写真"} ${index + 1}/${post.media.length}を開く`}
+          >
             <img src={media.thumbnailUrl} alt="" loading="lazy" />
             {media.kind === "video" && (
               <span className="media-play-mark" aria-hidden>
@@ -53,9 +54,9 @@ export function PostCard({ post, showContext = true }: { post: Post; showContext
               </span>
             )}
             {index === 3 && post.media.length >= 4 && <span className="more-count">+{post.media.length - 3}</span>}
-          </div>
+          </Link>
         ))}
-      </Link>
+      </div>
       <div className="post-copy">
         <div className="post-engagement">
           <SeenBy users={post.seenBy} />

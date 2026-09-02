@@ -31,7 +31,6 @@ describe("PostCard", () => {
       </MemoryRouter>,
     );
     expect(html).toContain('class="media-grid unseen"');
-    expect(html).toContain('aria-label="未閲覧の投稿を開く"');
   });
 
   it("閲覧済みの投稿には未閲覧表示を付けない", () => {
@@ -42,6 +41,33 @@ describe("PostCard", () => {
     );
     expect(html).toContain('class="media-grid"');
     expect(html).not.toContain('class="media-grid unseen"');
+  });
+
+  it("画像ごとにMedia Viewerへ直接移動する", () => {
+    const media = [
+      {
+        id: "media-1",
+        kind: "image" as const,
+        mimeType: "image/jpeg",
+        originalFilename: "photo.jpg",
+        byteSize: 100,
+        width: 100,
+        height: 100,
+        durationSeconds: null,
+        capturedAt: post.capturedAt,
+        position: 0,
+        contentUrl: "/api/media/media-1/content?variant=preview",
+        thumbnailUrl: "/api/media/media-1/content?variant=thumbnail",
+        downloadUrl: "/api/media/media-1/download",
+      },
+    ];
+    const html = renderToStaticMarkup(
+      <MemoryRouter>
+        <PostCard post={{ ...post, media }} />
+      </MemoryRouter>,
+    );
+    expect(html).toContain('href="/posts/post-1/media/media-1"');
+    expect(html).toContain('aria-label="未閲覧の投稿の写真 1/1を開く"');
   });
 
   it("投稿者名とイベント・シーンを写真の上、撮影日を写真の下に表示する", () => {

@@ -855,6 +855,7 @@ a.icon-button {
   font-size: 12px;
   font-weight: 700;
   line-height: 1;
+  pointer-events: none;
 }
 .media-cell {
   position: relative;

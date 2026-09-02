@@ -92,6 +92,8 @@ Media Gridの下には「見た人」の両目アイコンと人数、コメン�
 
 写真・動画をできるだけ大きく表示。
 
+Post CardのMediaを押すと、Post Detailを経由せず、選択したMediaをMedia Viewerで直接開く。Media Viewerを閉じると、開く前のTimelineまたはEvent Detailへ戻る。投稿者、Caption、Commentの導線はPost Detailを開く。
+
 表示済みのthumbnailとpreviewは端末へ最大300件キャッシュする。originalとvideoに加え、アプリ本体のHTML、JavaScript、CSSはService Workerのキャッシュ対象外とし、ログアウト時にメディアキャッシュを削除する。PWA起動中は、HTMLの初期表示からアプリの起動と認証確認が完了するまで、背景透過のアプリアイコンとアプリ名を画面中央へ途切れず表示する。途中でspinnerだけの画面へ切り替えない。ブラウザでの読み込み中はアプリ名と読み込み状態を表示する。Service Worker更新時は新版へ切り替えて自動再読み込みする。
 
 ---

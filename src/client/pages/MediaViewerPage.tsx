@@ -10,13 +10,21 @@ export function swipeDirection(deltaX: number, deltaY: number): "previous" | "ne
   return deltaX > 0 ? "previous" : "next";
 }
 
+export function swipeDragOffset(deltaX: number, canMovePrevious: boolean, canMoveNext: boolean) {
+  const reachedEdge = (deltaX > 0 && !canMovePrevious) || (deltaX < 0 && !canMoveNext);
+  return deltaX * (reachedEdge ? 0.24 : 0.88);
+}
+
 export function MediaViewerPage() {
   const { postId = "", mediaId = "" } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
   const [post, setPost] = useState<Post | null>(null);
   const [error, setError] = useState("");
+  const [dragOffset, setDragOffset] = useState(0);
+  const [dragging, setDragging] = useState(false);
   const swipeStart = useRef<{ x: number; y: number; pointerId: number } | null>(null);
+  const swipeAnimation = useRef<number | null>(null);
   const load = () => {
     setError("");
     void api<Post>(`/posts/${postId}`).then(setPost).catch((reason: Error) => setError(reason.message));
@@ -24,6 +32,9 @@ export function MediaViewerPage() {
   useEffect(() => {
     void api<Post>(`/posts/${postId}`).then(setPost).catch((reason: Error) => setError(reason.message));
   }, [postId]);
+  useEffect(() => () => {
+    if (swipeAnimation.current !== null) window.clearTimeout(swipeAnimation.current);
+  }, []);
   const index = post?.media.findIndex((item) => item.id === mediaId) ?? -1;
   const current = post?.media[index];
   const closeViewer = useCallback(() => {
@@ -45,6 +56,7 @@ export function MediaViewerPage() {
     return () => window.removeEventListener("keydown", keydown);
   }, [closeViewer, index, post, showMedia]);
   const startSwipe = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (swipeAnimation.current !== null) return;
     if (!event.isPrimary || (event.pointerType === "mouse" && event.button !== 0)) return;
     if (current?.kind === "video" && event.target instanceof HTMLVideoElement) {
       const bounds = event.target.getBoundingClientRect();
@@ -52,21 +64,50 @@ export function MediaViewerPage() {
     }
     swipeStart.current = { x: event.clientX, y: event.clientY, pointerId: event.pointerId };
   };
+  const moveSwipe = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const start = swipeStart.current;
+    if (!start || start.pointerId !== event.pointerId) return;
+    const deltaX = event.clientX - start.x;
+    const deltaY = event.clientY - start.y;
+    if (Math.abs(deltaX) < 6 || Math.abs(deltaX) <= Math.abs(deltaY)) return;
+    if (!event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.setPointerCapture(event.pointerId);
+    event.preventDefault();
+    setDragging(true);
+    setDragOffset(swipeDragOffset(deltaX, index > 0, index < (post?.media.length ?? 0) - 1));
+  };
   const finishSwipe = (event: ReactPointerEvent<HTMLDivElement>) => {
     const start = swipeStart.current;
     swipeStart.current = null;
     if (!start || start.pointerId !== event.pointerId) return;
     const direction = swipeDirection(event.clientX - start.x, event.clientY - start.y);
-    if (direction === "previous") showMedia(index - 1);
-    if (direction === "next") showMedia(index + 1);
+    const targetIndex = direction === "previous" ? index - 1 : direction === "next" ? index + 1 : -1;
+    if (direction && post && targetIndex >= 0 && targetIndex < post.media.length) {
+      setDragging(false);
+      setDragOffset(direction === "previous" ? event.currentTarget.clientWidth : -event.currentTarget.clientWidth);
+      swipeAnimation.current = window.setTimeout(() => {
+        showMedia(targetIndex);
+        setDragOffset(0);
+        swipeAnimation.current = null;
+      }, 200);
+      return;
+    }
+    setDragging(false);
+    setDragOffset(0);
+  };
+  const cancelSwipe = () => {
+    swipeStart.current = null;
+    setDragging(false);
+    setDragOffset(0);
   };
   if (!post && !error) return <div className="media-viewer"><Loading /></div>;
   if (error || !post || !current) return <div className="media-viewer"><ErrorState message={error || "写真が見つかりません"} retry={error ? load : undefined} /></div>;
   return <main className="media-viewer">
     <header className="viewer-header"><button className="viewer-button" type="button" onClick={closeViewer} aria-label="閉じる"><X /></button><span>{index + 1} / {post.media.length}</span><a className="viewer-button" href={current.downloadUrl} aria-label="保存"><Download /></a></header>
-    <div className="viewer-stage" onPointerDown={startSwipe} onPointerUp={finishSwipe} onPointerCancel={() => { swipeStart.current = null; }}>
+    <div className="viewer-stage" onPointerDown={startSwipe} onPointerMove={moveSwipe} onPointerUp={finishSwipe} onPointerCancel={cancelSwipe}>
       {index > 0 && <Link className="viewer-arrow previous" to={`/posts/${postId}/media/${post.media[index - 1].id}`} replace state={location.state} aria-label="前の写真"><ChevronLeft /></Link>}
-      {current.kind === "video" ? <video src={current.contentUrl} controls playsInline draggable={false} /> : <img src={current.contentUrl} alt={`${post.title}の写真 ${index + 1}`} draggable={false} />}
+      <div key={current.id} className={`viewer-media-frame${dragging ? " dragging" : ""}`} style={{ transform: `translate3d(${dragOffset}px, 0, 0)` }}>
+        {current.kind === "video" ? <video src={current.contentUrl} controls playsInline draggable={false} /> : <img src={current.contentUrl} alt={`${post.title}の写真 ${index + 1}`} draggable={false} />}
+      </div>
       {index < post.media.length - 1 && <Link className="viewer-arrow next" to={`/posts/${postId}/media/${post.media[index + 1].id}`} replace state={location.state} aria-label="次の写真"><ChevronRight /></Link>}
     </div>
     <div className="viewer-info"><strong>{post.title}</strong><span>{formatDate(current.capturedAt ?? post.capturedAt)} · {post.authorName}</span>{(post.eventTitle || post.sectionTitle) && <span>{[post.eventTitle, post.sectionTitle].filter(Boolean).join(" · ")}</span>}</div>

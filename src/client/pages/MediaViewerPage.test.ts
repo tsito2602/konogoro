@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { swipeDirection } from "./MediaViewerPage";
+import { swipeDirection, swipeDragOffset } from "./MediaViewerPage";
 
 describe("swipeDirection", () => {
   it("右へ十分に動かすと前のメディアへ移動する", () => {
@@ -16,5 +16,19 @@ describe("swipeDirection", () => {
 
   it("縦方向の移動が大きい場合はスワイプとして扱わない", () => {
     expect(swipeDirection(80, 70)).toBeNull();
+  });
+});
+
+describe("swipeDragOffset", () => {
+  it("移動できる方向では指の動きに近い距離だけ追従する", () => {
+    expect(swipeDragOffset(-100, true, true)).toBe(-88);
+  });
+
+  it("先頭より前へ引いた場合は抵抗を付ける", () => {
+    expect(swipeDragOffset(100, false, true)).toBe(24);
+  });
+
+  it("末尾より後ろへ引いた場合は抵抗を付ける", () => {
+    expect(swipeDragOffset(-100, true, false)).toBe(-24);
   });
 });

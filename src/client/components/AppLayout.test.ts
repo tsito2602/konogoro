@@ -30,8 +30,8 @@ describe("LoginScreen", () => {
   it("正式アイコンとLINEログイン導線を表示する", () => {
     const html = renderToStaticMarkup(createElement(LoginScreen));
 
-    expect(html).toContain('/icons/icon-light-192.png');
-    expect(html).toContain('/icons/icon-dark-192.png');
+    expect(html).toContain('/icons/icon-light-transparent.png');
+    expect(html).toContain('/icons/icon-dark-transparent.png');
     expect(html).toContain('class="login-icon login-icon-dark"');
     expect(html).toContain("このごろ");
     expect(html).toContain('href="/api/auth/line"');

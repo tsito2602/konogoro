@@ -17,7 +17,29 @@
         const theme = localStorage.getItem("konogoro-theme");
         if (theme === "light" || theme === "dark") document.documentElement.dataset.theme = theme;
       } catch {}
+      if (matchMedia("(display-mode: standalone)").matches || navigator.standalone === true) document.documentElement.classList.add("standalone");
     </script>
+    <style>
+      body { margin: 0; }
+      .boot-screen { min-height: 100dvh; display: grid; place-items: center; color: #1d1d1f; background: #f5f5f7; font-family: system-ui, -apple-system, sans-serif; }
+      .boot-brand { display: flex; flex-direction: column; align-items: center; text-align: center; }
+      .boot-symbol { display: none; width: 152px; height: 152px; margin-bottom: -12px; }
+      .boot-symbol-dark { display: none; }
+      .boot-name { font-size: 20px; font-weight: 650; letter-spacing: .04em; }
+      .boot-status { margin: 8px 0 0; color: #707070; font-size: 14px; }
+      .standalone .boot-symbol-light { display: block; }
+      .standalone .boot-status { display: none; }
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme]) .boot-screen { color: #f5f5f7; background: #000; }
+        :root:not([data-theme]) .boot-symbol-light { display: none; }
+        :root:not([data-theme]).standalone .boot-symbol-dark { display: block; }
+        :root:not([data-theme]) .boot-status { color: #aeaeb2; }
+      }
+      :root[data-theme="dark"] .boot-screen { color: #f5f5f7; background: #000; }
+      :root[data-theme="dark"] .boot-symbol-light { display: none; }
+      :root[data-theme="dark"].standalone .boot-symbol-dark { display: block; }
+      :root[data-theme="dark"] .boot-status { color: #aeaeb2; }
+    </style>
     <script>
       const localDevelopment = location.hostname === "localhost" || location.hostname === "127.0.0.1";
       if (!localDevelopment && "serviceWorker" in navigator) {
@@ -35,7 +57,7 @@
     <title>このごろ</title>
   </head>
   <body>
-    <div id="root"><main style="min-height:100vh;display:grid;place-items:center;color:CanvasText;background:Canvas;font-family:system-ui,-apple-system,sans-serif"><div style="text-align:center"><strong>このごろ</strong><p style="margin:8px 0 0;color:GrayText;font-size:14px">読み込み中…</p></div></main></div>
+    <div id="root"><main class="boot-screen"><div class="boot-brand"><img class="boot-symbol boot-symbol-light" src="/icons/icon-light-transparent.png" alt=""><img class="boot-symbol boot-symbol-dark" src="/icons/icon-dark-transparent.png" alt=""><strong class="boot-name">このごろ</strong><p class="boot-status">読み込み中…</p></div></main></div>
     <script type="module" src="/src/client/main.tsx"></script>
   </body>
 </html>

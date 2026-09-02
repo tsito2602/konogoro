@@ -134,8 +134,8 @@ export function SettingsPage() {
 
         <section className="settings-app-info" aria-label="アプリ情報">
           <span aria-hidden>
-            <img className="settings-app-icon settings-app-icon-light" src="/icons/icon-light-192.png" alt="" />
-            <img className="settings-app-icon settings-app-icon-dark" src="/icons/icon-dark-192.png" alt="" />
+            <img className="settings-app-icon settings-app-icon-light" src="/icons/icon-light-transparent.png" alt="" />
+            <img className="settings-app-icon settings-app-icon-dark" src="/icons/icon-dark-transparent.png" alt="" />
           </span>
           <strong>このごろ</strong>
           <small>バージョン {packageInfo.version}</small>

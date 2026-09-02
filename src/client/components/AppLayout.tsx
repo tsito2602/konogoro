@@ -82,8 +82,8 @@ export function AppLayout() {
 export function LoginScreen() {
   return <main className="login-page"><section>
     <span className="login-icon-frame" aria-hidden>
-      <img className="login-icon login-icon-light" src="/icons/icon-light-192.png" alt="" />
-      <img className="login-icon login-icon-dark" src="/icons/icon-dark-192.png" alt="" />
+      <img className="login-icon login-icon-light" src="/icons/icon-light-transparent.png" alt="" />
+      <img className="login-icon login-icon-dark" src="/icons/icon-dark-transparent.png" alt="" />
     </span>
     <p className="login-eyebrow">このごろ</p>
     <h1>家族の思い出を、ひとつの場所に</h1>

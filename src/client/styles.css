@@ -330,8 +330,8 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-ink); box
 .invite-page p { color: var(--ash); line-height: 1.6; }
 .login-page { min-height: 100dvh; display: grid; place-items: center; padding: 40px 24px; text-align: center; background: radial-gradient(circle at 50% 18%, var(--surface) 0, var(--frost) 58%); }
 .login-page section { width: 100%; max-width: 420px; }
-.login-icon-frame { width: 104px; height: 104px; margin: 0 auto 18px; display: block; }
-.login-icon { width: 104px; height: 104px; border-radius: 23px; }
+.login-icon-frame { width: 144px; height: 144px; margin: -18px auto -18px; display: block; }
+.login-icon { width: 144px; height: 144px; }
 .login-icon-dark { display: none; }
 .login-page h1 { margin: 12px 0; font-size: clamp(28px, 8vw, 40px); line-height: 1.15; letter-spacing: -.035em; }
 .login-page section > p:not(.login-eyebrow) { margin: 0; color: var(--ash); line-height: 1.6; }
@@ -395,8 +395,8 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-ink); box
 .settings-logout { grid-template-columns: 40px minmax(0,1fr); color: var(--danger); }
 .settings-logout > svg:first-child { color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, transparent); }
 .settings-app-info { margin-top: 32px; padding-bottom: 12px; display: flex; flex-direction: column; align-items: center; color: var(--ash); text-align: center; }
-.settings-app-info > span { width: 58px; height: 58px; margin-bottom: 10px; display: block; }
-.settings-app-icon { width: 58px; height: 58px; border-radius: 13px; }
+.settings-app-info > span { width: 88px; height: 88px; margin-bottom: -8px; display: block; }
+.settings-app-icon { width: 88px; height: 88px; }
 .settings-app-icon-dark { display: none; }
 .settings-app-info strong { color: var(--carbon); font-size: 15px; }
 .settings-app-info small { margin-top: 2px; font-size: 11px; }

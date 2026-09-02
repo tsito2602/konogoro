@@ -196,13 +196,13 @@ app.get("/auth/line/callback", async (c) => {
     :root { color: #1d1d1f; background: #f5f5f7; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
     body { min-height: 100dvh; margin: 0; display: grid; place-items: center; }
     main { max-width: 360px; padding: 32px 24px; text-align: center; }
-    img { width: 72px; height: 72px; border-radius: 16px; }
+    img { width: 112px; height: 112px; margin: -20px; }
     h1 { margin: 20px 0 10px; font-size: 24px; letter-spacing: -.02em; }
     p { margin: 0; color: #707070; font-size: 16px; line-height: 1.6; }
   </style>
 </head>
 <body><main>
-  <img src="/icons/icon-light-192.png" alt="">
+  <img src="/icons/icon-light-transparent.png" alt="">
   <h1>ログインが完了しました</h1>
   <p>この画面を閉じて、ホーム画面の<br>「このごろ」アプリに戻ってください。</p>
 </main></body>

@@ -13,6 +13,7 @@ import { InvitePage } from "./pages/InvitePage";
 import { MediaViewerPage } from "./pages/MediaViewerPage";
 import { PostCreatePage } from "./pages/PostCreatePage";
 import { PostDetailPage } from "./pages/PostDetailPage";
+import { PostEditPage } from "./pages/PostEditPage";
 import { TimelinePage } from "./pages/TimelinePage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { initializeTheme } from "./theme";
@@ -33,6 +34,7 @@ const router = createBrowserRouter([{
     { path: "/events/:eventId/edit", element: <EventEditPage /> },
     { path: "/posts/new", element: <PostCreatePage /> },
     { path: "/posts/:postId", element: <PostDetailPage /> },
+    { path: "/posts/:postId/edit", element: <PostEditPage /> },
     { path: "/posts/:postId/media/:mediaId", element: <MediaViewerPage /> },
     { path: "/family", element: <FamilyPage /> },
     { path: "/invite/:token", element: <InvitePage /> },

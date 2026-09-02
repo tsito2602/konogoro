@@ -83,6 +83,7 @@ export type Post = {
   capturedAt: string | null;
   publishedAt: string | null;
   authorName: string;
+  canEdit: boolean;
   canDelete: boolean;
   media: Media[];
   comments: Comment[];

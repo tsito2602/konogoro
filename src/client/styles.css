@@ -247,13 +247,18 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-ink); box
 .primary-button.wide { width: 100%; font-size: 17px; }
 .primary-button:disabled { background: var(--disabled); cursor: default; }
 .form-error { margin: 0; color: var(--danger); font-size: 14px; line-height: 1.45; }
-.post-delete-section { padding: 24px 16px; border-top: 1px solid var(--border); }
 .danger-button { min-height: 44px; border: 1px solid var(--danger-border); border-radius: 10px; padding: 10px 14px; display: inline-flex; align-items: center; gap: 8px; background: var(--surface); color: var(--danger); font: inherit; cursor: pointer; }
 .danger-button:disabled { opacity: .6; cursor: default; }
 .danger-button svg { width: 18px; height: 18px; }
 .inline-action { align-self: flex-start; display: flex; gap: 5px; align-items: center; margin-top: -14px; padding-left: 0; }
 .inline-action svg { width: 17px; }
 .inline-form { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-top: -12px; }
+.post-edit-media { display: flex; gap: 5px; overflow-x: auto; scrollbar-width: none; }
+.post-edit-media::-webkit-scrollbar { display: none; }
+.post-edit-media > div { position: relative; width: 92px; aspect-ratio: 1; flex: 0 0 92px; overflow: hidden; border-radius: 9px; background: var(--placeholder); }
+.post-edit-media img { width: 100%; height: 100%; object-fit: cover; }
+.post-edit-media span { position: absolute; inset: 50% auto auto 50%; width: 30px; height: 30px; display: grid; place-items: center; transform: translate(-50%,-50%); border-radius: 50%; color: #fff; background: rgba(0,0,0,.58); font-size: 12px; }
+.post-edit-media-note { margin: -14px 0 0; }
 .event-edit { display: flex; flex-direction: column; gap: 32px; }
 .management-section { padding-top: 28px; border-top: 1px solid var(--separator); }
 .management-section h2 { margin: 0 0 14px; font-size: 20px; }
@@ -268,6 +273,21 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-ink); box
 .cover-grid svg { width: 17px; }
 .muted, .danger-zone p { color: var(--ash); font-size: 14px; }
 .danger-button { min-height: 44px; padding: 10px 18px; border: 1px solid var(--danger); border-radius: var(--pill); color: var(--danger); background: transparent; cursor: pointer; }
+.post-actions { position: relative; z-index: 23; }
+.post-menu-backdrop { position: fixed; z-index: 21; inset: 0; border: 0; background: transparent; }
+.post-action-menu { position: absolute; z-index: 22; top: 44px; right: 0; width: 150px; padding: 6px; display: grid; border: 1px solid var(--overlay-border); border-radius: 12px; background: var(--surface); box-shadow: 0 12px 32px rgba(0,0,0,.22); }
+.post-action-menu a, .post-action-menu button { min-height: 44px; padding: 9px 11px; display: flex; align-items: center; gap: 10px; border: 0; border-radius: 8px; color: var(--carbon); background: transparent; font: inherit; text-align: left; cursor: pointer; }
+.post-action-menu button { color: var(--danger); }
+.post-action-menu a:active, .post-action-menu button:active { background: var(--surface-muted); }
+.post-action-menu svg { width: 19px; height: 19px; }
+.modal-backdrop { position: fixed; z-index: 60; inset: 0; padding: 20px; display: grid; place-items: center; background: rgba(0,0,0,.48); }
+.confirmation-modal { width: min(100%, 360px); padding: 24px; border: 1px solid var(--overlay-border); border-radius: var(--radius-card); color: var(--carbon); background: var(--surface); box-shadow: 0 18px 52px rgba(0,0,0,.3); }
+.confirmation-modal h2 { margin: 0 0 10px; font-size: 20px; }
+.confirmation-modal > p:not(.form-error) { margin: 0; color: var(--ash); font-size: 14px; line-height: 1.6; }
+.confirmation-modal .form-error { margin-top: 12px; }
+.confirmation-modal > div { margin-top: 22px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.danger-confirm-button { min-height: 44px; padding: 10px 18px; border: 0; border-radius: var(--pill); color: #fff; background: var(--danger); cursor: pointer; }
+.danger-confirm-button:disabled { opacity: .6; cursor: default; }
 .family-page { padding: 24px 16px 40px; }
 .family-section + .family-section { margin-top: 32px; padding-top: 28px; border-top: 1px solid var(--separator); }
 .family-section h2 { margin: 0 0 14px; font-size: 20px; }

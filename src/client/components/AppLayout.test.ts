@@ -8,7 +8,7 @@ const viewer: CurrentUser = { id: "viewer", displayName: "Viewer", role: "viewer
 const uploader: CurrentUser = { id: "uploader", displayName: "Uploader", role: "uploader" };
 
 describe("canAccessPath", () => {
-  it.each(["/posts/new", "/events/new", "/events/event-1/edit", "/family"])("viewerの管理ルート%sを拒否する", (pathname) => {
+  it.each(["/posts/new", "/posts/post-1/edit", "/events/new", "/events/event-1/edit", "/family"])("viewerの管理ルート%sを拒否する", (pathname) => {
     expect(canAccessPath(viewer, pathname)).toBe(false);
   });
 
@@ -18,6 +18,7 @@ describe("canAccessPath", () => {
 
   it("uploaderは投稿画面とイベント管理画面を利用できる", () => {
     expect(canAccessPath(uploader, "/posts/new")).toBe(true);
+    expect(canAccessPath(uploader, "/posts/post-1/edit")).toBe(true);
     expect(canAccessPath(uploader, "/events/new")).toBe(true);
     expect(canAccessPath(uploader, "/events/event-1/edit")).toBe(true);
     expect(canAccessPath(uploader, "/family")).toBe(false);

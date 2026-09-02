@@ -9,7 +9,7 @@ import { ErrorState, Loading } from "./AsyncState";
 const viewerPattern = /^\/posts\/[^/]+\/media\//;
 const postDetailPattern = /^\/posts\/[^/]+$/;
 export function canAccessPath(user: CurrentUser, pathname: string): boolean {
-  if (/^\/posts\/new$/.test(pathname)) return canCreatePost(user);
+  if (/^\/posts\/(new|[^/]+\/edit)$/.test(pathname)) return canCreatePost(user);
   if (/^\/events\/new$/.test(pathname) || /^\/events\/[^/]+\/edit$/.test(pathname)) return canManageEvent(user);
   if (/^\/family$/.test(pathname)) return canInviteFamily(user);
   return true;
@@ -27,7 +27,7 @@ export function AppLayout() {
   const [authError, setAuthError] = useState("");
   const [addMenuOpen, setAddMenuOpen] = useState(false);
   const hideNavigation = viewerPattern.test(pathname) || (pathname !== "/posts/new" && postDetailPattern.test(pathname));
-  const hideAddButton = pathname === "/posts/new" || pathname === "/events/new" || /^\/events\/[^/]+\/edit$/.test(pathname);
+  const hideAddButton = pathname === "/posts/new" || /^\/posts\/[^/]+\/edit$/.test(pathname) || pathname === "/events/new" || /^\/events\/[^/]+\/edit$/.test(pathname);
 
   const loadAuth = useCallback(() => {
     void api<CurrentUser>("/me")

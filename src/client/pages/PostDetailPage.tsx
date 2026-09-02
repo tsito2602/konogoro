@@ -1,4 +1,4 @@
-import { Trash2 } from "lucide-react";
+import { Ellipsis, Pencil, Trash2 } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import type { Comment, Post } from "../../shared/types";
@@ -15,6 +15,8 @@ export function PostDetailPage() {
   const [commentError, setCommentError] = useState("");
   const [deleteError, setDeleteError] = useState("");
   const [deleting, setDeleting] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const load = () => {
     setError("");
     void api<Post>(`/posts/${postId}`).then(setPost).catch((reason: Error) => setError(reason.message));
@@ -25,8 +27,21 @@ export function PostDetailPage() {
   if (!post && !error) return <><PageHeader title="投稿" back /><Loading /></>;
   if (error) return <><PageHeader title="投稿" back /><ErrorState message={error} retry={load} /></>;
   if (!post) return null;
+  const deletePost = async () => {
+    setDeleting(true); setDeleteError("");
+    try {
+      await api(`/posts/${post.id}`, { method: "DELETE" });
+      navigate(post.eventId ? `/events/${post.eventId}` : "/", { replace: true });
+    } catch (reason) { setDeleteError((reason as Error).message); setDeleting(false); }
+  };
   return <>
-    <PageHeader title={post.title} back />
+    <PageHeader title={post.title} back action={(post.canEdit || post.canDelete) && <div className="post-actions">
+      <button className="icon-button" type="button" onClick={() => setMenuOpen((open) => !open)} aria-label="投稿メニュー" aria-expanded={menuOpen}><Ellipsis /></button>
+      {menuOpen && <><button className="post-menu-backdrop" type="button" aria-label="投稿メニューを閉じる" onClick={() => setMenuOpen(false)} /><div className="post-action-menu" role="menu">
+        {post.canEdit && <Link to={`/posts/${post.id}/edit`} role="menuitem" onClick={() => setMenuOpen(false)}><Pencil />編集</Link>}
+        {post.canDelete && <button type="button" role="menuitem" onClick={() => { setMenuOpen(false); setDeleteOpen(true); }}><Trash2 />削除</button>}
+      </div></>}
+    </div>} />
     <main className="post-detail page-content">
       <div className="detail-meta">
         {(post.eventTitle || post.sectionTitle) && <p>{[post.eventTitle, post.sectionTitle].filter(Boolean).join(" · ")}</p>}
@@ -53,22 +68,15 @@ export function PostDetailPage() {
         }}><input name="body" aria-label="コメント" placeholder="コメントを書く" maxLength={1000} required /><button className="primary-button" type="submit">送信</button></form>
         {commentError && <p className="form-error">{commentError}</p>}
       </section>
-      {post.canDelete && <section className="post-delete-section">
-        <button className="danger-button" type="button" disabled={deleting} onClick={async () => {
-          if (!window.confirm("この投稿を削除しますか？写真・動画とコメントも削除されます。")) return;
-          setDeleting(true);
-          setDeleteError("");
-          try {
-            await api(`/posts/${post.id}`, { method: "DELETE" });
-            navigate(post.eventId ? `/events/${post.eventId}` : "/", { replace: true });
-          } catch (reason) {
-            setDeleteError((reason as Error).message);
-            setDeleting(false);
-          }
-        }}><Trash2 />{deleting ? "削除中…" : "投稿を削除"}</button>
-        {deleteError && <p className="form-error" role="alert">{deleteError}</p>}
-      </section>}
     </main>
+    {deleteOpen && <div className="modal-backdrop" onClick={() => { if (!deleting) setDeleteOpen(false); }}>
+      <section className="confirmation-modal" role="dialog" aria-modal="true" aria-labelledby="delete-post-title" onClick={(event) => event.stopPropagation()}>
+        <h2 id="delete-post-title">この投稿を削除する？</h2>
+        <p>写真・動画とコメントもすべて削除される。この操作は元に戻せない。</p>
+        {deleteError && <p className="form-error" role="alert">{deleteError}</p>}
+        <div><button className="outline-button" type="button" disabled={deleting} onClick={() => setDeleteOpen(false)}>キャンセル</button><button className="danger-confirm-button" type="button" disabled={deleting} onClick={() => void deletePost()}>{deleting ? "削除中…" : "削除する"}</button></div>
+      </section>
+    </div>}
   </>;
 }
 

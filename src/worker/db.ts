@@ -1,4 +1,4 @@
-import { canDeleteComment, canDeletePost } from "../shared/permissions";
+import { canCreatePost, canDeleteComment, canDeletePost } from "../shared/permissions";
 import type { Comment, Media, Post, SeenUser, User } from "../shared/types";
 
 type PostRow = {
@@ -112,6 +112,7 @@ export async function loadPosts(db: D1Database, rows: PostRow[], currentUser: Us
     capturedAt: row.captured_at,
     publishedAt: row.published_at,
     authorName: row.author_name,
+    canEdit: canCreatePost(currentUser),
     canDelete: canDeletePost(currentUser),
     media: mediaByPost.get(row.id) ?? [],
     comments: commentsByPost.get(row.id) ?? [],

@@ -537,6 +537,32 @@ app.get("/posts/:postId", async (c) => {
   return c.json((await loadPosts(c.env.DB, result.results, c.var.currentUser))[0]);
 });
 
+app.put("/posts/:postId", async (c) => {
+  if (!canCreatePost(c.var.currentUser)) return c.json({ error: "投稿を編集する権限がありません" }, 403);
+  const postId = c.req.param("postId");
+  const post = await c.env.DB.prepare("SELECT event_id FROM posts WHERE id = ? AND status = 'published'").bind(postId).first<{ event_id: string | null }>();
+  if (!post) return c.json({ error: "投稿が見つかりません" }, 404);
+  const input = postInputSchema.parse(await c.req.json());
+  if (input.sectionId && !input.eventId) return c.json({ error: "セクションにはイベントが必要です" }, 400);
+  if (input.eventId) {
+    const event = await c.env.DB.prepare("SELECT id FROM events WHERE id = ?").bind(input.eventId).first();
+    if (!event) return c.json({ error: "イベントが見つかりません" }, 400);
+  }
+  if (input.sectionId) {
+    const section = await c.env.DB.prepare("SELECT id FROM event_sections WHERE id = ? AND event_id = ?").bind(input.sectionId, input.eventId).first();
+    if (!section) return c.json({ error: "セクションがイベントと一致しません" }, 400);
+  }
+  const now = new Date().toISOString();
+  const statements = [c.env.DB.prepare("UPDATE posts SET event_id = ?, section_id = ?, title = ?, caption = ?, updated_at = ? WHERE id = ? AND status = 'published'")
+    .bind(input.eventId, input.sectionId, input.title, input.caption, now, postId)];
+  if (post.event_id !== input.eventId) {
+    if (post.event_id) statements.push(autoEventCoverStatement(c.env.DB, post.event_id, now));
+    if (input.eventId) statements.push(autoEventCoverStatement(c.env.DB, input.eventId, now));
+  }
+  await c.env.DB.batch(statements);
+  return c.json({ id: postId });
+});
+
 app.delete("/posts/:postId", async (c) => {
   const postId = c.req.param("postId");
   const post = await c.env.DB.prepare("SELECT event_id FROM posts WHERE id = ?").bind(postId).first<{ event_id: string | null }>();
@@ -546,23 +572,7 @@ app.delete("/posts/:postId", async (c) => {
   const media = await c.env.DB.prepare("SELECT original_object_key, preview_object_key, thumbnail_object_key FROM media WHERE post_id = ?").bind(postId).all<{ original_object_key: string; preview_object_key: string | null; thumbnail_object_key: string | null }>();
   const statements = [c.env.DB.prepare("DELETE FROM posts WHERE id = ?").bind(postId)];
   if (post.event_id) {
-    statements.push(c.env.DB.prepare(`
-      UPDATE events SET cover_media_id = (
-                          SELECT m.id FROM media m JOIN posts p ON p.id = m.post_id
-                           WHERE p.event_id = events.id AND p.status = 'published' AND m.status = 'uploaded'
-                           ORDER BY CASE WHEN m.kind = 'image' THEN 0 ELSE 1 END,
-                                    COALESCE(m.captured_at, p.captured_at, p.published_at, p.created_at), m.position, m.id
-                           LIMIT 1
-                        ),
-                        cover_object_key = (
-                          SELECT m.original_object_key FROM media m JOIN posts p ON p.id = m.post_id
-                           WHERE p.event_id = events.id AND p.status = 'published' AND m.status = 'uploaded'
-                           ORDER BY CASE WHEN m.kind = 'image' THEN 0 ELSE 1 END,
-                                    COALESCE(m.captured_at, p.captured_at, p.published_at, p.created_at), m.position, m.id
-                           LIMIT 1
-                        ), updated_at = ?
-       WHERE id = ? AND cover_source = 'auto'
-    `).bind(new Date().toISOString(), post.event_id));
+    statements.push(autoEventCoverStatement(c.env.DB, post.event_id, new Date().toISOString()));
   }
   await c.env.DB.batch(statements);
 
@@ -750,6 +760,26 @@ function mapEvent(row: EventRow): EventSummary {
     photoCount: Number(row.photo_count),
     videoCount: Number(row.video_count),
   };
+}
+
+function autoEventCoverStatement(db: D1Database, eventId: string, updatedAt: string): D1PreparedStatement {
+  return db.prepare(`
+    UPDATE events SET cover_media_id = (
+                        SELECT m.id FROM media m JOIN posts p ON p.id = m.post_id
+                         WHERE p.event_id = events.id AND p.status = 'published' AND m.status = 'uploaded'
+                         ORDER BY CASE WHEN m.kind = 'image' THEN 0 ELSE 1 END,
+                                  COALESCE(m.captured_at, p.captured_at, p.published_at, p.created_at), m.position, m.id
+                         LIMIT 1
+                      ),
+                      cover_object_key = (
+                        SELECT m.original_object_key FROM media m JOIN posts p ON p.id = m.post_id
+                         WHERE p.event_id = events.id AND p.status = 'published' AND m.status = 'uploaded'
+                         ORDER BY CASE WHEN m.kind = 'image' THEN 0 ELSE 1 END,
+                                  COALESCE(m.captured_at, p.captured_at, p.published_at, p.created_at), m.position, m.id
+                         LIMIT 1
+                      ), updated_at = ?
+     WHERE id = ? AND cover_source = 'auto'
+  `).bind(updatedAt, eventId);
 }
 
 function extensionForMime(mime: string): string {

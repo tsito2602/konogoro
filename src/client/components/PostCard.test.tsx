@@ -68,7 +68,7 @@ describe("PostCard", () => {
     expect(html).toContain("旅行の思い出");
   });
 
-  it("イベント詳細ではシーン名とイベントアイコンを投稿カードへ重複表示しない", () => {
+  it("イベント詳細ではシーン名をアイコンなしで投稿カードへ表示する", () => {
     const html = renderToStaticMarkup(
       <MemoryRouter>
         <PostCard
@@ -77,8 +77,7 @@ describe("PostCard", () => {
         />
       </MemoryRouter>,
     );
-    expect(html).toContain(">投稿<");
-    expect(html).not.toContain("2日目");
+    expect(html).toContain("2日目");
     expect(html).not.toContain("lucide-calendar-days");
   });
 

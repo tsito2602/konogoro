@@ -7,7 +7,7 @@ import { SeenBy } from "./SeenBy";
 export function PostCard({ post, showContext = true }: { post: Post; showContext?: boolean }) {
   const { ref: seenRef, viewed } = useSeenTracking(post.id, post.viewedByCurrentUser);
   const latestComment = post.comments.at(-1);
-  const contextTitle = showContext ? (post.eventTitle ?? "日常の投稿") : "投稿";
+  const contextTitle = showContext ? (post.eventTitle ?? "日常の投稿") : (post.sceneTitle ?? "投稿");
   const contextSubtitle = showContext ? post.sceneTitle : null;
   const date = post.capturedAt ?? post.publishedAt;
   const dateLabel = post.capturedAt ? "撮影日" : "投稿日";

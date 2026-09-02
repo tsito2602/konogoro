@@ -41,10 +41,6 @@ export function EventDetailPage() {
       </>
     );
   if (!detail) return null;
-  const groups = [
-    { id: null, title: "", posts: detail.posts.filter((post) => !post.sceneId) },
-    ...detail.scenes.map((scene) => ({ ...scene, posts: detail.posts.filter((post) => post.sceneId === scene.id) })),
-  ].filter((group) => group.posts.length > 0);
   return (
     <>
       <PageHeader
@@ -76,7 +72,7 @@ export function EventDetailPage() {
             </Link>
           </div>
         )}
-        {groups.length === 0 && (
+        {detail.posts.length === 0 && (
           <EmptyState
             title="まだ投稿がありません"
             body={canAddPost ? "このイベントの写真を追加できます。" : "投稿が追加されると、ここに表示されます。"}
@@ -89,13 +85,8 @@ export function EventDetailPage() {
             }
           />
         )}
-        {groups.map((group) => (
-          <section className="event-scene" key={group.id ?? "none"}>
-            {group.title && <h2>{group.title}</h2>}
-            {group.posts.map((post) => (
-              <PostCard key={post.id} post={post} showContext={false} />
-            ))}
-          </section>
+        {detail.posts.map((post) => (
+          <PostCard key={post.id} post={post} showContext={false} />
         ))}
       </main>
     </>

@@ -1178,14 +1178,6 @@ a.icon-button {
   margin: 0 auto;
   background: var(--surface);
 }
-.event-scene {
-  padding-top: 28px;
-}
-.event-scene > h2 {
-  margin: 0 16px 4px;
-  font-size: 20px;
-  letter-spacing: -0.01em;
-}
 .event-actions {
   padding: 16px;
   display: flex;

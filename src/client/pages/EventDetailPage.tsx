@@ -1,5 +1,5 @@
 import { Pencil } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import type { EventDetail } from "../../shared/types";
 import { api, eventDate } from "../api";
@@ -17,6 +17,9 @@ export function EventDetailPage() {
   const [detail, setDetail] = useState<EventDetail | null>(null);
   const [error, setError] = useState("");
   const coverImageRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    window.scrollTo(0, 0);
+  }, [eventId]);
   const load = () => {
     setError("");
     void api<EventDetail>(`/events/${eventId}`)

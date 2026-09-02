@@ -1812,6 +1812,7 @@ textarea:focus {
 .event-filter-backdrop {
   padding: 0;
   place-items: end center;
+  animation: event-filter-backdrop-in 0.24s ease-out both;
 }
 .event-filter-modal {
   width: min(100%, 520px);
@@ -1821,6 +1822,33 @@ textarea:focus {
   border-radius: 20px 20px 0 0;
   color: var(--carbon);
   background: var(--surface);
+  animation: event-filter-in 0.28s cubic-bezier(0.22, 0.75, 0.24, 1) both;
+}
+.event-filter-backdrop.closing {
+  animation: event-filter-backdrop-out 0.22s ease-in both;
+}
+.event-filter-backdrop.closing .event-filter-modal {
+  animation: event-filter-out 0.22s ease-in both;
+}
+@keyframes event-filter-backdrop-in {
+  from {
+    background: transparent;
+  }
+}
+@keyframes event-filter-backdrop-out {
+  to {
+    background: transparent;
+  }
+}
+@keyframes event-filter-in {
+  from {
+    transform: translate3d(0, 100%, 0);
+  }
+}
+@keyframes event-filter-out {
+  to {
+    transform: translate3d(0, 100%, 0);
+  }
 }
 .event-filter-modal > header {
   min-height: 44px;

@@ -23,6 +23,7 @@ export function EventsPage() {
   const [filters, setFilters] = useState<EventFilters>(emptyFilters);
   const [draftFilters, setDraftFilters] = useState<EventFilters>(emptyFilters);
   const [filterOpen, setFilterOpen] = useState(false);
+  const [filterClosing, setFilterClosing] = useState(false);
   const load = () => {
     setError("");
     void api<{ events: EventSummary[] }>("/events")
@@ -41,8 +42,10 @@ export function EventsPage() {
   const invalidRange = Boolean(draftFilters.from && draftFilters.to && draftFilters.from > draftFilters.to);
   const openFilters = () => {
     setDraftFilters(filters);
+    setFilterClosing(false);
     setFilterOpen(true);
   };
+  const closeFilters = () => setFilterClosing(true);
   return (
     <>
       <PageHeader
@@ -95,17 +98,25 @@ export function EventsPage() {
         ))}
       </main>
       {filterOpen && (
-        <div className="modal-backdrop event-filter-backdrop" onClick={() => setFilterOpen(false)}>
+        <div
+          className={`modal-backdrop event-filter-backdrop${filterClosing ? " closing" : ""}`}
+          onClick={closeFilters}
+        >
           <section
             className="event-filter-modal"
             role="dialog"
             aria-modal="true"
             aria-labelledby="event-filter-title"
             onClick={(event) => event.stopPropagation()}
+            onAnimationEnd={(event) => {
+              if (!filterClosing || event.target !== event.currentTarget) return;
+              setFilterOpen(false);
+              setFilterClosing(false);
+            }}
           >
             <header>
               <h2 id="event-filter-title">イベントを絞り込む</h2>
-              <button className="icon-button" type="button" onClick={() => setFilterOpen(false)} aria-label="閉じる">
+              <button className="icon-button" type="button" onClick={closeFilters} aria-label="閉じる">
                 <X />
               </button>
             </header>
@@ -115,7 +126,7 @@ export function EventsPage() {
                 event.preventDefault();
                 if (invalidRange) return;
                 setFilters(draftFilters);
-                setFilterOpen(false);
+                closeFilters();
               }}
             >
               <label>

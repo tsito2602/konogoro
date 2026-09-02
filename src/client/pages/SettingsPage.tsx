@@ -31,6 +31,7 @@ export function SettingsPage() {
   const [busy, setBusy] = useState(false);
   const [theme, setTheme] = useState<ThemePreference>(getThemePreference);
   const showToast = useToast();
+  const hasChanges = Boolean(user && (displayName !== user.displayName || notificationEnabled !== (user.notificationEnabled ?? false)));
 
   const loadFamily = useCallback(() => {
     setFamilyError("");
@@ -74,9 +75,9 @@ export function SettingsPage() {
 
   return <>
     <PageHeader title="設定" />
-    <main className="page-content settings-page">
+    <main className={`page-content settings-page${hasChanges ? " has-save-bar" : ""}`}>
       {error && !user ? <ErrorState message={error} retry={load} /> : !user ? <Loading /> : <>
-        <form className="settings-form" onSubmit={save}>
+        <form id="settings-save-form" className="settings-form" onSubmit={save}>
           <section className="settings-section">
             <h2>プロフィール</h2>
             <div className="settings-card"><label className="settings-field"><span>表示名</span><input value={displayName} onChange={(event) => setDisplayName(event.target.value)} required maxLength={100} disabled={busy} /></label></div>
@@ -98,8 +99,11 @@ export function SettingsPage() {
           </section>
 
           {error && <p className="form-error" role="alert">{error}</p>}
-          <button className="primary-button wide" disabled={busy || !displayName.trim()}>{busy ? "保存中…" : "設定を保存"}</button>
         </form>
+
+        <div className={`settings-save-bar${hasChanges ? " visible" : ""}`} aria-hidden={!hasChanges}>
+          <button className="primary-button wide" type="submit" form="settings-save-form" disabled={busy || !displayName.trim()}>{busy ? "保存中…" : "変更を保存"}</button>
+        </div>
 
         <section className="settings-section">
           <h2>表示</h2>

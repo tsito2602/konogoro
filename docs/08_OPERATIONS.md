@@ -21,6 +21,34 @@ Cloudflare Dashboardの「Workers & Pages」→`konogoro`→「Observability」�
 3. Cron実行後の`notification_cron_completed`
 4. LINE通知の受信
 
+## LINE Webhook
+
+Webhook URLは次を使用する。
+
+```text
+https://konogoro.tsito-apps.workers.dev/api/webhooks/line
+```
+
+署名検証にはLINE Loginの`LINE_CHANNEL_SECRET`ではなく、Messaging API ChannelのChannel Secretを使用する。本番Workerへsecretとして対話入力する。値をコマンド引数、ログ、リポジトリへ記録しない。
+
+```sh
+npx wrangler secret put LINE_MESSAGING_CHANNEL_SECRET
+```
+
+Workerをデプロイした後、LINE Developers Consoleで次を行う。
+
+1. 「このごろ」に紐づくMessaging API Channelを開く。
+2. 「Messaging API」タブのWebhook URLへ上記URLを登録する。
+3. 「Verify」を実行し、`Success`になることを確認する。
+4. 「Use webhook」を有効にする。
+5. 「Webhook redelivery」を有効にする。
+6. 検証用メンバーで「このごろ」をブロックし、設定画面が受信不可・通知OFFへ変わることを確認する。
+7. ブロックを解除し、設定画面が受信可能へ変わること、通知はOFFのままであることを確認する。
+
+LINEは友だち追加またはブロック解除時に`follow`、ブロック時に`unfollow`を送る。Webhookはraw bodyのHMAC-SHA256署名を検証し、不正な署名では状態を更新しない。LINE Developers Consoleの疎通確認はeventが空のリクエストを送るため、正常な署名であればHTTP 200を返す。LINE user IDやChannel Secretはログへ出力しない。
+
+Webhookが反映されない場合は、LINE Developers ConsoleのWebhook error statisticsとCloudflare Workers LogsのWebhookエラーを確認する。復旧までの間は設定画面の「LINE通知の状態を確認」で手動同期できる。
+
 ## D1の復旧とエクスポート
 
 D1 production databaseはTime Travelの対象で、特別な有効化は不要。復旧可能期間内の誤更新・誤削除はpoint-in-time recoveryを使う。
@@ -61,3 +89,5 @@ R2 bindingの`MEDIA`は非公開bucketを参照し、D1にobject keyのみ保存
 - [Workers Logs](https://developers.cloudflare.com/workers/observability/logs/workers-logs/)
 - [D1 Time Travel](https://developers.cloudflare.com/d1/reference/time-travel/)
 - [D1 import / export](https://developers.cloudflare.com/d1/best-practices/import-export-data/)
+- [LINE Webhookの受信](https://developers.line.biz/en/docs/messaging-api/receiving-messages/)
+- [LINE Webhook署名検証](https://developers.line.biz/en/docs/messaging-api/verify-webhook-signature/)

@@ -396,6 +396,10 @@ Invite URL
 
 LINE Login ChannelにはMessaging API Channelをリンクする。ログイン後に「このごろ」からの通知を受け取れる友だち状態を保存し、設定画面からいつでも状態を再確認できるようにする。LINEで「このごろ」をブロックした場合も、この再確認導線から解除・再設定できる。
 
+Messaging APIのWebhookで友だち状態を同期する。`unfollow`受信時は友だち状態とLINE通知をOFFにし、`follow`受信時は友だち状態だけをONにする。ブロック解除によってLINE通知を自動で再開せず、ユーザーが設定画面で改めてONにする。Webhookを受信できない場合に備え、設定画面の手動確認導線は残す。
+
+Webhookは受信したraw bodyとMessaging API Channel Secretを用いて`x-line-signature`を検証してから処理する。署名がない、または不正なリクエストでは状態を更新しない。複数eventと再送を安全に処理し、対象メンバーが存在しないeventは正常応答として無視する。LINE Developers Consoleによる疎通確認の空eventにも正常応答する。
+
 ---
 
 ## 13. LINE通知
@@ -419,7 +423,7 @@ Mediaごと / Postごとの即時通知はしない。
 
 Cloudflare Cron Triggersで通知batchを処理。
 
-ユーザーごとに通知ON/OFFを持つ。「このごろ」のLINEアカウントを友だち追加済みかつブロックしていないユーザーだけを送信対象にする。
+ユーザーごとに通知ON/OFFを持つ。「このごろ」のLINEアカウントを友だち追加済みかつブロックしていないユーザーだけを送信対象にする。友だち状態はLINE Login後の確認に加え、Messaging APIの`follow`・`unfollow`Webhookで更新する。
 
 ---
 

@@ -131,13 +131,14 @@ https://<本番origin>/api/auth/line/callback
 npx wrangler secret put LINE_CHANNEL_ID
 npx wrangler secret put LINE_CHANNEL_SECRET
 npx wrangler secret put LINE_CHANNEL_ACCESS_TOKEN
+npx wrangler secret put LINE_MESSAGING_CHANNEL_SECRET
 npx wrangler secret put APP_ORIGIN
 npx wrangler secret put R2_ACCOUNT_ID
 npx wrangler secret put R2_ACCESS_KEY_ID
 npx wrangler secret put R2_SECRET_ACCESS_KEY
 ```
 
-LINE公式アカウントはLINE Login Channelへリンクする。通知は友だち追加済みかつ通知ONのユーザーだけへ送信する。
+LINE公式アカウントはLINE Login Channelへリンクする。Messaging API ChannelのWebhook URLへ`https://<本番origin>/api/webhooks/line`を登録し、「Verify」の成功を確認してから「Use webhook」を有効にする。通知は友だち追加済みかつ通知ONのユーザーだけへ送信する。
 
 </details>
 

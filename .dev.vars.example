@@ -10,3 +10,4 @@ APP_ORIGIN=http://localhost:5173
 
 # Phase 3のLINE通知を有効にする場合のみ設定する。
 LINE_CHANNEL_ACCESS_TOKEN=your-line-messaging-api-channel-access-token
+LINE_MESSAGING_CHANNEL_SECRET=your-line-messaging-api-channel-secret

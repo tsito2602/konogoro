@@ -24,8 +24,9 @@ import { matchesUploadFiles, type ExistingMedia } from "./upload-request";
 import { createInviteToken } from "./invite-token";
 import { processNotificationBatches, type NotificationCronEnv } from "./notification-cron";
 import { addPostToNotificationBatch } from "./notification-batch";
+import { lineFriendshipStatements, verifyLineWebhookSignature, type LineWebhookSecrets } from "./line-webhook";
 
-type Bindings = Cloudflare.Env & R2Secrets & LineSecrets;
+type Bindings = Cloudflare.Env & R2Secrets & LineSecrets & LineWebhookSecrets;
 type EventRow = {
   id: string;
   title: string;
@@ -66,6 +67,10 @@ type AppEnv = { Bindings: Bindings; Variables: { currentUser: User } };
 export const app = new Hono<AppEnv>().basePath("/api");
 
 app.use("*", async (c, next) => {
+  if (c.req.path === "/api/webhooks/line") {
+    await next();
+    return;
+  }
   const publicAuth = c.req.path === "/api/auth/line" || c.req.path === "/api/auth/line/callback";
   const lineConfigured = hasLineConfig(c.env);
   const localDevelopment = !lineConfigured || new URL(c.env.APP_ORIGIN!).hostname === "localhost";
@@ -105,6 +110,26 @@ app.onError((error, c) => {
 });
 
 app.notFound((c) => c.json({ error: "見つかりませんでした" }, 404));
+
+app.post("/webhooks/line", async (c) => {
+  const channelSecret = c.env.LINE_MESSAGING_CHANNEL_SECRET;
+  if (!channelSecret) return c.json({ error: "LINE Webhookが設定されていません" }, 503);
+  const signature = c.req.header("x-line-signature");
+  const body = await c.req.text();
+  if (!signature || !await verifyLineWebhookSignature(body, signature, channelSecret)) {
+    return c.json({ error: "署名を確認できません" }, 401);
+  }
+  let payload: { events?: unknown };
+  try {
+    payload = JSON.parse(body) as { events?: unknown };
+  } catch {
+    return c.json({ error: "Webhookの内容を確認できません" }, 400);
+  }
+  if (!Array.isArray(payload.events)) return c.json({ error: "Webhookの内容を確認できません" }, 400);
+  const statements = lineFriendshipStatements(c.env.DB, payload.events, new Date().toISOString());
+  if (statements.length > 0) await c.env.DB.batch(statements);
+  return c.json({});
+});
 
 app.get("/me", async (c) => {
   const profile = await c.env.DB.prepare("SELECT avatar_url, line_user_id, line_friend_enabled, notification_enabled FROM users WHERE id = ?").bind(c.var.currentUser.id).first<{ avatar_url: string | null; line_user_id: string | null; line_friend_enabled: number; notification_enabled: number }>();

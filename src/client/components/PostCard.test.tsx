@@ -52,6 +52,13 @@ describe("PostCard", () => {
     expect(html).toContain("旅行の思い出");
   });
 
+  it("イベント詳細ではシーン名とイベントアイコンを投稿カードへ重複表示しない", () => {
+    const html = renderToStaticMarkup(<MemoryRouter><PostCard showContext={false} post={{ ...post, eventId: "event-1", eventTitle: "箱根旅行", sceneId: "scene-1", sceneTitle: "2日目" }} /></MemoryRouter>);
+    expect(html).toContain(">投稿<");
+    expect(html).not.toContain("2日目");
+    expect(html).not.toContain("lucide-calendar-days");
+  });
+
   it("コメント総数と最新コメント1件を表示する", () => {
     const comments = [
       { id: "comment-1", body: "最初のコメント", userId: "user-1", authorName: "薫", avatarUrl: null, createdAt: "2026-09-01T00:00:00.000Z", canDelete: false },

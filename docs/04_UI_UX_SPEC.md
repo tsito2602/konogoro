@@ -154,6 +154,7 @@ Post Card
 ```
 
 Scene titleは必ず1行の文字列として扱う。
+Event DetailではScene titleをグループ見出しにだけ表示し、各Post Cardへ重複表示しない。Post Card内ではイベント用のカレンダーアイコンも表示しない。
 
 ---
 

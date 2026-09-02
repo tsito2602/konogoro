@@ -7,7 +7,7 @@ import { SeenBy } from "./SeenBy";
 export function PostCard({ post, showContext = true }: { post: Post; showContext?: boolean }) {
   const { ref: seenRef, viewed } = useSeenTracking(post.id, post.viewedByCurrentUser);
   const latestComment = post.comments.at(-1);
-  const contextTitle = showContext ? post.eventTitle ?? "日常の投稿" : post.sceneTitle ?? "投稿";
+  const contextTitle = showContext ? post.eventTitle ?? "日常の投稿" : "投稿";
   const contextSubtitle = showContext ? post.sceneTitle : null;
   const date = post.capturedAt ?? post.publishedAt;
   const dateLabel = post.capturedAt ? "撮影日" : "投稿日";
@@ -15,7 +15,7 @@ export function PostCard({ post, showContext = true }: { post: Post; showContext
     <article className="post-card" ref={seenRef}>
       <Link className="post-head" to={`/posts/${post.id}`} aria-label={`${post.authorName}さんの投稿を開く`}>
         <span className="post-author-avatar" aria-hidden>{post.authorAvatarUrl ? <img src={post.authorAvatarUrl} alt="" /> : post.authorName.slice(0, 1)}</span>
-        <span className="post-head-copy"><strong className="post-event-title">{post.eventTitle && <CalendarDays aria-hidden />}{contextTitle}</strong>{contextSubtitle && <span>{contextSubtitle}</span>}</span>
+        <span className="post-head-copy"><strong className="post-event-title">{showContext && post.eventTitle && <CalendarDays aria-hidden />}{contextTitle}</strong>{contextSubtitle && <span>{contextSubtitle}</span>}</span>
         <ChevronRight aria-hidden />
       </Link>
       <Link to={`/posts/${post.id}`} className={`media-grid${viewed ? "" : " unseen"}`} data-count={Math.min(post.media.length, 4)} aria-label={`${viewed ? "" : "未閲覧の"}投稿を開く`}>

@@ -4,7 +4,6 @@ import { Link } from "react-router-dom";
 import type { AlbumMedia } from "../../shared/types";
 import { api } from "../api";
 import { EmptyState, ErrorState, Loading } from "../components/AsyncState";
-import { PageHeader } from "../components/PageHeader";
 
 type AlbumResponse = { media: AlbumMedia[]; nextCursor: string | null };
 
@@ -60,23 +59,23 @@ export function AlbumPage() {
     if (firstMonth) setSelectedMonthKey(allSelected ? `all-${year}` : firstMonth.key);
   };
 
-  return <>
-    <PageHeader title="アルバム" />
-    <main className="album-page page-content">
+  return <main className="album-page page-content">
       {!media && !error && <Loading />}
       {error && <ErrorState message={error} retry={load} />}
       {media?.length === 0 && <EmptyState title="まだ写真がありません" body="投稿した写真や動画が、撮影した月ごとに表示されます。" />}
       {selectedYear && <>
-        <div className="album-year-picker">
-          <button type="button" onClick={() => selectYear(years[selectedYearIndex + 1])} disabled={selectedYearIndex >= years.length - 1} aria-label="前年を表示"><ChevronLeft /></button>
-          <strong>{selectedYear}</strong>
-          <button type="button" onClick={() => selectYear(years[selectedYearIndex - 1])} disabled={selectedYearIndex <= 0} aria-label="翌年を表示"><ChevronRight /></button>
-        </div>
-        <div className="album-month-picker" aria-label={`${selectedYear}年の月`}>
-          <button className={`album-all-button${allSelected ? " active" : ""}`} type="button" onClick={() => setSelectedMonthKey(`all-${selectedYear}`)} aria-label={`${selectedYear}年をすべて表示`} aria-pressed={allSelected}><Grid2X2 /></button>
-          {months.map((group) => <button className={group.key === selectedMonth?.key ? "active" : ""} type="button" key={group.key} onClick={() => setSelectedMonthKey(group.key)} aria-pressed={group.key === selectedMonth?.key}>
-            <span>{group.month}</span>
-          </button>)}
+        <div className="album-picker-header">
+          <div className="album-year-picker">
+            <button type="button" onClick={() => selectYear(years[selectedYearIndex + 1])} disabled={selectedYearIndex >= years.length - 1} aria-label="前年を表示"><ChevronLeft /></button>
+            <strong>{selectedYear}</strong>
+            <button type="button" onClick={() => selectYear(years[selectedYearIndex - 1])} disabled={selectedYearIndex <= 0} aria-label="翌年を表示"><ChevronRight /></button>
+          </div>
+          <div className="album-month-picker" aria-label={`${selectedYear}年の月`}>
+            <button className={`album-all-button${allSelected ? " active" : ""}`} type="button" onClick={() => setSelectedMonthKey(`all-${selectedYear}`)} aria-label={`${selectedYear}年をすべて表示`} aria-pressed={allSelected}><Grid2X2 /></button>
+            {months.map((group) => <button className={group.key === selectedMonth?.key ? "active" : ""} type="button" key={group.key} onClick={() => setSelectedMonthKey(group.key)} aria-pressed={group.key === selectedMonth?.key}>
+              <span>{group.month}</span>
+            </button>)}
+          </div>
         </div>
         {allSelected ? <section className="album-month" aria-label={`${selectedYear}年のすべて`}>
           <div className="album-grid">{months.flatMap((group) => group.media).map((item) => <AlbumMediaLink item={item} key={item.id}>
@@ -96,8 +95,7 @@ export function AlbumPage() {
         {moreError && <p className="form-error" role="alert">{moreError}</p>}
         <button className="outline-button wide" type="button" onClick={() => void loadMore()} disabled={loadingMore}>{loadingMore ? "読み込み中…" : "さらに読み込む"}</button>
       </div>}
-    </main>
-  </>;
+  </main>;
 }
 
 function AlbumMediaLink({ item, className, children }: { item: AlbumMedia; className?: string; children: React.ReactNode }) {

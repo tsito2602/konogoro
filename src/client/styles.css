@@ -175,6 +175,8 @@ img { display: block; max-width: 100%; }
 
 .event-list { padding: 16px; display: grid; gap: 12px; }
 .album-page { min-height: calc(100vh - 120px); padding: 0 0 32px; background: var(--surface); }
+.album-picker-header { position: sticky; z-index: 20; top: 0; background: var(--header-background); backdrop-filter: blur(20px) saturate(180%); }
+.album-picker-header::after { content: ""; position: absolute; inset: auto 0 0; height: 12px; transform: translateY(100%); background: linear-gradient(var(--header-shadow), transparent); pointer-events: none; opacity: .42; }
 .album-year-picker { height: 54px; padding: 0 14px; display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; text-align: center; }
 .album-year-picker strong { font-size: 18px; letter-spacing: .03em; }
 .album-year-picker button { width: 40px; height: 40px; display: grid; place-items: center; border: 0; color: var(--carbon); background: transparent; }
@@ -422,5 +424,5 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-ink); box
 }
 
 @media (prefers-reduced-transparency: reduce) {
-  .page-header, .tab-bar { background: var(--surface); backdrop-filter: none; }
+  .page-header, .album-picker-header, .tab-bar { background: var(--surface); backdrop-filter: none; }
 }

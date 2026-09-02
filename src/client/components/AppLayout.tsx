@@ -95,7 +95,7 @@ export function LoginScreen() {
 
 function NavItem({ to, label, icon, end }: { to: string; label: string; icon: React.ReactNode; end?: boolean }) {
   return (
-    <NavLink to={to} end={end} className={({ isActive }) => `tab-item${isActive ? " active" : ""}`}>
+    <NavLink to={to} end={end} onClick={() => window.scrollTo(0, 0)} className={({ isActive }) => `tab-item${isActive ? " active" : ""}`}>
       {icon}
       <span>{label}</span>
     </NavLink>

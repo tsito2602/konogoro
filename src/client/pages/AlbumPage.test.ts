@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { AlbumMedia } from "../../shared/types";
 import { appendUniqueAlbumMedia, groupAlbumMedia } from "./AlbumPage";
 
-const media = (id: string, capturedAt: string): AlbumMedia => ({ id, postId: `post-${id}`, postTitle: id, kind: "image", capturedAt, thumbnailUrl: `/media/${id}` });
+const media = (id: string, capturedAt: string): AlbumMedia => ({ id, postId: `post-${id}`, postTitle: id, kind: "image", capturedAt, thumbnailUrl: `/media/${id}/thumbnail`, previewUrl: `/media/${id}/preview` });
 
 describe("album grouping", () => {
   it("撮影日時の年月ごとにまとめる", () => {
@@ -13,6 +13,10 @@ describe("album grouping", () => {
     ]);
 
     expect(groups.map((group) => [group.label, group.media.length])).toEqual([["2026年9月", 2], ["2026年8月", 1]]);
+    expect(groups.map(({ key, year, month }) => ({ key, year, month }))).toEqual([
+      { key: "2026-09", year: 2026, month: 9 },
+      { key: "2026-08", year: 2026, month: 8 },
+    ]);
   });
 
   it("追加読込時の重複を除く", () => {

@@ -1,3 +1,4 @@
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import type { AlbumMedia } from "../../shared/types";
@@ -8,6 +9,9 @@ import { PageHeader } from "../components/PageHeader";
 type AlbumResponse = { media: AlbumMedia[]; nextCursor: string | null };
 
 const monthFormatter = new Intl.DateTimeFormat("ja-JP", { year: "numeric", month: "long", timeZone: "Asia/Tokyo" });
+const yearMonthFormatter = new Intl.DateTimeFormat("en", { year: "numeric", month: "numeric", timeZone: "Asia/Tokyo" });
+
+type AlbumMonth = { key: string; label: string; year: number; month: number; media: AlbumMedia[] };
 
 export function AlbumPage() {
   const [media, setMedia] = useState<AlbumMedia[] | null>(null);
@@ -15,6 +19,7 @@ export function AlbumPage() {
   const [error, setError] = useState("");
   const [moreError, setMoreError] = useState("");
   const [loadingMore, setLoadingMore] = useState(false);
+  const [selectedMonthKey, setSelectedMonthKey] = useState("");
 
   const load = () => {
     setError("");
@@ -42,19 +47,43 @@ export function AlbumPage() {
     finally { setLoadingMore(false); }
   };
 
+  const groups = media ? groupAlbumMedia(media) : [];
+  const selectedMonth = groups.find((group) => group.key === selectedMonthKey) ?? groups[0];
+  const years = [...new Set(groups.map((group) => group.year))];
+  const selectedYearIndex = selectedMonth ? years.indexOf(selectedMonth.year) : -1;
+  const months = selectedMonth ? groups.filter((group) => group.year === selectedMonth.year) : [];
+  const selectYear = (year: number) => {
+    const firstMonth = groups.find((group) => group.year === year);
+    if (firstMonth) setSelectedMonthKey(firstMonth.key);
+  };
+
   return <>
     <PageHeader title="アルバム" />
     <main className="album-page page-content">
       {!media && !error && <Loading />}
       {error && <ErrorState message={error} retry={load} />}
       {media?.length === 0 && <EmptyState title="まだ写真がありません" body="投稿した写真や動画が、撮影した月ごとに表示されます。" />}
-      {media && groupAlbumMedia(media).map((group) => <section className="album-month" key={group.label}>
-        <h2>{group.label}<span>{group.media.length}</span></h2>
-        <div className="album-grid">{group.media.map((item) => <Link to={`/posts/${item.postId}/media/${item.id}`} state={{ returnToPrevious: true }} key={item.id} aria-label={`${item.postTitle}の${item.kind === "video" ? "動画" : "写真"}`}>
-          <img src={item.thumbnailUrl} alt="" loading="lazy" />
-          {item.kind === "video" && <span className="media-play-mark" aria-hidden>▶</span>}
-        </Link>)}</div>
-      </section>)}
+      {selectedMonth && <>
+        <div className="album-year-picker">
+          <button type="button" onClick={() => selectYear(years[selectedYearIndex + 1])} disabled={selectedYearIndex >= years.length - 1} aria-label="前年を表示"><ChevronLeft /></button>
+          <strong>{selectedMonth.year}</strong>
+          <button type="button" onClick={() => selectYear(years[selectedYearIndex - 1])} disabled={selectedYearIndex <= 0} aria-label="翌年を表示"><ChevronRight /></button>
+        </div>
+        <div className="album-month-picker" aria-label={`${selectedMonth.year}年の月`}>
+          {months.map((group) => <button className={group.key === selectedMonth.key ? "active" : ""} type="button" key={group.key} onClick={() => setSelectedMonthKey(group.key)} aria-pressed={group.key === selectedMonth.key}>
+            <span>{group.month}</span><small>{group.media.length}</small>
+          </button>)}
+        </div>
+        <section className="album-month" aria-label={selectedMonth.label}>
+          <AlbumMediaLink item={selectedMonth.media[0]} className="album-cover">
+            <img src={selectedMonth.media[0].previewUrl} alt="" />
+            <span className="album-cover-label"><strong>{selectedMonth.month}月</strong><small>{selectedMonth.year}</small><small>{selectedMonth.media.length}件の思い出</small></span>
+          </AlbumMediaLink>
+          {selectedMonth.media.length > 1 && <div className="album-grid">{selectedMonth.media.slice(1).map((item) => <AlbumMediaLink item={item} key={item.id}>
+            <img src={item.thumbnailUrl} alt="" loading="lazy" />
+          </AlbumMediaLink>)}</div>}
+        </section>
+      </>}
       {media && nextCursor && <div className="form-page">
         {moreError && <p className="form-error" role="alert">{moreError}</p>}
         <button className="outline-button wide" type="button" onClick={() => void loadMore()} disabled={loadingMore}>{loadingMore ? "読み込み中…" : "さらに読み込む"}</button>
@@ -63,13 +92,24 @@ export function AlbumPage() {
   </>;
 }
 
-export function groupAlbumMedia(media: AlbumMedia[]): Array<{ label: string; media: AlbumMedia[] }> {
-  const groups: Array<{ label: string; media: AlbumMedia[] }> = [];
+function AlbumMediaLink({ item, className, children }: { item: AlbumMedia; className?: string; children: React.ReactNode }) {
+  return <Link className={className} to={`/posts/${item.postId}/media/${item.id}`} state={{ returnToPrevious: true }} aria-label={`${item.postTitle}の${item.kind === "video" ? "動画" : "写真"}`}>
+    {children}
+    {item.kind === "video" && <span className="media-play-mark" aria-hidden>▶</span>}
+  </Link>;
+}
+
+export function groupAlbumMedia(media: AlbumMedia[]): AlbumMonth[] {
+  const groups: AlbumMonth[] = [];
   for (const item of media) {
-    const label = monthFormatter.format(new Date(item.capturedAt));
+    const date = new Date(item.capturedAt);
+    const parts = yearMonthFormatter.formatToParts(date);
+    const year = Number(parts.find((part) => part.type === "year")?.value);
+    const month = Number(parts.find((part) => part.type === "month")?.value);
+    const key = `${year}-${String(month).padStart(2, "0")}`;
     const current = groups.at(-1);
-    if (current?.label === label) current.media.push(item);
-    else groups.push({ label, media: [item] });
+    if (current?.key === key) current.media.push(item);
+    else groups.push({ key, label: monthFormatter.format(date), year, month, media: [item] });
   }
   return groups;
 }

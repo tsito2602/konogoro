@@ -313,6 +313,7 @@ app.get("/album", async (c) => {
     kind: item.kind,
     capturedAt: item.captured_at,
     thumbnailUrl: `/api/media/${item.id}/content?variant=thumbnail`,
+    previewUrl: `/api/media/${item.id}/content?variant=${item.kind === "image" ? "preview" : "thumbnail"}`,
   }));
   const last = rows.at(-1);
   return c.json({ media, nextCursor: hasMore && last ? `${last.captured_at}|${last.id}` : null });

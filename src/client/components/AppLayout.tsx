@@ -1,4 +1,4 @@
-import { Bell, CalendarDays, CalendarPlus, ImagePlus, Images, Plus, Settings, Users } from "lucide-react";
+import { Bell, CalendarDays, CalendarPlus, GalleryVerticalEnd, ImagePlus, Images, Plus, Settings, Users } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { Link, Navigate, NavLink, Outlet, useLocation, useOutletContext } from "react-router-dom";
 import type { CurrentUser } from "../../shared/types";
@@ -63,6 +63,7 @@ export function AppLayout() {
           <NavItem to="/" label="タイムライン" icon={<Images />} end />
           <NavItem to="/activity" label="近況" icon={<Bell />} />
           <NavItem to="/events" label="イベント" icon={<CalendarDays />} />
+          <NavItem to="/album" label="アルバム" icon={<GalleryVerticalEnd />} />
           {canInviteFamily(currentUser)
             ? <NavItem to="/family" label="家族" icon={<Users />} />
             : <NavItem to="/settings" label="設定" icon={<Settings />} />}

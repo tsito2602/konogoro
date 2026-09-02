@@ -37,6 +37,7 @@ export type AlbumMedia = Pick<Media, "id" | "kind" | "thumbnailUrl"> & {
   postId: string;
   postTitle: string;
   capturedAt: string;
+  previewUrl: string;
 };
 
 export type Activity = {

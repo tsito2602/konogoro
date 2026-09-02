@@ -2403,7 +2403,7 @@ textarea:focus {
 .media-viewer {
   min-height: 100dvh;
   display: grid;
-  grid-template-rows: 56px minmax(0, 1fr) auto 76px;
+  grid-template-rows: 56px minmax(0, 1fr) auto calc(76px + env(safe-area-inset-bottom));
   color: white;
   background: #000;
 }

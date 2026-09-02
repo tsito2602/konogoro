@@ -4,7 +4,7 @@ import { Link, Navigate, NavLink, useLocation, useOutlet, useOutletContext } fro
 import type { CurrentUser } from "../../shared/types";
 import { canCreatePost, canInviteFamily, canManageEvent } from "../../shared/permissions";
 import { api } from "../api";
-import { ErrorState, Loading } from "./AsyncState";
+import { ErrorState } from "./AsyncState";
 import { ToastProvider } from "./Toast";
 
 const viewerPattern = /^\/posts\/[^/]+\/media\//;
@@ -71,12 +71,7 @@ export function AppLayout() {
   }, [invite, loadAuth]);
 
   if (invite) return <div className="app-shell">{routedContent}</div>;
-  if (authenticated === null && !authError)
-    return (
-      <div className="app-shell">
-        <Loading />
-      </div>
-    );
+  if (authenticated === null && !authError) return <BootScreen />;
   if (authError)
     return (
       <div className="app-shell">
@@ -84,12 +79,7 @@ export function AppLayout() {
       </div>
     );
   if (!authenticated) return <LoginScreen />;
-  if (!currentUser)
-    return (
-      <div className="app-shell">
-        <Loading />
-      </div>
-    );
+  if (!currentUser) return <BootScreen />;
   if (!canAccessPath(currentUser, pathname)) return <Navigate to="/" replace />;
 
   return (
@@ -154,6 +144,19 @@ export function AppLayout() {
           ))}
       </div>
     </ToastProvider>
+  );
+}
+
+export function BootScreen() {
+  return (
+    <main className="boot-screen" role="status" aria-label="このごろを読み込み中">
+      <div className="boot-brand">
+        <img className="boot-symbol boot-symbol-light" src="/icons/icon-light-transparent.png" alt="" />
+        <img className="boot-symbol boot-symbol-dark" src="/icons/icon-dark-transparent.png" alt="" />
+        <strong className="boot-name">このごろ</strong>
+        <p className="boot-status">読み込み中…</p>
+      </div>
+    </main>
   );
 }
 

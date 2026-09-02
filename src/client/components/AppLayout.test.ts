@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { CurrentUser } from "../../shared/types";
-import { canAccessPath, LoginScreen } from "./AppLayout";
+import { BootScreen, canAccessPath, LoginScreen } from "./AppLayout";
 
 const viewer: CurrentUser = { id: "viewer", displayName: "Viewer", role: "viewer" };
 const uploader: CurrentUser = { id: "uploader", displayName: "Uploader", role: "uploader" };
@@ -41,5 +41,16 @@ describe("LoginScreen", () => {
     expect(html).toContain('class="login-icon login-icon-dark"');
     expect(html).toContain("このごろ");
     expect(html).toContain('href="/api/auth/line"');
+  });
+});
+
+describe("BootScreen", () => {
+  it("PWA起動中も正式アイコンとアプリ名を表示する", () => {
+    const html = renderToStaticMarkup(createElement(BootScreen));
+
+    expect(html).toContain('class="boot-symbol boot-symbol-light"');
+    expect(html).toContain('class="boot-symbol boot-symbol-dark"');
+    expect(html).toContain("このごろ");
+    expect(html).toContain('role="status"');
   });
 });

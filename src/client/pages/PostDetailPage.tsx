@@ -1,5 +1,5 @@
 import { Ellipsis, Pencil, Trash2 } from "lucide-react";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useLayoutEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import type { Comment, Post } from "../../shared/types";
 import { api, formatDate } from "../api";
@@ -17,6 +17,9 @@ export function PostDetailPage() {
   const [deleting, setDeleting] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  useLayoutEffect(() => {
+    window.scrollTo(0, 0);
+  }, [postId]);
   const load = () => {
     setError("");
     void api<Post>(`/posts/${postId}`).then(setPost).catch((reason: Error) => setError(reason.message));

@@ -154,6 +154,8 @@ Section titleは必ず1行の文字列として扱う。
 
 ownerとuploaderには右上に3点メニューを表示し、「編集」「削除」を配置する。編集ではEvent、Section、Post title、Captionを変更し、既存Mediaは保持する。削除時は確認モーダルを表示し、写真・動画とコメントも削除されて元に戻せないことを明示する。
 
+TimelineやEvent DetailからPost Detailを開いたときは、遷移元のスクロール位置を引き継がず画面先頭から表示する。
+
 Mediaを押すとMedia Viewer。
 
 ---

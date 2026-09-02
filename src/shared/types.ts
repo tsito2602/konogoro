@@ -114,6 +114,7 @@ export type EventScene = {
 };
 
 export type EventDetail = EventSummary & {
+  coverMediaId: string | null;
   scenes: EventScene[];
   posts: Post[];
 };

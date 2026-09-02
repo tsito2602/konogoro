@@ -14,6 +14,18 @@ export const sceneInputSchema = z.object({
   title: z.string().trim().min(1).max(100),
 });
 
+export const eventManagementInputSchema = z.object({
+  event: eventInputSchema,
+  scenes: z.array(z.object({
+    id: z.string().min(1).optional(),
+    title: z.string().trim().min(1).max(100),
+  })).max(100),
+  coverMediaId: z.string().min(1).nullable(),
+}).refine(({ scenes }) => {
+  const ids = scenes.flatMap((scene) => scene.id ? [scene.id] : []);
+  return new Set(ids).size === ids.length;
+}, { message: "同じシーンが重複しています", path: ["scenes"] });
+
 export const eventCoverInputSchema = z.object({
   mediaId: z.string().min(1).nullable(),
 });

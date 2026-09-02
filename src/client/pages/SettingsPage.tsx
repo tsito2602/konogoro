@@ -101,7 +101,7 @@ export function SettingsPage() {
           {error && <p className="form-error" role="alert">{error}</p>}
         </form>
 
-        <div className={`settings-save-bar${hasChanges ? " visible" : ""}`} aria-hidden={!hasChanges}>
+        <div className={`change-save-bar${hasChanges ? " visible" : ""}`} aria-hidden={!hasChanges}>
           <button className="primary-button wide" type="submit" form="settings-save-form" disabled={busy || !displayName.trim()}>{busy ? "保存中…" : "変更を保存"}</button>
         </div>
 

@@ -4,6 +4,7 @@ import { ulid } from "ulid";
 import { ZodError } from "zod";
 import {
   eventInputSchema,
+  eventManagementInputSchema,
   eventCoverInputSchema,
   editUploadFilesSchema,
   commentInputSchema,
@@ -478,6 +479,53 @@ app.put("/events/:eventId", async (c) => {
   return c.json({ id: c.req.param("eventId") });
 });
 
+app.put("/events/:eventId/manage", async (c) => {
+  if (!canManageEvent(c.var.currentUser)) return c.json({ error: "イベントを編集する権限がありません" }, 403);
+  const eventId = c.req.param("eventId");
+  const input = eventManagementInputSchema.parse(await c.req.json());
+  const event = await c.env.DB.prepare("SELECT id FROM events WHERE id = ?").bind(eventId).first();
+  if (!event) return c.json({ error: "イベントが見つかりません" }, 404);
+
+  const currentScenes = await c.env.DB.prepare("SELECT id FROM event_scenes WHERE event_id = ?").bind(eventId).all<{ id: string }>();
+  const currentSceneIds = new Set(currentScenes.results.map((scene) => scene.id));
+  const requestedSceneIds = new Set(input.scenes.flatMap((scene) => scene.id ? [scene.id] : []));
+  if ([...requestedSceneIds].some((id) => !currentSceneIds.has(id))) return c.json({ error: "シーンがイベントと一致しません" }, 400);
+  const deletedSceneIds = [...currentSceneIds].filter((id) => !requestedSceneIds.has(id));
+  if (deletedSceneIds.length > 0) {
+    const placeholders = deletedSceneIds.map(() => "?").join(", ");
+    const used = await c.env.DB.prepare(`SELECT id FROM posts WHERE event_id = ? AND scene_id IN (${placeholders}) LIMIT 1`).bind(eventId, ...deletedSceneIds).first();
+    if (used) return c.json({ error: "投稿があるシーンは削除できません" }, 409);
+  }
+
+  const cover = input.coverMediaId ? await c.env.DB.prepare(`
+    SELECT m.id, m.original_object_key FROM media m JOIN posts p ON p.id = m.post_id
+     WHERE m.id = ? AND p.event_id = ? AND p.status = 'published' AND m.status = 'uploaded'
+  `).bind(input.coverMediaId, eventId).first<{ id: string; original_object_key: string }>() : null;
+  if (input.coverMediaId && !cover) return c.json({ error: "カバーに設定できるメディアが見つかりません" }, 400);
+
+  const now = new Date().toISOString();
+  const statements = [c.env.DB.prepare("UPDATE events SET title = ?, description = ?, start_date = ?, end_date = ?, updated_at = ? WHERE id = ?")
+    .bind(input.event.title, input.event.description, input.event.startDate, input.event.endDate, now, eventId)];
+  input.scenes.forEach((scene, index) => {
+    if (scene.id) {
+      statements.push(c.env.DB.prepare("UPDATE event_scenes SET title = ?, sort_order = ?, updated_at = ? WHERE id = ? AND event_id = ?")
+        .bind(scene.title, index, now, scene.id, eventId));
+    } else {
+      statements.push(c.env.DB.prepare("INSERT INTO event_scenes (id, event_id, title, sort_order, created_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)")
+        .bind(ulid(), eventId, scene.title, index, c.var.currentUser.id, now, now));
+    }
+  });
+  deletedSceneIds.forEach((sceneId) => statements.push(c.env.DB.prepare("DELETE FROM event_scenes WHERE id = ? AND event_id = ?").bind(sceneId, eventId)));
+  if (cover) {
+    statements.push(c.env.DB.prepare("UPDATE events SET cover_media_id = ?, cover_object_key = ?, cover_source = 'manual', updated_at = ? WHERE id = ?")
+      .bind(cover.id, cover.original_object_key, now, eventId));
+  } else {
+    statements.push(autoEventCoverStatement(c.env.DB, eventId, now));
+  }
+  await c.env.DB.batch(statements);
+  return c.json({ id: eventId });
+});
+
 app.delete("/events/:eventId", async (c) => {
   if (!canManageEvent(c.var.currentUser)) return c.json({ error: "イベントを削除する権限がありません" }, 403);
   const eventId = c.req.param("eventId");
@@ -511,6 +559,7 @@ app.get("/events/:eventId", async (c) => {
   ]);
   const detail: EventDetail = {
     ...mapEvent(event),
+    coverMediaId: event.cover_media_id,
     scenes: scenesResult.results.map((scene) => ({ id: scene.id, title: scene.title, sortOrder: scene.sort_order })),
     posts: await loadPosts(c.env.DB, postsResult.results, c.var.currentUser),
   };

@@ -290,6 +290,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-ink); box
 .inline-action svg { width: 17px; }
 .inline-form { display: grid; grid-template-columns: 1fr auto; gap: 8px; margin-top: -12px; }
 .event-edit { display: flex; flex-direction: column; gap: 32px; }
+.event-edit.has-save-bar { padding-bottom: 112px; }
 .management-section { padding-top: 28px; border-top: 1px solid var(--separator); }
 .management-section h2 { margin: 0 0 14px; font-size: 20px; }
 .management-section .inline-form { margin-top: 12px; }
@@ -298,6 +299,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-ink); box
 .management-heading { display: flex; align-items: center; justify-content: space-between; }
 .cover-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 5px; }
 .cover-grid button { position: relative; aspect-ratio: 1; padding: 0; overflow: hidden; border: 0; border-radius: 8px; background: var(--placeholder); cursor: pointer; }
+.cover-grid button.selected { outline: 3px solid var(--accent-ink); outline-offset: -3px; }
 .cover-grid img { width: 100%; height: 100%; object-fit: cover; }
 .cover-grid span { position: absolute; inset: 50% auto auto 50%; width: 32px; height: 32px; display: grid; place-items: center; transform: translate(-50%,-50%); border-radius: 50%; color: white; background: rgba(0,0,0,.58); }
 .cover-grid svg { width: 17px; }
@@ -356,9 +358,9 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-ink); box
 .settings-page { padding: 20px 16px 40px; }
 .settings-page.has-save-bar { padding-bottom: 112px; }
 .settings-form { display: flex; flex-direction: column; gap: 24px; }
-.settings-form + .settings-section, .settings-save-bar + .settings-section, .settings-page > .settings-section + .settings-section { margin-top: 28px; }
-.settings-save-bar { position: fixed; z-index: 35; right: 0; bottom: calc(64px + env(safe-area-inset-bottom)); left: 0; width: 100%; max-width: 760px; margin: 0 auto; padding: 12px 16px; border-top: 1px solid var(--separator); background: var(--header-background); box-shadow: 0 -8px 24px rgba(0,0,0,.08); backdrop-filter: blur(20px) saturate(180%); opacity: 0; transform: translateY(calc(100% + 12px)); visibility: hidden; pointer-events: none; transition: opacity 180ms ease, transform 260ms cubic-bezier(.2,.8,.2,1), visibility 0s linear 260ms; }
-.settings-save-bar.visible { opacity: 1; transform: translateY(0); visibility: visible; pointer-events: auto; transition-delay: 0s; }
+.settings-form + .settings-section, .change-save-bar + .settings-section, .settings-page > .settings-section + .settings-section { margin-top: 28px; }
+.change-save-bar { position: fixed; z-index: 35; right: 0; bottom: calc(64px + env(safe-area-inset-bottom)); left: 0; width: 100%; max-width: 760px; margin: 0 auto; padding: 12px 16px; border-top: 1px solid var(--separator); background: var(--header-background); box-shadow: 0 -8px 24px rgba(0,0,0,.08); backdrop-filter: blur(20px) saturate(180%); opacity: 0; transform: translateY(calc(100% + 12px)); visibility: hidden; pointer-events: none; transition: opacity 180ms ease, transform 260ms cubic-bezier(.2,.8,.2,1), visibility 0s linear 260ms; }
+.change-save-bar.visible { opacity: 1; transform: translateY(0); visibility: visible; pointer-events: auto; transition-delay: 0s; }
 .settings-section > h2 { margin: 0 4px 8px; color: var(--ash); font-size: 13px; font-weight: 600; }
 .settings-card { overflow: hidden; border: 1px solid var(--border); border-radius: var(--radius-card); background: var(--surface); }
 .settings-field { padding: 14px; display: flex; flex-direction: column; gap: 8px; font-size: 13px; font-weight: 600; }

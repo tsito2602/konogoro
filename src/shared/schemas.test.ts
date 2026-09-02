@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { commentInputSchema, eventCoverInputSchema, eventInputSchema, memberRoleInputSchema, postInputSchema, sceneInputSchema, uploadFilesSchema } from "./schemas";
+import { commentInputSchema, eventCoverInputSchema, eventInputSchema, eventManagementInputSchema, memberRoleInputSchema, postInputSchema, sceneInputSchema, uploadFilesSchema } from "./schemas";
 
 describe("API validation", () => {
   it("終了日が開始日より前のイベントを拒否する", () => {
@@ -10,6 +10,12 @@ describe("API validation", () => {
     expect(eventCoverInputSchema.safeParse({ mediaId: "media-1" }).success).toBe(true);
     expect(eventCoverInputSchema.safeParse({ mediaId: null }).success).toBe(true);
     expect(eventCoverInputSchema.safeParse({}).success).toBe(false);
+  });
+
+  it("イベント編集内容をまとめて受け付け、重複シーンを拒否する", () => {
+    const event = { title: "旅行", description: "", startDate: null, endDate: null };
+    expect(eventManagementInputSchema.safeParse({ event, scenes: [{ id: "scene-1", title: "1日目" }, { title: "2日目" }], coverMediaId: null }).success).toBe(true);
+    expect(eventManagementInputSchema.safeParse({ event, scenes: [{ id: "scene-1", title: "1日目" }, { id: "scene-1", title: "重複" }], coverMediaId: null }).success).toBe(false);
   });
 
   it("空コメントを拒否する", () => {

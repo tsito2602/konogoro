@@ -92,9 +92,8 @@ export function SettingsPage() {
                 <span className="notification-switch" aria-hidden><span><Check className="notification-switch-on" /><X className="notification-switch-off" /></span></span>
               </label>
               <div className="setting-status"><strong>LINEアカウント</strong><span className={user.lineConnected ? "linked" : ""}>{user.lineConnected ? "連携済み" : "未連携"}</span></div>
-              <div className="setting-status"><strong>「このごろ」からの通知</strong><span className={user.lineFriend ? "linked" : ""}>{user.lineFriend ? "受信可能" : "友だち追加が必要"}</span></div>
-              {user.lineConnected && <a className="outline-button wide settings-line-action" href="/api/auth/line">LINE通知の状態を確認</a>}
-              {user.lineConnected && <p className="settings-line-help">LINEで「このごろ」をブロックした場合も、ここから友だち状態を確認・再設定できる。</p>}
+              <div className="setting-status"><strong>アプリからの通知</strong><span className={user.lineFriend ? "linked" : ""}>{user.lineFriend ? "受信可能" : "受信不可"}</span></div>
+              {!user.lineFriend && <p className="settings-line-warning">LINEで「このごろ」アカウントをブロックしていないか確認してください。</p>}
             </div>
           </section>
 

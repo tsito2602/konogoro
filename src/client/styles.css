@@ -396,8 +396,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-ink); box
 .notification-toggle.unavailable { cursor: default; opacity: .55; }
 .setting-status span { color: var(--ash); }
 .setting-status span.linked { color: var(--success); }
-.settings-line-action { width: calc(100% - 28px) !important; margin: 0 14px 14px; }
-.settings-line-help { margin: -5px 14px 14px; color: var(--ash); font-size: 12px; line-height: 1.5; }
+.settings-line-warning { margin: 0; padding: 12px 14px 14px; color: var(--ash); border-top: 1px solid var(--separator); font-size: 12px; line-height: 1.5; }
 .member-delete-button { color: var(--danger); }
 .member-delete-button svg { width: 19px; height: 19px; }
 .settings-card .member-row { padding: 0 14px; }

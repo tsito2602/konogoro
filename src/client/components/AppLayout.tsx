@@ -11,7 +11,7 @@ const postDetailPattern = /^\/posts\/[^/]+$/;
 export function canAccessPath(user: CurrentUser, pathname: string): boolean {
   if (/^\/posts\/(new|[^/]+\/edit)$/.test(pathname)) return canCreatePost(user);
   if (/^\/events\/new$/.test(pathname) || /^\/events\/[^/]+\/edit$/.test(pathname)) return canManageEvent(user);
-  if (/^\/family$/.test(pathname)) return canInviteFamily(user);
+  if (pathname === "/family" || pathname === "/settings/family") return canInviteFamily(user);
   return true;
 }
 

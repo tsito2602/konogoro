@@ -1,5 +1,6 @@
-import { Bell, BellOff, Check, Monitor, Moon, Sun, X } from "lucide-react";
+import { Bell, BellOff, Check, ChevronRight, Monitor, Moon, Sun, Users, X } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
+import { Link } from "react-router-dom";
 import packageInfo from "../../../package.json";
 import type { CurrentUser } from "../../shared/types";
 import { api } from "../api";
@@ -57,7 +58,9 @@ export function SettingsPage() {
   return <>
     <PageHeader title="設定" back />
     <main className="page-content form-page">
-      {error && !user ? <ErrorState message={error} retry={load} /> : !user ? <Loading /> : <><form className="form-stack settings-form" onSubmit={save}>
+      {error && !user ? <ErrorState message={error} retry={load} /> : !user ? <Loading /> : <>
+      {user.role === "owner" && <Link className="settings-navigation" to="/settings/family"><Users aria-hidden /><span><strong>家族の管理</strong><small>権限設定・招待URL発行</small></span><ChevronRight aria-hidden /></Link>}
+      <form className="form-stack settings-form" onSubmit={save}>
         <fieldset className="theme-setting">
           <legend>テーマ</legend>
           <div>{themeOptions.map(({ value, label, description, icon: Icon }) => <label className={theme === value ? "selected" : ""} key={value}>

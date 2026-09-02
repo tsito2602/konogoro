@@ -9,6 +9,7 @@ import { EventDetailPage } from "./pages/EventDetailPage";
 import { EventEditPage } from "./pages/EventEditPage";
 import { EventsPage } from "./pages/EventsPage";
 import { FamilyPage } from "./pages/FamilyPage";
+import { FamilySettingsPage } from "./pages/FamilySettingsPage";
 import { InvitePage } from "./pages/InvitePage";
 import { MediaViewerPage } from "./pages/MediaViewerPage";
 import { PostCreatePage } from "./pages/PostCreatePage";
@@ -39,6 +40,7 @@ const router = createBrowserRouter([{
     { path: "/family", element: <FamilyPage /> },
     { path: "/invite/:token", element: <InvitePage /> },
     { path: "/settings", element: <SettingsPage /> },
+    { path: "/settings/family", element: <FamilySettingsPage /> },
   ],
 }]);
 

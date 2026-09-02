@@ -371,6 +371,12 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-ink); box
 .notification-toggle.unavailable { cursor: default; opacity: .55; }
 .setting-status span { color: var(--ash); }
 .setting-status span.linked, .save-message { color: var(--success); }
+.settings-navigation { min-height: 68px; margin-bottom: 22px; padding: 12px 14px; display: grid; grid-template-columns: 40px minmax(0,1fr) 20px; gap: 11px; align-items: center; border: 1px solid var(--border); border-radius: var(--radius-card); background: var(--surface); }
+.settings-navigation > svg:first-child { width: 40px; height: 40px; padding: 9px; border-radius: 50%; color: var(--accent-ink); background: rgba(255,209,102,.2); }
+.settings-navigation span { display: flex; flex-direction: column; gap: 2px; }
+.settings-navigation strong { font-size: 15px; }
+.settings-navigation small { color: var(--ash); font-size: 12px; }
+.settings-navigation > svg:last-child { width: 18px; color: var(--ash); }
 .settings-logout { align-self: center; }
 .settings-app-info { margin-top: 44px; padding-bottom: 12px; display: flex; flex-direction: column; align-items: center; color: var(--ash); text-align: center; }
 .settings-app-info > span { width: 58px; height: 58px; margin-bottom: 10px; display: block; }

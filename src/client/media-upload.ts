@@ -48,6 +48,24 @@ export async function prepareMediaFiles(
   onPrepared: (file: SelectedMediaFile) => void,
   concurrency = 2,
 ): Promise<void> {
+  const limit = Math.max(1, concurrency);
+  const imageFiles = files.filter((file) => !file.file.type.startsWith("video/"));
+  const videoFiles = files.filter((file) => file.file.type.startsWith("video/"));
+  if (limit === 1 || imageFiles.length === 0 || videoFiles.length === 0) {
+    await prepareMediaQueue(files, videoFiles.length > 0 ? 1 : limit, onPrepared);
+    return;
+  }
+  await Promise.all([
+    prepareMediaQueue(imageFiles, limit - 1, onPrepared),
+    prepareMediaQueue(videoFiles, 1, onPrepared),
+  ]);
+}
+
+async function prepareMediaQueue(
+  files: SelectedMediaFile[],
+  concurrency: number,
+  onPrepared: (file: SelectedMediaFile) => void,
+): Promise<void> {
   let nextFile = 0;
   await Promise.all(
     Array.from({ length: Math.min(concurrency, files.length) }, async () => {
@@ -68,7 +86,7 @@ async function prepareMediaFile(item: SelectedMediaFile): Promise<SelectedMediaF
   const capturedAtPromise = captureDate(item.file);
   try {
     if (item.file.type.startsWith("video/")) {
-      const video = await loadVideo(item.previewUrl);
+      const video = await loadVideoFirstFrame(item.previewUrl);
       const width = video.videoWidth;
       const height = video.videoHeight;
       const durationSeconds = Number.isFinite(video.duration) ? video.duration : null;
@@ -150,27 +168,16 @@ async function captureDate(file: File): Promise<string | null> {
   return file.lastModified ? new Date(file.lastModified).toISOString() : null;
 }
 
-function loadVideo(url: string): Promise<HTMLVideoElement> {
+function loadVideoFirstFrame(url: string): Promise<HTMLVideoElement> {
   return new Promise((resolve, reject) => {
     const video = document.createElement("video");
-    video.preload = "metadata";
+    video.preload = "auto";
     video.muted = true;
     video.playsInline = true;
-    video.addEventListener(
-      "loadeddata",
-      () => {
-        const seekTime = Number.isFinite(video.duration) && video.duration > 0 ? Math.min(1, video.duration / 3) : 0;
-        if (seekTime === 0) resolve(video);
-        else {
-          video.currentTime = seekTime;
-          window.setTimeout(() => resolve(video), 1000);
-        }
-      },
-      { once: true },
-    );
-    video.addEventListener("seeked", () => resolve(video), { once: true });
+    video.addEventListener("loadeddata", () => resolve(video), { once: true });
     video.addEventListener("error", () => reject(new Error("動画を読み込めません")), { once: true });
     video.src = url;
+    video.load();
   });
 }
 

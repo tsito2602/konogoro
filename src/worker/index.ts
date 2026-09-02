@@ -167,14 +167,22 @@ app.get("/auth/line/callback", async (c) => {
   if (!verifyResponse.ok) return c.json({ error: "LINEアカウントを確認できません" }, 502);
   const profile = await verifyResponse.json<{ sub: string; name?: string; picture?: string }>();
   const lineFriend = await getLineFriendship(token.access_token);
-  let user = await c.env.DB.prepare("SELECT id FROM users WHERE line_user_id = ?").bind(profile.sub).first<{ id: string }>();
-  if (!user) {
+  let user = await c.env.DB.prepare("SELECT id, is_active FROM users WHERE line_user_id = ?").bind(profile.sub).first<{ id: string; is_active: number }>();
+  if (!user || !user.is_active) {
     if (!loginRequest.invite_token_hash) return c.json({ error: "有効な招待が必要です" }, 403);
     const invite = await c.env.DB.prepare("UPDATE invites SET use_count = use_count + 1 WHERE token_hash = ? AND expires_at > ? AND use_count < max_uses RETURNING role").bind(loginRequest.invite_token_hash, new Date().toISOString()).first<{ role: User["role"] }>();
     if (!invite) return c.json({ error: "招待URLが無効または期限切れです" }, 403);
-    user = { id: ulid() };
     const now = new Date().toISOString();
-    await c.env.DB.prepare("INSERT INTO users (id, line_user_id, display_name, avatar_url, role, notification_enabled, line_friend_enabled, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)").bind(user.id, profile.sub, profile.name ?? "LINEユーザー", profile.picture ?? null, invite.role, Number(lineFriend === true), Number(lineFriend === true), now, now).run();
+    if (user) {
+      await c.env.DB.prepare(`
+        UPDATE users
+           SET display_name = ?, avatar_url = ?, role = ?, notification_enabled = ?, line_friend_enabled = ?, is_active = 1, updated_at = ?
+         WHERE id = ?
+      `).bind(profile.name ?? "LINEユーザー", profile.picture ?? null, invite.role, Number(lineFriend === true), Number(lineFriend === true), now, user.id).run();
+    } else {
+      user = { id: ulid(), is_active: 1 };
+      await c.env.DB.prepare("INSERT INTO users (id, line_user_id, display_name, avatar_url, role, notification_enabled, line_friend_enabled, is_active, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?)").bind(user.id, profile.sub, profile.name ?? "LINEユーザー", profile.picture ?? null, invite.role, Number(lineFriend === true), Number(lineFriend === true), now, now).run();
+    }
   } else if (lineFriend !== null) {
     await c.env.DB.prepare("UPDATE users SET line_friend_enabled = ?, notification_enabled = CASE WHEN ? = 0 THEN 0 ELSE notification_enabled END, updated_at = ? WHERE id = ?").bind(Number(lineFriend), Number(lineFriend), new Date().toISOString(), user.id).run();
   }
@@ -222,10 +230,11 @@ app.post("/auth/logout", async (c) => {
 });
 
 app.get("/family/members", async (c) => {
-  if (!canInviteFamily(c.var.currentUser)) return c.json({ error: "家族情報を表示する権限がありません" }, 403);
+  if (!canInviteFamily(c.var.currentUser)) return c.json({ error: "メンバー情報を表示する権限がありません" }, 403);
   const result = await c.env.DB.prepare(`
     SELECT id, display_name, role, avatar_url, line_user_id, notification_enabled, created_at
       FROM users
+     WHERE is_active = 1
      ORDER BY CASE role WHEN 'owner' THEN 0 WHEN 'uploader' THEN 1 ELSE 2 END, created_at, id
   `).all<{ id: string; display_name: string; role: User["role"]; avatar_url: string | null; line_user_id: string | null; notification_enabled: number; created_at: string }>();
   return c.json({ members: result.results.map((member) => ({
@@ -247,7 +256,7 @@ app.patch("/family/members/:memberId", async (c) => {
   const member = await c.env.DB.prepare(`
     UPDATE users
        SET role = ?, updated_at = ?
-     WHERE id = ?
+     WHERE id = ? AND is_active = 1
      RETURNING id, display_name, role, avatar_url, line_user_id, notification_enabled
   `).bind(input.role, new Date().toISOString(), memberId).first<{ id: string; display_name: string; role: User["role"]; avatar_url: string | null; line_user_id: string | null; notification_enabled: number }>();
   if (!member) return c.json({ error: "メンバーが見つかりません" }, 404);
@@ -261,8 +270,27 @@ app.patch("/family/members/:memberId", async (c) => {
   });
 });
 
+app.delete("/family/members/:memberId", async (c) => {
+  if (!canInviteFamily(c.var.currentUser)) return c.json({ error: "メンバーを削除する権限がありません" }, 403);
+  const memberId = c.req.param("memberId");
+  if (memberId === c.var.currentUser.id) return c.json({ error: "自分自身は削除できません" }, 400);
+  const member = await c.env.DB.prepare("SELECT id FROM users WHERE id = ? AND is_active = 1").bind(memberId).first<{ id: string }>();
+  if (!member) return c.json({ error: "メンバーが見つかりません" }, 404);
+  const now = new Date().toISOString();
+  await c.env.DB.batch([
+    c.env.DB.prepare(`
+      UPDATE users
+         SET is_active = 0, notification_enabled = 0, line_friend_enabled = 0, updated_at = ?
+       WHERE id = ? AND is_active = 1
+    `).bind(now, memberId),
+    c.env.DB.prepare("DELETE FROM sessions WHERE user_id = ?").bind(memberId),
+    c.env.DB.prepare("DELETE FROM invites WHERE created_by = ? AND expires_at > ? AND use_count < max_uses").bind(memberId, now),
+  ]);
+  return c.body(null, 204);
+});
+
 app.post("/family/invites", async (c) => {
-  if (!canInviteFamily(c.var.currentUser)) return c.json({ error: "家族を招待する権限がありません" }, 403);
+  if (!canInviteFamily(c.var.currentUser)) return c.json({ error: "メンバーを招待する権限がありません" }, 403);
   const input = inviteInputSchema.parse(await c.req.json());
   const { token, tokenHash } = await createInviteToken();
   const id = ulid();
@@ -363,6 +391,7 @@ app.get("/activity", async (c) => {
     SELECT u.id, u.display_name, u.avatar_url, MAX(v.last_viewed_at) AS last_viewed_at
       FROM users u
       LEFT JOIN view_histories v ON v.user_id = u.id
+     WHERE u.is_active = 1
      GROUP BY u.id, u.display_name, u.avatar_url, u.created_at
      ORDER BY last_viewed_at IS NULL, last_viewed_at DESC, u.created_at, u.id
   `).all<MemberLastViewedRow>();

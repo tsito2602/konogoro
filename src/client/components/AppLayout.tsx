@@ -85,8 +85,8 @@ export function LoginScreen() {
       <img className="login-icon login-icon-dark" src="/icons/icon-dark-transparent.png" alt="" />
     </span>
     <p className="login-eyebrow">このごろ</p>
-    <h1>家族の思い出を、ひとつの場所に</h1>
-    <p>写真や動画を家族だけで共有できます。</p>
+    <h1>メンバーの思い出を、ひとつの場所に</h1>
+    <p>写真や動画を招待したメンバーだけで共有できます。</p>
     <a className="line-login-button" href="/api/auth/line">LINEでログイン</a>
   </section></main>;
 }

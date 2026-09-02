@@ -18,6 +18,7 @@ describe("viewer API authorization", () => {
   it.each([
     ["GET", "/api/family/members", undefined],
     ["PATCH", "/api/family/members/member-1", { role: "uploader" }],
+    ["DELETE", "/api/family/members/member-1", undefined],
     ["GET", "/api/events/event-1/cover-media", undefined],
     ["POST", "/api/events/event-1/scenes", { title: "1日目" }],
     ["PUT", "/api/events/event-1/scenes/scene-1", { title: "2日目" }],

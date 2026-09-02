@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createSession, getLineFriendship, hashToken, pkceChallenge, randomToken, safeEqual } from "./auth";
+import { createSession, getCurrentUser, getLineFriendship, hashToken, pkceChallenge, randomToken, safeEqual } from "./auth";
 
 describe("auth helpers", () => {
   it("URL-safeなtokenを生成する", () => expect(randomToken()).toMatch(/^[A-Za-z0-9_-]{43}$/));
@@ -23,6 +23,18 @@ describe("auth helpers", () => {
     expect(values[0]).toBe(await hashToken(session));
     expect(values[1]).toBe("user-1");
     expect(new Date(String(values[2])).getTime() - new Date(String(values[3])).getTime()).toBe(30 * 86400000);
+  });
+  it("無効化されたユーザーをsession認証の対象外にする", async () => {
+    let query = "";
+    const db = {
+      prepare: (sql: string) => {
+        query = sql;
+        return { bind: () => ({ first: async () => null }) };
+      },
+    } as unknown as D1Database;
+
+    expect(await getCurrentUser(db, "session-token", false)).toBeNull();
+    expect(query).toContain("u.is_active = 1");
   });
   it("LINE公式アカウントの友だち状態を取得する", async () => {
     const fetcher = async (input: string | URL | Request, init?: RequestInit) => {

@@ -10,10 +10,10 @@ export function hasLineConfig(env: LineSecrets): env is Required<LineSecrets> {
 
 export async function getCurrentUser(db: D1Database, sessionToken?: string, allowDevFallback = true): Promise<User | null> {
   const user = sessionToken
-    ? await db.prepare("SELECT u.id, u.display_name, u.role, u.avatar_url FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ? AND s.expires_at > ?")
+    ? await db.prepare("SELECT u.id, u.display_name, u.role, u.avatar_url FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ? AND s.expires_at > ? AND u.is_active = 1")
       .bind(await hashToken(sessionToken), new Date().toISOString()).first<{ id: string; display_name: string; role: User["role"]; avatar_url: string | null }>()
     : allowDevFallback
-      ? await db.prepare("SELECT id, display_name, role, avatar_url FROM users WHERE id = ?").bind(DEV_USER_ID).first<{ id: string; display_name: string; role: User["role"]; avatar_url: string | null }>()
+      ? await db.prepare("SELECT id, display_name, role, avatar_url FROM users WHERE id = ? AND is_active = 1").bind(DEV_USER_ID).first<{ id: string; display_name: string; role: User["role"]; avatar_url: string | null }>()
       : null;
   return user ? { id: user.id, displayName: user.display_name, role: user.role, avatarUrl: user.avatar_url } : null;
 }

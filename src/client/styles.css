@@ -403,6 +403,9 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-ink); box
 .setting-status span { color: var(--ash); }
 .setting-status span.linked { color: var(--success); }
 .settings-line-action { width: calc(100% - 28px) !important; margin: 0 14px 14px; }
+.settings-line-help { margin: -5px 14px 14px; color: var(--ash); font-size: 12px; line-height: 1.5; }
+.member-delete-button { color: var(--danger); }
+.member-delete-button svg { width: 19px; height: 19px; }
 .settings-card .member-row { padding: 0 14px; }
 .settings-card-loading { min-height: 64px; display: flex; align-items: center; justify-content: center; gap: 9px; color: var(--ash); font-size: 13px; }
 .settings-family-error { padding: 14px; text-align: center; }

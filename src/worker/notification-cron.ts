@@ -45,7 +45,7 @@ export async function processNotificationBatches(
   const recipients = await env.DB.prepare(`
     SELECT id, line_user_id
       FROM users
-     WHERE notification_enabled = 1 AND line_friend_enabled = 1 AND line_user_id IS NOT NULL
+     WHERE is_active = 1 AND notification_enabled = 1 AND line_friend_enabled = 1 AND line_user_id IS NOT NULL
      ORDER BY id
   `).all<NotificationRecipient>();
 

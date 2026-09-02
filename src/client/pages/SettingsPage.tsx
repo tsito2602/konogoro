@@ -103,9 +103,10 @@ export function SettingsPage() {
                 <span className="notification-toggle-copy"><strong>LINE通知 <small>{!user.lineFriend ? "利用不可" : notificationEnabled ? "オン" : "オフ"}</small></strong><span>{!user.lineFriend ? "友だち追加後に利用できる" : notificationEnabled ? "新しい投稿をLINEでお知らせします" : "新しい投稿のLINE通知は届きません"}</span></span>
                 <span className="notification-switch" aria-hidden><span><Check className="notification-switch-on" /><X className="notification-switch-off" /></span></span>
               </label>
-              <div className="setting-status"><strong>LINE連携</strong><span className={user.lineConnected ? "linked" : ""}>{user.lineConnected ? "連携済み" : "未連携"}</span></div>
-              <div className="setting-status"><strong>公式アカウント</strong><span className={user.lineFriend ? "linked" : ""}>{user.lineFriend ? "友だち追加済み" : "未追加"}</span></div>
-              {user.lineConnected && !user.lineFriend && <a className="outline-button wide settings-line-action" href="/api/auth/line">友だち追加を確認</a>}
+              <div className="setting-status"><strong>LINEアカウント</strong><span className={user.lineConnected ? "linked" : ""}>{user.lineConnected ? "連携済み" : "未連携"}</span></div>
+              <div className="setting-status"><strong>「このごろ」からの通知</strong><span className={user.lineFriend ? "linked" : ""}>{user.lineFriend ? "受信可能" : "友だち追加が必要"}</span></div>
+              {user.lineConnected && <a className="outline-button wide settings-line-action" href="/api/auth/line">LINE通知の状態を確認</a>}
+              {user.lineConnected && <p className="settings-line-help">LINEで「このごろ」をブロックした場合も、ここから友だち状態を確認・再設定できる。</p>}
             </div>
           </section>
 
@@ -114,7 +115,7 @@ export function SettingsPage() {
         </form>
 
         {user.role === "owner" && <section className="settings-section">
-          <h2>家族</h2>
+          <h2>メンバー</h2>
           <div className="settings-card">
             {familyError ? <div className="settings-family-error"><p>{familyError}</p><button className="text-button" type="button" onClick={loadFamily}>再読み込み</button></div>
               : members === null ? <div className="settings-card-loading" role="status"><span className="spinner" />読み込み中</div>
@@ -123,7 +124,7 @@ export function SettingsPage() {
                 <div className="member-copy"><strong>{member.displayName}</strong><span>{roleLabels[member.role]}</span></div>
                 <span className={`notification-state${member.notificationEnabled ? " enabled" : ""}`}>{member.notificationEnabled ? <Bell /> : <BellOff />}LINE通知{member.notificationEnabled ? "ON" : "OFF"}</span>
               </article>)}
-            <Link className="settings-menu-row" to="/settings/family"><Users aria-hidden /><span><strong>家族の管理</strong><small>権限設定・招待URL発行</small></span><ChevronRight aria-hidden /></Link>
+            <Link className="settings-menu-row" to="/settings/family"><Users aria-hidden /><span><strong>メンバーの管理</strong><small>権限設定・招待URL発行</small></span><ChevronRight aria-hidden /></Link>
           </div>
         </section>}
 

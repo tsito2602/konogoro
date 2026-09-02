@@ -116,16 +116,24 @@ export function PostDetailPage() {
       />
       <main className="post-detail page-content">
         <div className="post-detail-head">
-          <span className="post-author-avatar" aria-hidden>
-            {post.authorAvatarUrl ? <img src={post.authorAvatarUrl} alt="" /> : post.authorName.slice(0, 1)}
+          <span className="post-author-row">
+            <span className="post-author-avatar" aria-hidden>
+              {post.authorAvatarUrl ? <img src={post.authorAvatarUrl} alt="" /> : post.authorName.slice(0, 1)}
+            </span>
+            <strong className="post-author-name">{post.authorName}</strong>
           </span>
-          <div className="post-detail-context">
-            <strong>
-              {post.eventTitle && <CalendarDays aria-hidden />}
-              {post.eventTitle ?? "日常の投稿"}
-            </strong>
-            {post.sceneTitle && <span>{post.sceneTitle}</span>}
-          </div>
+          {(post.eventTitle || post.sceneTitle) && (
+            <span className="post-context">
+              {post.eventTitle && (
+                <>
+                  <CalendarDays aria-hidden />
+                  <span>{post.eventTitle}</span>
+                </>
+              )}
+              {post.eventTitle && post.sceneTitle && <span aria-hidden>›</span>}
+              {post.sceneTitle && <span>{post.sceneTitle}</span>}
+            </span>
+          )}
         </div>
         <div className="media-grid detail-media-grid" data-count={Math.min(post.media.length, 4)}>
           {post.media.slice(0, 4).map((media, index) => (

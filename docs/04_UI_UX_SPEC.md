@@ -162,7 +162,7 @@ Event DetailではTimelineと同じPost Cardの構造を使い、Scene titleの�
 
 # Post Detail
 
-ヘッダーには共通の画面タイトルを表示せず、戻るボタンと権限に応じた投稿メニューだけを置く。投稿者、Event、Scene、Media Grid、反応、撮影日、CaptionはTimelineと同じ視覚構造で表示する。Event titleにはカレンダーアイコンを付け、Scene titleは装飾のない補助行とする。
+ヘッダーには共通の画面タイトルを表示せず、戻るボタンと権限に応じた投稿メニューだけを置く。投稿者、Event、Scene、Media Grid、反応、撮影日、CaptionはTimelineと同じ視覚構造で表示する。小さな投稿者アイコンと投稿者名を横並びにし、その下の独立行へ通常色で`Event title ＞ Scene title`を表示する。Event titleにはカレンダーアイコンを付け、EventとSceneのどちらもない場合は分類の代替文言を表示しない。
 
 CaptionとComment一覧は同じsurface上に連続して配置し、背景色や太い帯で別の島に分けない。Comment一覧の開始位置は1pxの区切り線と余白で示す。
 

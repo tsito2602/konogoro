@@ -123,6 +123,8 @@ Eventだけに絞ったTimeline。
 - 動画数
 - Post数
 
+Cover下部のdark gradientは画像下端まで連続させ、最下部では画像色が線状に残らないよう完全な黒へ収束させる。
+
 その下:
 
 ```text

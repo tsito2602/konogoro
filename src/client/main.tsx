@@ -43,10 +43,3 @@ const router = createBrowserRouter([{
 }]);
 
 createRoot(document.getElementById("root")!).render(<StrictMode><RouterProvider router={router} /></StrictMode>);
-
-const localDevelopment = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
-if (!localDevelopment && "serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    void navigator.serviceWorker.register("/service-worker.js");
-  });
-}

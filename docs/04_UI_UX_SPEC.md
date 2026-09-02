@@ -83,7 +83,7 @@ Day 2 - シュトゥットガルト
 
 写真・動画をできるだけ大きく表示。
 
-表示済みのthumbnailとpreviewは端末へ最大300件キャッシュする。originalとvideoはService Workerのキャッシュ対象外とし、ログアウト時にメディアキャッシュを削除する。
+表示済みのthumbnailとpreviewは端末へ最大300件キャッシュする。originalとvideoに加え、アプリ本体のHTML、JavaScript、CSSはService Workerのキャッシュ対象外とし、ログアウト時にメディアキャッシュを削除する。起動中はアプリ名と読み込み状態を表示し、Service Worker更新時は新版へ切り替えて自動再読み込みする。
 
 ---
 

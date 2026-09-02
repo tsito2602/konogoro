@@ -245,6 +245,9 @@ img {
 .header-action {
   justify-content: flex-end;
 }
+.header-actions {
+  display: flex;
+}
 .header-link,
 .text-button {
   min-height: 44px;
@@ -1485,14 +1488,6 @@ a.icon-button {
   border-radius: 18px 18px 0 0;
   background: var(--surface);
 }
-.event-actions {
-  padding: 16px;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
 .form-page {
   padding: 24px 16px 40px;
 }

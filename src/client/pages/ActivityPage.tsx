@@ -1,5 +1,5 @@
 import { MessageCircle, Send } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import type { Activity, MemberLastViewed } from "../../shared/types";
 import { api } from "../api";
@@ -17,6 +17,8 @@ export function ActivityPage() {
   const [error, setError] = useState("");
   const [moreError, setMoreError] = useState("");
   const [loadingMore, setLoadingMore] = useState(false);
+  const loadingMoreRef = useRef(false);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
 
   const load = () => {
     setError("");
@@ -39,8 +41,9 @@ export function ActivityPage() {
       .catch((reason: Error) => setError(reason.message));
   }, []);
 
-  const loadMore = async () => {
-    if (!nextCursor || loadingMore) return;
+  const loadMore = useCallback(async () => {
+    if (!nextCursor || loadingMoreRef.current) return;
+    loadingMoreRef.current = true;
     setLoadingMore(true);
     setMoreError("");
     try {
@@ -50,9 +53,25 @@ export function ActivityPage() {
     } catch (reason) {
       setMoreError((reason as Error).message);
     } finally {
+      loadingMoreRef.current = false;
       setLoadingMore(false);
     }
-  };
+  }, [nextCursor]);
+
+  useEffect(() => {
+    const target = loadMoreRef.current;
+    if (!target || !nextCursor || moreError || !("IntersectionObserver" in window)) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry?.isIntersecting) return;
+        observer.disconnect();
+        void loadMore();
+      },
+      { rootMargin: "300px 0px" },
+    );
+    observer.observe(target);
+    return () => observer.disconnect();
+  }, [loadMore, moreError, nextCursor]);
 
   return (
     <>
@@ -82,20 +101,28 @@ export function ActivityPage() {
           </div>
         )}
         {activities && nextCursor && (
-          <div className="form-page">
+          <div className="activity-load-more" ref={loadMoreRef}>
             {moreError && (
-              <p className="form-error" role="alert">
-                {moreError}
-              </p>
+              <>
+                <p className="form-error" role="alert">
+                  {moreError}
+                </p>
+                <button className="outline-button" type="button" onClick={() => void loadMore()}>
+                  再試行
+                </button>
+              </>
             )}
-            <button
-              className="outline-button wide"
-              type="button"
-              onClick={() => void loadMore()}
-              disabled={loadingMore}
-            >
-              {loadingMore ? "読み込み中…" : "さらに読み込む"}
-            </button>
+            {!moreError && loadingMore && (
+              <div className="activity-loading-more" role="status" aria-live="polite">
+                <span className="spinner" />
+                読み込み中…
+              </div>
+            )}
+            {!moreError && !("IntersectionObserver" in window) && (
+              <button className="outline-button" type="button" onClick={() => void loadMore()} disabled={loadingMore}>
+                さらに読み込む
+              </button>
+            )}
           </div>
         )}
       </main>

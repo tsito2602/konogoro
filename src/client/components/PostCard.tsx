@@ -1,4 +1,4 @@
-import { Camera, ChevronRight, MessageCircle, Upload } from "lucide-react";
+import { Camera, ChevronRight, Folder, MessageCircle, Upload } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { Post } from "../../shared/types";
 import { useSeenTracking } from "../hooks/useSeenTracking";
@@ -7,18 +7,18 @@ import { SeenBy } from "./SeenBy";
 export function PostCard({ post, showContext = true }: { post: Post; showContext?: boolean }) {
   const { ref: seenRef, viewed } = useSeenTracking(post.id, post.viewedByCurrentUser);
   const latestComment = post.comments.at(-1);
-  const contextTitle = showContext ? post.eventTitle ?? post.title : post.sectionTitle ?? post.title;
+  const contextTitle = showContext ? post.eventTitle ?? "日常の投稿" : post.sectionTitle ?? "投稿";
   const contextSubtitle = showContext ? post.sectionTitle : null;
   const date = post.capturedAt ?? post.publishedAt;
   const dateLabel = post.capturedAt ? "撮影日" : "投稿日";
   return (
     <article className="post-card" ref={seenRef}>
-      <Link className="post-head" to={`/posts/${post.id}`} aria-label={`${post.authorName}さんの投稿「${post.title}」を開く`}>
+      <Link className="post-head" to={`/posts/${post.id}`} aria-label={`${post.authorName}さんの投稿を開く`}>
         <span className="post-author-avatar" aria-hidden>{post.authorAvatarUrl ? <img src={post.authorAvatarUrl} alt="" /> : post.authorName.slice(0, 1)}</span>
-        <span className="post-head-copy"><strong>{contextTitle}</strong>{contextSubtitle && <span>{contextSubtitle}</span>}</span>
+        <span className="post-head-copy"><strong>{contextTitle}</strong>{contextSubtitle && <span className="post-section-label"><Folder aria-hidden />{contextSubtitle}</span>}</span>
         <ChevronRight aria-hidden />
       </Link>
-      <Link to={`/posts/${post.id}`} className={`media-grid${viewed ? "" : " unseen"}`} data-count={Math.min(post.media.length, 4)} aria-label={`${viewed ? "" : "未閲覧の"}${post.title}を開く`}>
+      <Link to={`/posts/${post.id}`} className={`media-grid${viewed ? "" : " unseen"}`} data-count={Math.min(post.media.length, 4)} aria-label={`${viewed ? "" : "未閲覧の"}投稿を開く`}>
         {post.media.slice(0, 4).map((media, index) => (
           <div className="media-cell" key={media.id}>
             <img src={media.thumbnailUrl} alt="" loading="lazy" />
@@ -39,9 +39,7 @@ export function PostCard({ post, showContext = true }: { post: Post; showContext
             <span>{formatPostDate(date)}</span>
           </time>
         </div>
-        <Link className="post-caption" to={`/posts/${post.id}`} aria-label={`${post.title}の詳細を開く`}>
-          <strong>{post.title}</strong>{post.caption && <span>{post.caption}</span>}
-        </Link>
+        {post.caption && <Link className="post-caption" to={`/posts/${post.id}`} aria-label="投稿の詳細を開く">{post.caption}</Link>}
         {latestComment && <div className="post-comment-section">
           <Link className="post-comment-preview" to={`/posts/${post.id}`} aria-label={`${latestComment.authorName}さんのコメントを開く`}>
             <span className="post-comment-avatar" aria-hidden>{latestComment.avatarUrl ? <img src={latestComment.avatarUrl} alt="" /> : latestComment.authorName.slice(0, 1)}</span>

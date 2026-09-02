@@ -3,7 +3,6 @@ import type { Comment, Media, Post, SeenUser, User } from "../shared/types";
 
 type PostRow = {
   id: string;
-  title: string;
   caption: string;
   event_id: string | null;
   event_title: string | null;
@@ -105,7 +104,6 @@ export async function loadPosts(db: D1Database, rows: PostRow[], currentUser: Us
 
   return rows.map((row) => ({
     id: row.id,
-    title: row.title,
     caption: row.caption,
     eventId: row.event_id,
     eventTitle: row.event_title,
@@ -125,7 +123,7 @@ export async function loadPosts(db: D1Database, rows: PostRow[], currentUser: Us
 }
 
 export const postSelect = `
-  SELECT p.id, p.title, p.caption, p.event_id, e.title AS event_title,
+  SELECT p.id, p.caption, p.event_id, e.title AS event_title,
          p.section_id, s.title AS section_title, p.captured_at,
          p.published_at, u.display_name AS author_name, u.avatar_url AS author_avatar_url
     FROM posts p

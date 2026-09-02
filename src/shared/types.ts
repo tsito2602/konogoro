@@ -36,7 +36,6 @@ export type Media = {
 
 export type AlbumMedia = Pick<Media, "id" | "kind" | "thumbnailUrl"> & {
   postId: string;
-  postTitle: string;
   capturedAt: string;
   previewUrl: string;
 };
@@ -48,7 +47,7 @@ export type Activity = {
   actorId: string;
   actorName: string;
   postId: string;
-  postTitle: string;
+  postCaption: string;
   body: string | null;
   thumbnailUrl: string | null;
 };
@@ -76,7 +75,6 @@ export type SeenUser = {
 
 export type Post = {
   id: string;
-  title: string;
   caption: string;
   eventId: string | null;
   eventTitle: string | null;

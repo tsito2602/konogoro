@@ -106,11 +106,11 @@ export function MediaViewerPage() {
     <div className="viewer-stage" onPointerDown={startSwipe} onPointerMove={moveSwipe} onPointerUp={finishSwipe} onPointerCancel={cancelSwipe}>
       {index > 0 && <Link className="viewer-arrow previous" to={`/posts/${postId}/media/${post.media[index - 1].id}`} replace state={location.state} aria-label="前の写真"><ChevronLeft /></Link>}
       <div key={current.id} className={`viewer-media-frame${dragging ? " dragging" : ""}`} style={{ transform: `translate3d(${dragOffset}px, 0, 0)` }}>
-        {current.kind === "video" ? <video src={current.contentUrl} controls playsInline draggable={false} /> : <img src={current.contentUrl} alt={`${post.title}の写真 ${index + 1}`} draggable={false} />}
+        {current.kind === "video" ? <video src={current.contentUrl} controls playsInline draggable={false} /> : <img src={current.contentUrl} alt={`投稿の写真 ${index + 1}`} draggable={false} />}
       </div>
       {index < post.media.length - 1 && <Link className="viewer-arrow next" to={`/posts/${postId}/media/${post.media[index + 1].id}`} replace state={location.state} aria-label="次の写真"><ChevronRight /></Link>}
     </div>
-    <div className="viewer-info"><strong>{post.title}</strong><span>{formatDate(current.capturedAt ?? post.capturedAt)} · {post.authorName}</span>{(post.eventTitle || post.sectionTitle) && <span>{[post.eventTitle, post.sectionTitle].filter(Boolean).join(" · ")}</span>}</div>
+    <div className="viewer-info"><strong>{post.caption || "写真・動画"}</strong><span>{formatDate(current.capturedAt ?? post.capturedAt)} · {post.authorName}</span>{(post.eventTitle || post.sectionTitle) && <span>{[post.eventTitle, post.sectionTitle].filter(Boolean).join(" · ")}</span>}</div>
     <div className="thumbnail-strip">{post.media.map((media) => <Link className={media.id === current.id ? "selected" : ""} key={media.id} to={`/posts/${postId}/media/${media.id}`} replace state={location.state}><img src={media.thumbnailUrl} alt="" />{media.kind === "video" && <span className="thumbnail-video-mark" aria-hidden>▶</span>}</Link>)}</div>
   </main>;
 }

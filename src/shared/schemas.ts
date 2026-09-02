@@ -19,7 +19,6 @@ export const eventCoverInputSchema = z.object({
 });
 
 export const postInputSchema = z.object({
-  title: z.string().trim().min(1).max(120),
   caption: z.string().trim().max(2000).default(""),
   eventId: z.string().min(1).nullable().default(null),
   sectionId: z.string().min(1).nullable().default(null),

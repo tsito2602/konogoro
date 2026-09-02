@@ -47,7 +47,7 @@ export function PostEditPage() {
     event.preventDefault(); setSaving(true); setError("");
     const form = new FormData(event.currentTarget);
     try {
-      await api(`/posts/${post.id}`, { method: "PUT", body: JSON.stringify({ title: form.get("title"), caption: form.get("caption"), eventId: eventId || null, sectionId: sectionId || null }) });
+      await api(`/posts/${post.id}`, { method: "PUT", body: JSON.stringify({ caption: form.get("caption"), eventId: eventId || null, sectionId: sectionId || null }) });
       showToast("投稿を更新しました");
       navigate(`/posts/${post.id}`, { replace: true });
     } catch (reason) { setError((reason as Error).message); setSaving(false); }
@@ -62,8 +62,7 @@ export function PostEditPage() {
       <p className="muted post-edit-media-note">写真・動画はそのまま保持される。</p>
       <label>イベント<select value={eventId} onChange={(event) => { setEventId(event.target.value); setSectionId(""); setSections([]); }} disabled={saving}><option value="">イベントなし</option>{events.map((item) => <option value={item.id} key={item.id}>{item.title}</option>)}</select></label>
       {eventId && <label>セクション<select value={sectionId} onChange={(event) => setSectionId(event.target.value)} disabled={saving}><option value="">セクションなし</option>{sections.map((item) => <option value={item.id} key={item.id}>{item.title}</option>)}</select></label>}
-      <label>投稿タイトル<input name="title" required maxLength={120} defaultValue={post.title} disabled={saving} /></label>
-      <label>キャプション<textarea name="caption" rows={4} maxLength={2000} defaultValue={post.caption} disabled={saving} /></label>
+      <label>ひとこと（任意）<textarea name="caption" rows={4} maxLength={2000} defaultValue={post.caption} disabled={saving} /></label>
       {error && <p className="form-error" role="alert">{error}</p>}
       <button className="primary-button wide" disabled={saving}>{saving ? "保存中…" : "変更を保存"}</button>
     </form></main>

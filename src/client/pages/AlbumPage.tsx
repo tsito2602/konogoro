@@ -99,7 +99,7 @@ export function AlbumPage() {
 }
 
 function AlbumMediaLink({ item, className, children }: { item: AlbumMedia; className?: string; children: React.ReactNode }) {
-  return <Link className={className} to={`/posts/${item.postId}/media/${item.id}`} state={{ returnToPrevious: true }} aria-label={`${item.postTitle}の${item.kind === "video" ? "動画" : "写真"}`}>
+  return <Link className={className} to={`/posts/${item.postId}/media/${item.id}`} state={{ returnToPrevious: true }} aria-label={`${new Intl.DateTimeFormat("ja-JP", { month: "long", day: "numeric" }).format(new Date(item.capturedAt))}の投稿の${item.kind === "video" ? "動画" : "写真"}`}>
     {children}
     {item.kind === "video" && <span className="media-play-mark" aria-hidden>▶</span>}
   </Link>;

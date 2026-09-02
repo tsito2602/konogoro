@@ -6,8 +6,7 @@ import { PostCard } from "./PostCard";
 
 const post = {
   id: "post-1",
-  title: "旅行",
-  caption: "",
+  caption: "旅行の思い出",
   eventId: null,
   eventTitle: null,
   sectionId: null,
@@ -28,7 +27,7 @@ describe("PostCard", () => {
   it("未閲覧の投稿へ未閲覧表示を付ける", () => {
     const html = renderToStaticMarkup(<MemoryRouter><PostCard post={post} /></MemoryRouter>);
     expect(html).toContain('class="media-grid unseen"');
-    expect(html).toContain('aria-label="未閲覧の旅行を開く"');
+    expect(html).toContain('aria-label="未閲覧の投稿を開く"');
   });
 
   it("閲覧済みの投稿には未閲覧表示を付けない", () => {
@@ -39,10 +38,16 @@ describe("PostCard", () => {
 
   it("投稿者アイコンとイベント情報を写真の上に表示する", () => {
     const html = renderToStaticMarkup(<MemoryRouter><PostCard post={{ ...post, eventId: "event-1", eventTitle: "箱根旅行", sectionTitle: "2日目" }} /></MemoryRouter>);
-    expect(html).toContain('aria-label="翼さんの投稿「旅行」を開く"');
+    expect(html).toContain('aria-label="翼さんの投稿を開く"');
     expect(html).toContain("箱根旅行");
     expect(html).toContain("2日目");
     expect(html).toContain('class="post-author-avatar"');
+  });
+
+  it("イベントがない投稿は日常の投稿として表示する", () => {
+    const html = renderToStaticMarkup(<MemoryRouter><PostCard post={post} /></MemoryRouter>);
+    expect(html).toContain("日常の投稿");
+    expect(html).toContain("旅行の思い出");
   });
 
   it("コメント総数と最新コメント1件を表示する", () => {

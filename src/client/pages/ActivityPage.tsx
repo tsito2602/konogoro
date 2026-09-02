@@ -61,8 +61,9 @@ export function ActivityPage() {
 }
 
 export function activityText(activity: Activity): string {
-  if (activity.kind === "post") return `${activity.actorName}さんが「${activity.postTitle}」を投稿しました`;
-  return `${activity.actorName}さんが「${activity.postTitle}」にコメントしました`;
+  const label = activity.postCaption.length > 30 ? `${activity.postCaption.slice(0, 30)}…` : activity.postCaption;
+  if (activity.kind === "post") return label ? `${activity.actorName}さんが「${label}」を投稿しました` : `${activity.actorName}さんが写真・動画を投稿しました`;
+  return label ? `${activity.actorName}さんが「${label}」にコメントしました` : `${activity.actorName}さんが投稿にコメントしました`;
 }
 
 export function appendUniqueActivities(current: Activity[], incoming: Activity[]): Activity[] {

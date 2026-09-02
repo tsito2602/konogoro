@@ -41,7 +41,6 @@ type EventRow = {
 type AlbumMediaRow = {
   id: string;
   post_id: string;
-  post_title: string;
   kind: "image" | "video";
   captured_at: string;
 };
@@ -52,7 +51,7 @@ type ActivityRow = {
   actor_id: string;
   actor_name: string;
   post_id: string;
-  post_title: string;
+  post_caption: string;
   body: string | null;
   media_id: string | null;
 };
@@ -296,7 +295,7 @@ app.get("/album", async (c) => {
   const limit = 60;
   const capturedAt = "COALESCE(m.captured_at, p.captured_at, p.published_at)";
   const select = `
-    SELECT m.id, m.post_id, p.title AS post_title, m.kind, ${capturedAt} AS captured_at
+    SELECT m.id, m.post_id, m.kind, ${capturedAt} AS captured_at
       FROM media m
       JOIN posts p ON p.id = m.post_id
      WHERE m.status = 'uploaded' AND p.status = 'published'`;
@@ -309,7 +308,6 @@ app.get("/album", async (c) => {
   const media = rows.map((item) => ({
     id: item.id,
     postId: item.post_id,
-    postTitle: item.post_title,
     kind: item.kind,
     capturedAt: item.captured_at,
     thumbnailUrl: `/api/media/${item.id}/content?variant=thumbnail`,
@@ -327,12 +325,12 @@ app.get("/activity", async (c) => {
            (SELECT m.id FROM media m WHERE m.post_id = activity.post_id AND m.status = 'uploaded' ORDER BY m.position, m.id LIMIT 1) AS media_id
       FROM (
         SELECT 'post:' || p.id AS activity_id, 'post' AS kind, p.published_at AS occurred_at,
-               u.id AS actor_id, u.display_name AS actor_name, p.id AS post_id, p.title AS post_title, NULL AS body
+               u.id AS actor_id, u.display_name AS actor_name, p.id AS post_id, p.caption AS post_caption, NULL AS body
           FROM posts p JOIN users u ON u.id = p.created_by
          WHERE p.status = 'published' AND p.published_at IS NOT NULL
         UNION ALL
         SELECT 'comment:' || c.id, 'comment', c.created_at,
-               u.id, u.display_name, p.id, p.title, c.body
+               u.id, u.display_name, p.id, p.caption, c.body
           FROM comments c JOIN users u ON u.id = c.user_id JOIN posts p ON p.id = c.post_id
          WHERE p.status = 'published'
       ) activity`;
@@ -349,7 +347,7 @@ app.get("/activity", async (c) => {
     actorId: item.actor_id,
     actorName: item.actor_name,
     postId: item.post_id,
-    postTitle: item.post_title,
+    postCaption: item.post_caption,
     body: item.body,
     thumbnailUrl: item.media_id ? `/api/media/${item.media_id}/content?variant=thumbnail` : null,
   }));
@@ -537,8 +535,8 @@ app.post("/posts", async (c) => {
   }
   const id = ulid();
   const now = new Date().toISOString();
-  await c.env.DB.prepare(`INSERT INTO posts (id, event_id, section_id, title, caption, created_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`)
-    .bind(id, input.eventId, input.sectionId, input.title, input.caption, c.var.currentUser.id, now, now).run();
+  await c.env.DB.prepare(`INSERT INTO posts (id, event_id, section_id, caption, created_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`)
+    .bind(id, input.eventId, input.sectionId, input.caption, c.var.currentUser.id, now, now).run();
   return c.json({ id }, 201);
 });
 
@@ -564,8 +562,8 @@ app.put("/posts/:postId", async (c) => {
     if (!section) return c.json({ error: "セクションがイベントと一致しません" }, 400);
   }
   const now = new Date().toISOString();
-  const statements = [c.env.DB.prepare("UPDATE posts SET event_id = ?, section_id = ?, title = ?, caption = ?, updated_at = ? WHERE id = ? AND status = 'published'")
-    .bind(input.eventId, input.sectionId, input.title, input.caption, now, postId)];
+  const statements = [c.env.DB.prepare("UPDATE posts SET event_id = ?, section_id = ?, caption = ?, updated_at = ? WHERE id = ? AND status = 'published'")
+    .bind(input.eventId, input.sectionId, input.caption, now, postId)];
   if (post.event_id !== input.eventId) {
     if (post.event_id) statements.push(autoEventCoverStatement(c.env.DB, post.event_id, now));
     if (input.eventId) statements.push(autoEventCoverStatement(c.env.DB, input.eventId, now));

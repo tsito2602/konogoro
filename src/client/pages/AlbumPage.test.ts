@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { AlbumMedia } from "../../shared/types";
 import { appendUniqueAlbumMedia, groupAlbumMedia } from "./AlbumPage";
 
-const media = (id: string, capturedAt: string): AlbumMedia => ({ id, postId: `post-${id}`, postTitle: id, kind: "image", capturedAt, thumbnailUrl: `/media/${id}/thumbnail`, previewUrl: `/media/${id}/preview` });
+const media = (id: string, capturedAt: string): AlbumMedia => ({ id, postId: `post-${id}`, kind: "image", capturedAt, thumbnailUrl: `/media/${id}/thumbnail`, previewUrl: `/media/${id}/preview` });
 
 describe("album grouping", () => {
   it("撮影日時の年月ごとにまとめる", () => {

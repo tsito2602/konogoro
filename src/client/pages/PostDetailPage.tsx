@@ -41,7 +41,7 @@ export function PostDetailPage() {
     } catch (reason) { setDeleteError((reason as Error).message); setDeleting(false); }
   };
   return <>
-    <PageHeader title={post.title} back action={(post.canEdit || post.canDelete) && <div className="post-actions">
+    <PageHeader title="投稿" back action={(post.canEdit || post.canDelete) && <div className="post-actions">
       <button className="icon-button" type="button" onClick={() => setMenuOpen((open) => !open)} aria-label="投稿メニュー" aria-expanded={menuOpen}><Ellipsis /></button>
       {menuOpen && <><button className="post-menu-backdrop" type="button" aria-label="投稿メニューを閉じる" onClick={() => setMenuOpen(false)} /><div className="post-action-menu" role="menu">
         {post.canEdit && <Link to={`/posts/${post.id}/edit`} role="menuitem" onClick={() => setMenuOpen(false)}><Pencil />編集</Link>}
@@ -54,7 +54,7 @@ export function PostDetailPage() {
         <p>{formatDate(post.capturedAt)} · {post.authorName}</p>
       </div>
       <div className="media-grid detail-media-grid" data-count={Math.min(post.media.length, 4)}>
-        {post.media.slice(0, 4).map((media, index) => <Link className="media-cell detail-media" key={media.id} to={`/posts/${post.id}/media/${media.id}`} state={{ returnToPrevious: true }}><img src={media.thumbnailUrl} alt={`${post.title}の${media.kind === "video" ? "動画" : "写真"}`} />{media.kind === "video" && <span className="media-play-mark" aria-hidden>▶</span>}{index === 3 && post.media.length >= 4 && <span className="more-count">+{post.media.length - 3}</span>}</Link>)}
+        {post.media.slice(0, 4).map((media, index) => <Link className="media-cell detail-media" key={media.id} to={`/posts/${post.id}/media/${media.id}`} state={{ returnToPrevious: true }}><img src={media.thumbnailUrl} alt={`投稿の${media.kind === "video" ? "動画" : "写真"}`} />{media.kind === "video" && <span className="media-play-mark" aria-hidden>▶</span>}{index === 3 && post.media.length >= 4 && <span className="more-count">+{post.media.length - 3}</span>}</Link>)}
       </div>
       {post.caption && <p className="detail-caption">{post.caption}</p>}
       <section className="conversation">

@@ -156,6 +156,8 @@ img { display: block; max-width: 100%; }
 .post-head-copy strong, .post-head-copy span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .post-head-copy strong { font-size: 13px; font-weight: 600; }
 .post-head-copy span { color: var(--ash); font-size: 11px; }
+.post-head-copy .post-section-label { width: fit-content; max-width: 100%; padding: 1px 6px; display: inline-flex; align-items: center; gap: 3px; border-radius: var(--pill); background: var(--surface-muted); }
+.post-section-label svg { width: 11px; height: 11px; flex: 0 0 auto; }
 .post-head > svg { width: 18px; height: 18px; color: var(--ash); }
 .media-grid { position: relative; display: grid; width: 100%; aspect-ratio: 4/3; gap: 2px; overflow: hidden; background: var(--placeholder); }
 .media-grid[data-count="1"] { grid-template-columns: 1fr; }
@@ -176,7 +178,6 @@ img { display: block; max-width: 100%; }
 .post-date { min-height: 42px; margin-left: auto; display: inline-flex; align-items: center; gap: 5px; color: var(--ash); font-size: 11px; }
 .post-date svg { width: 16px; height: 16px; stroke-width: 1.7; }
 .post-caption { display: block; font-size: 14px; line-height: 1.5; white-space: pre-wrap; }
-.post-caption strong { margin-right: 7px; font-weight: 600; }
 .post-comment-section { margin-top: 5px; }
 .post-comment-preview { min-height: 38px; display: grid; grid-template-columns: 26px minmax(0,1fr); gap: 8px; align-items: center; }
 .post-comment-avatar { width: 26px; height: 26px; display: grid; place-items: center; overflow: hidden; border-radius: 50%; color: var(--accent-contrast); background: var(--accent); font-size: 10px; font-weight: 600; }

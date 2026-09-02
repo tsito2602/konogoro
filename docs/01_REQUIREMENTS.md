@@ -125,8 +125,8 @@ Sectionは1階層のみ。ネスト不可。
 - 夜ごはん
 - ドイツ到着
 
-Post title は必須。
-caption は任意。
+Post titleは持たない。
+Caption（画面上は「ひとこと」）は任意。
 
 ### Media
 
@@ -150,13 +150,13 @@ Postカードには原則として以下を表示:
 - Event titleとSection title（存在する場合）
 - Media Grid
 - 「みたよ」の人数とComment数
-- Post titleとCaption
+- Caption（存在する場合）
 - 最新のComment 1件
 - 残りのCommentを開く導線
 
 写真1枚ごとをSNS投稿にしない。
 
-Event titleとSection titleは投稿者アイコンとともにMedia Gridの上へ表示し、Post Detailを開けることが分かる矢印を添える。投稿者名は常時表示せず、プロフィールアイコンで表現する。「みたよ」とCommentの右端には撮影日をカメラアイコン付きで表示し、撮影日がない場合は投稿日をアップロードアイコン付きで表示する。Comment数はコメントアイコンの右へ表示する。Commentが2件以上ある場合も、最新の1件の下に表示する導線は「ほかのコメントを見る」とし、Comment数を重複表示しない。
+Event titleとSection titleは投稿者アイコンとともにMedia Gridの上へ表示し、Post Detailを開けることが分かる矢印を添える。Section titleはフォルダーアイコン付きの小さなラベルとし、Event titleとの違いを示す。Eventがない場合は「日常の投稿」と表示する。投稿者名は常時表示せず、プロフィールアイコンで表現する。「みたよ」とCommentの右端には撮影日をカメラアイコン付きで表示し、撮影日がない場合は投稿日をアップロードアイコン付きで表示する。Comment数はコメントアイコンの右へ表示する。Commentが2件以上ある場合も、最新の1件の下に表示する導線は「ほかのコメントを見る」とし、Comment数を重複表示しない。
 
 ### 近況
 
@@ -266,7 +266,6 @@ Timeline / Event Detail のどちらから入っても同じPost Detailを使う
 
 表示:
 
-- Post title
 - Event（存在する場合）
 - Section（存在する場合）
 - 撮影日
@@ -276,7 +275,7 @@ Timeline / Event Detail のどちらから入っても同じPost Detailを使う
 - Seen by
 - Comments
 
-右上の3点メニューから、権限があるユーザーだけが投稿を編集・削除できる。編集対象はPost title、Event、Section、Captionとし、既存Mediaは保持する。削除前には写真・動画とコメントも削除され、元に戻せないことを確認するモーダルを表示する。
+右上の3点メニューから、権限があるユーザーだけが投稿を編集・削除できる。編集対象はEvent、Section、Captionとし、既存Mediaは保持する。削除前には写真・動画とコメントも削除され、元に戻せないことを確認するモーダルを表示する。
 
 Event / Sectionがない場合、空ラベルを出さない。
 
@@ -315,13 +314,11 @@ Event / Sectionがない場合、空ラベルを出さない。
 1. 写真・動画を複数選択
 2. Event選択
 3. Section選択
-4. Post title
-5. Caption
-6. 投稿
+4. ひとこと
+5. 投稿
 
 Event: optional  
 Section: optional  
-Post title: required  
 Caption: optional
 
 SectionはEvent選択時のみ利用可能。

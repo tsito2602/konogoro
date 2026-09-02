@@ -20,7 +20,7 @@ describe("viewer API authorization", () => {
     ["PATCH", "/api/family/members/member-1", { role: "uploader" }],
     ["GET", "/api/events/event-1/cover-media", undefined],
     ["POST", "/api/posts/post-1/media/upload-urls", { files: [] }],
-    ["PUT", "/api/posts/post-1", { title: "編集", caption: "", eventId: null, sectionId: null }],
+    ["PUT", "/api/posts/post-1", { caption: "", eventId: null, sectionId: null }],
     ["POST", "/api/media/media-1/upload-url", undefined],
     ["POST", "/api/media/media-1/failed", undefined],
     ["POST", "/api/media/media-1/complete", { width: 100, height: 100 }],

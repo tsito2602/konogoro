@@ -68,7 +68,6 @@ id
 event_id nullable
 section_id nullable
 created_by
-title
 caption nullable
 taken_date nullable
 created_at
@@ -79,7 +78,6 @@ updated_at
 
 - section_idがある場合はevent_idも存在すること
 - sectionは該当eventに属していること
-- title必須
 
 ## media
 

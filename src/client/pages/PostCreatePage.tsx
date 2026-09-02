@@ -127,7 +127,7 @@ export function PostCreatePage() {
     setBusy(true); setError(""); setProgress(0);
     const form = new FormData(event.currentTarget);
     try {
-      const post = await api<{ id: string }>("/posts", { method: "POST", body: JSON.stringify({ title: form.get("title"), caption: form.get("caption"), eventId: eventId || null, sectionId: sectionId || null }) });
+      const post = await api<{ id: string }>("/posts", { method: "POST", body: JSON.stringify({ caption: form.get("caption"), eventId: eventId || null, sectionId: sectionId || null }) });
       setDraftPostId(post.id);
       await requestUploads(post.id);
     } catch (reason) { setError((reason as Error).message); setBusy(false); }
@@ -173,8 +173,7 @@ export function PostCreatePage() {
       <label>イベント<select value={eventId} onChange={(event) => { setEventId(event.target.value); setSectionId(""); setSections([]); }} disabled={busy || !!draftPostId}><option value="">イベントなし</option>{events.map((item) => <option value={item.id} key={item.id}>{item.title}</option>)}</select></label>
       {eventId && <label>セクション<select value={sectionId} onChange={(event) => setSectionId(event.target.value)} disabled={busy || !!draftPostId}><option value="">セクションなし</option>{sections.map((item) => <option value={item.id} key={item.id}>{item.title}</option>)}</select></label>}
       {eventId && !draftPostId && (!showSectionForm ? <button className="text-button inline-action" type="button" onClick={() => setShowSectionForm(true)}><Plus />新しいセクション</button> : <div className="inline-form"><input value={newSection} onChange={(event) => setNewSection(event.target.value)} placeholder="例: Day 2 - シュトゥットガルト" maxLength={100} /><button type="button" className="outline-button" onClick={createSection}>作成</button></div>)}
-      <label>投稿タイトル<input name="title" required maxLength={120} placeholder="例: ポルシェミュージアム" disabled={busy || !!draftPostId} /></label>
-      <label>キャプション<textarea name="caption" rows={4} maxLength={2000} placeholder="思い出をひとこと" disabled={busy || !!draftPostId} /></label>
+      <label>ひとこと（任意）<textarea name="caption" rows={4} maxLength={2000} placeholder="思い出をひとこと" disabled={busy || !!draftPostId} /></label>
       {preparing && <p className="muted" role="status">画像を準備中…</p>}
       {(busy || progress > 0) && <div className="upload-progress" role="status"><div><span>{progress === 100 ? "処理中" : "アップロード中"}</span><strong>{progress}%</strong></div><progress value={progress} max={100} /></div>}
       {error && <p className="form-error" role="alert">{error}</p>}

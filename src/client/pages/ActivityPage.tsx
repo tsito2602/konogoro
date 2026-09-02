@@ -86,7 +86,7 @@ export function formatLastViewedAt(value: string | null, now = Date.now()): stri
 
 function MemberLastViewedList({ members }: { members: MemberLastViewed[] }) {
   return <section className="member-last-viewed" aria-labelledby="member-last-viewed-title">
-    <h2 id="member-last-viewed-title">みたよ履歴</h2>
+    <h2 id="member-last-viewed-title">最後に見た時間</h2>
     <div className="member-last-viewed-list">
       {members.map((member, index) => <div className="member-last-viewed-item" key={member.id}>
         <span className={`member-last-viewed-avatar color-${index % 5}`}>{member.avatarUrl ? <img src={member.avatarUrl} alt="" /> : member.displayName.slice(0, 1)}</span>

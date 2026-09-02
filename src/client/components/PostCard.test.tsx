@@ -75,7 +75,7 @@ describe("PostCard", () => {
   it("コメントがないときもコメント数0を表示する", () => {
     const html = renderToStaticMarkup(<MemoryRouter><PostCard post={post} /></MemoryRouter>);
     expect(html).toContain('aria-label="コメント0件を開く"');
-    expect(html).toContain('aria-label="みたよ 0人"');
+    expect(html).toContain('aria-label="見た人 0人"');
   });
 
   it("撮影日はカメラアイコン付きで表示する", () => {

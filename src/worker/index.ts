@@ -29,7 +29,7 @@ import {
   randomToken,
   type LineSecrets,
 } from "./auth";
-import { createPresignedUploadUrl, hasUploadCredentials } from "./r2";
+import { createPresignedDownloadUrl, createPresignedUploadUrl, hasUploadCredentials } from "./r2";
 import { loadPosts, postSelect, type PostRow } from "./db";
 import { matchesUploadFiles, type ExistingMedia } from "./upload-request";
 import { createInviteToken } from "./invite-token";
@@ -1529,6 +1529,16 @@ async function serveMedia(c: Context<AppEnv>, download: boolean): Promise<Respon
       original_filename: string;
     }>();
   if (!media) return c.json({ error: "メディアが見つかりません" }, 404);
+  if (!download && media.mime_type.startsWith("video/")) {
+    if (!hasUploadCredentials(c.env)) return c.json({ error: "動画再生用secretが設定されていません" }, 503);
+    return new Response(null, {
+      status: 307,
+      headers: {
+        Location: await createPresignedDownloadUrl(c.env, media.original_object_key),
+        "Cache-Control": "private, no-store",
+      },
+    });
+  }
   const thumbnail = !download && c.req.query("variant") === "thumbnail" && media.thumbnail_object_key;
   const preview = !download && c.req.query("variant") === "preview" && media.preview_object_key;
   const range =

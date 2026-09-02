@@ -21,3 +21,17 @@ export async function createPresignedUploadUrl(env: MediaEnv, objectKey: string,
   });
   return signed.url.toString();
 }
+
+export async function createPresignedDownloadUrl(env: MediaEnv, objectKey: string): Promise<string> {
+  if (!hasUploadCredentials(env)) throw new Error("R2ダウンロード用secretが設定されていません");
+  const aws = new AwsClient({
+    accessKeyId: env.R2_ACCESS_KEY_ID,
+    secretAccessKey: env.R2_SECRET_ACCESS_KEY,
+    service: "s3",
+    region: "auto",
+  });
+  const url = new URL(`https://${env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com/${env.R2_BUCKET_NAME}/${objectKey}`);
+  url.searchParams.set("X-Amz-Expires", "900");
+  const signed = await aws.sign(new Request(url), { aws: { signQuery: true } });
+  return signed.url.toString();
+}

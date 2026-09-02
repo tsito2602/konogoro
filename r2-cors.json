@@ -3,10 +3,10 @@
     {
       "allowed": {
         "origins": ["http://localhost:5173", "http://127.0.0.1:5173", "https://konogoro.tsito-apps.workers.dev"],
-        "methods": ["PUT"],
-        "headers": ["Content-Type"]
+        "methods": ["GET", "HEAD", "PUT"],
+        "headers": ["Content-Type", "Range"]
       },
-      "exposeHeaders": ["ETag"],
+      "exposeHeaders": ["Accept-Ranges", "Content-Length", "Content-Range", "Content-Type", "ETag"],
       "maxAgeSeconds": 3600
     }
   ]

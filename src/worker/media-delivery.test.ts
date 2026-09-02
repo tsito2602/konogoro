@@ -11,6 +11,10 @@ const viewer = {
 function mediaEnv() {
   return {
     APP_ORIGIN: "http://localhost:5173",
+    R2_ACCOUNT_ID: "account-id",
+    R2_ACCESS_KEY_ID: "access-key-id",
+    R2_SECRET_ACCESS_KEY: "secret-access-key",
+    R2_BUCKET_NAME: "family-timeline-media",
     DB: {
       prepare: (query: string) => ({
         bind: () => ({
@@ -43,21 +47,23 @@ function mediaEnv() {
 }
 
 describe("video delivery", () => {
-  it("通常応答はR2の動画ストリームをそのまま返す", async () => {
+  it("認証後は15分有効なR2の再生URLへリダイレクトする", async () => {
     const response = await app.request("/api/media/video-1/content", undefined, mediaEnv());
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get("Cache-Control")).toBe("private, no-store");
+    const location = new URL(response.headers.get("Location")!);
+    expect(location.origin).toBe("https://account-id.r2.cloudflarestorage.com");
+    expect(location.pathname).toBe("/family-timeline-media/media/video/original.mov");
+    expect(location.searchParams.get("X-Amz-Expires")).toBe("900");
+    expect(location.searchParams.has("X-Amz-Signature")).toBe(true);
+  });
+
+  it("保存時は元動画をWorker経由で返す", async () => {
+    const response = await app.request("/api/media/video-1/download", undefined, mediaEnv());
 
     expect(response.status).toBe(200);
     expect(response.headers.get("Content-Type")).toBe("video/quicktime");
-    expect(response.headers.get("Accept-Ranges")).toBe("bytes");
-    expect(response.headers.get("Content-Length")).toBeNull();
-  });
-
-  it("Range要求へ206と取得範囲を返す", async () => {
-    const response = await app.request("/api/media/video-1/content", { headers: { Range: "bytes=0-1" } }, mediaEnv());
-
-    expect(response.status).toBe(206);
-    expect(response.headers.get("Content-Range")).toBe("bytes 0-1/12");
-    expect(response.headers.get("Content-Length")).toBe("2");
-    expect(await response.text()).toBe("ab");
+    expect(await response.text()).toBe("abcdefghijkl");
   });
 });

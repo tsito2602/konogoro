@@ -66,6 +66,8 @@ Browser
 → media.status = uploaded
 ```
 
+動画再生では、Workerで認証・Media確認後に15分有効のPresigned GET URLを発行し、307でR2へ接続する。Range配信はR2へ任せ、Workerで大容量動画を中継しない。写真表示と元ファイル保存は認証済みWorker経由を維持する。
+
 ## 認証
 
 最終的にLINE Login。

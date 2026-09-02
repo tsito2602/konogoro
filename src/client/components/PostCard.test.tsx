@@ -70,4 +70,16 @@ describe("PostCard", () => {
     expect(html).toContain('aria-label="コメント0件を開く"');
     expect(html).toContain('aria-label="みたよ 0人"');
   });
+
+  it("撮影日はカメラアイコン付きで表示する", () => {
+    const html = renderToStaticMarkup(<MemoryRouter><PostCard post={post} /></MemoryRouter>);
+    expect(html).toContain('aria-label="撮影日 9月1日"');
+    expect(html).toContain("lucide-camera");
+  });
+
+  it("撮影日がない場合は投稿日をアップロードアイコン付きで表示する", () => {
+    const html = renderToStaticMarkup(<MemoryRouter><PostCard post={{ ...post, capturedAt: null }} /></MemoryRouter>);
+    expect(html).toContain('aria-label="投稿日 9月1日"');
+    expect(html).toContain("lucide-upload");
+  });
 });

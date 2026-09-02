@@ -149,13 +149,13 @@ img { display: block; max-width: 100%; }
 .empty-state p { margin: 0 0 24px; color: var(--ash); font-size: 15px; line-height: 1.5; }
 
 .post-card { padding: 0 0 15px; border-bottom: 8px solid var(--surface-subtle); }
-.post-head { min-height: 62px; padding: 9px 12px; display: grid; grid-template-columns: 38px minmax(0,1fr) auto 18px; gap: 9px; align-items: center; }
+.post-head { min-height: 62px; padding: 9px 12px; display: grid; grid-template-columns: 38px minmax(0,1fr) 18px; gap: 9px; align-items: center; }
 .post-author-avatar { width: 38px; height: 38px; display: grid; place-items: center; overflow: hidden; border-radius: 50%; color: var(--carbon); background: var(--placeholder); font-size: 13px; font-weight: 600; }
 .post-author-avatar img { width: 100%; height: 100%; object-fit: cover; }
 .post-head-copy { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
 .post-head-copy strong, .post-head-copy span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .post-head-copy strong { font-size: 13px; font-weight: 600; }
-.post-head-copy span, .post-head time { color: var(--ash); font-size: 11px; }
+.post-head-copy span { color: var(--ash); font-size: 11px; }
 .post-head > svg { width: 18px; height: 18px; color: var(--ash); }
 .media-grid { position: relative; display: grid; width: 100%; aspect-ratio: 4/3; gap: 2px; overflow: hidden; background: var(--placeholder); }
 .media-grid[data-count="1"] { grid-template-columns: 1fr; }
@@ -173,6 +173,8 @@ img { display: block; max-width: 100%; }
 .post-engagement .seen-by summary, .post-engagement .seen-by-empty, .comment-count-link { min-width: 42px; min-height: 42px; padding: 0 5px; display: inline-flex; align-items: center; gap: 5px; border-radius: 0; color: var(--carbon); background: transparent; font-size: 13px; font-weight: 400; }
 .post-engagement .seen-icon { width: 24px; height: 19px; }
 .comment-count-link svg { width: 22px; height: 22px; stroke-width: 1.8; }
+.post-date { min-height: 42px; margin-left: auto; display: inline-flex; align-items: center; gap: 5px; color: var(--ash); font-size: 11px; }
+.post-date svg { width: 16px; height: 16px; stroke-width: 1.7; }
 .post-caption { display: block; font-size: 14px; line-height: 1.5; white-space: pre-wrap; }
 .post-caption strong { margin-right: 7px; font-weight: 600; }
 .post-comment-section { margin-top: 5px; }

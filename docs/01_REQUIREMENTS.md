@@ -147,7 +147,7 @@ Eventに属さないPostも表示する。
 Postカードには原則として以下を表示:
 
 - 投稿者のプロフィールアイコン
-- Event titleとSection title（存在する場合）、撮影日
+- Event titleとSection title（存在する場合）
 - Media Grid
 - 「みたよ」の人数とComment数
 - Post titleとCaption
@@ -156,7 +156,7 @@ Postカードには原則として以下を表示:
 
 写真1枚ごとをSNS投稿にしない。
 
-Event titleとSection titleは投稿者アイコンとともにMedia Gridの上へ表示し、Post Detailを開けることが分かる矢印を添える。投稿者名は常時表示せず、プロフィールアイコンで表現する。Comment数はコメントアイコンの右へ表示する。Commentが2件以上ある場合も、最新の1件の下に表示する導線は「ほかのコメントを見る」とし、Comment数を重複表示しない。
+Event titleとSection titleは投稿者アイコンとともにMedia Gridの上へ表示し、Post Detailを開けることが分かる矢印を添える。投稿者名は常時表示せず、プロフィールアイコンで表現する。「みたよ」とCommentの右端には撮影日をカメラアイコン付きで表示し、撮影日がない場合は投稿日をアップロードアイコン付きで表示する。Comment数はコメントアイコンの右へ表示する。Commentが2件以上ある場合も、最新の1件の下に表示する導線は「ほかのコメントを見る」とし、Comment数を重複表示しない。
 
 ### 近況
 

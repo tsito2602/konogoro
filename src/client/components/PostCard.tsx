@@ -1,4 +1,4 @@
-import { ChevronRight, MessageCircle } from "lucide-react";
+import { Camera, ChevronRight, MessageCircle, Upload } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { Post } from "../../shared/types";
 import { useSeenTracking } from "../hooks/useSeenTracking";
@@ -9,12 +9,13 @@ export function PostCard({ post, showContext = true }: { post: Post; showContext
   const latestComment = post.comments.at(-1);
   const contextTitle = showContext ? post.eventTitle ?? post.title : post.sectionTitle ?? post.title;
   const contextSubtitle = showContext ? post.sectionTitle : null;
+  const date = post.capturedAt ?? post.publishedAt;
+  const dateLabel = post.capturedAt ? "撮影日" : "投稿日";
   return (
     <article className="post-card" ref={seenRef}>
       <Link className="post-head" to={`/posts/${post.id}`} aria-label={`${post.authorName}さんの投稿「${post.title}」を開く`}>
         <span className="post-author-avatar" aria-hidden>{post.authorAvatarUrl ? <img src={post.authorAvatarUrl} alt="" /> : post.authorName.slice(0, 1)}</span>
         <span className="post-head-copy"><strong>{contextTitle}</strong>{contextSubtitle && <span>{contextSubtitle}</span>}</span>
-        <time dateTime={post.capturedAt ?? post.publishedAt ?? undefined}>{formatPostDate(post.capturedAt ?? post.publishedAt)}</time>
         <ChevronRight aria-hidden />
       </Link>
       <Link to={`/posts/${post.id}`} className={`media-grid${viewed ? "" : " unseen"}`} data-count={Math.min(post.media.length, 4)} aria-label={`${viewed ? "" : "未閲覧の"}${post.title}を開く`}>
@@ -33,6 +34,10 @@ export function PostCard({ post, showContext = true }: { post: Post; showContext
             <MessageCircle aria-hidden />
             <span>{post.comments.length}</span>
           </Link>
+          <time className="post-date" dateTime={date ?? undefined} aria-label={`${dateLabel} ${formatPostDate(date)}`}>
+            {post.capturedAt ? <Camera aria-hidden /> : <Upload aria-hidden />}
+            <span>{formatPostDate(date)}</span>
+          </time>
         </div>
         <Link className="post-caption" to={`/posts/${post.id}`} aria-label={`${post.title}の詳細を開く`}>
           <strong>{post.title}</strong>{post.caption && <span>{post.caption}</span>}

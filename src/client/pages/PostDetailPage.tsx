@@ -87,5 +87,9 @@ export function PostDetailPage() {
 }
 
 function CommentRow({ comment, onDelete }: { comment: Comment; onDelete: () => Promise<void> }) {
-  return <article className="comment"><div><strong>{comment.authorName}</strong><span>{formatDate(comment.createdAt)}</span></div><p>{comment.body}</p>{comment.canDelete && <button type="button" onClick={() => void onDelete()} aria-label="コメントを削除"><Trash2 /></button>}</article>;
+  return <article className="comment">
+    <div className="comment-avatar">{comment.avatarUrl ? <img src={comment.avatarUrl} alt="" /> : comment.authorName.slice(0, 1)}</div>
+    <div className="comment-content"><div className="comment-meta"><strong>{comment.authorName}</strong><span>{formatDate(comment.createdAt)}</span></div><p>{comment.body}</p></div>
+    {comment.canDelete && <button type="button" onClick={() => void onDelete()} aria-label="コメントを削除"><Trash2 /></button>}
+  </article>;
 }

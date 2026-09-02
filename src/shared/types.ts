@@ -2,6 +2,7 @@ export type User = {
   id: string;
   displayName: string;
   role: "owner" | "uploader" | "viewer";
+  avatarUrl?: string | null;
 };
 
 export type FamilyMember = User & {
@@ -62,6 +63,7 @@ export type Comment = {
   body: string;
   userId: string;
   authorName: string;
+  avatarUrl: string | null;
   createdAt: string;
   canDelete: boolean;
 };

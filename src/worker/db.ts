@@ -35,6 +35,7 @@ type CommentRow = {
   body: string;
   created_at: string;
   author_name: string;
+  avatar_url: string | null;
 };
 
 type SeenRow = {
@@ -55,7 +56,7 @@ export async function loadPosts(db: D1Database, rows: PostRow[], currentUser: Us
       WHERE status = 'uploaded' AND post_id IN (${placeholders})
       ORDER BY post_id, position`,
   ).bind(...rows.map(({ id }) => id)).all<MediaRow>(), db.prepare(`
-    SELECT c.id, c.post_id, c.user_id, c.body, c.created_at, u.display_name AS author_name
+    SELECT c.id, c.post_id, c.user_id, c.body, c.created_at, u.display_name AS author_name, u.avatar_url
       FROM comments c JOIN users u ON u.id = c.user_id
      WHERE c.post_id IN (${placeholders}) ORDER BY c.created_at, c.id
   `).bind(...rows.map(({ id }) => id)).all<CommentRow>(), db.prepare(`
@@ -88,7 +89,7 @@ export async function loadPosts(db: D1Database, rows: PostRow[], currentUser: Us
 
   const commentsByPost = new Map<string, Comment[]>();
   for (const item of commentsResult.results) {
-    const comment: Comment = { id: item.id, body: item.body, userId: item.user_id, authorName: item.author_name, createdAt: item.created_at, canDelete: canDeleteComment(currentUser, item.user_id) };
+    const comment: Comment = { id: item.id, body: item.body, userId: item.user_id, authorName: item.author_name, avatarUrl: item.avatar_url, createdAt: item.created_at, canDelete: canDeleteComment(currentUser, item.user_id) };
     const list = commentsByPost.get(item.post_id) ?? [];
     list.push(comment);
     commentsByPost.set(item.post_id, list);

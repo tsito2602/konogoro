@@ -723,7 +723,7 @@ app.post("/posts/:postId/comments", async (c) => {
   const id = ulid();
   const now = new Date().toISOString();
   await c.env.DB.prepare("INSERT INTO comments (id, post_id, user_id, body, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)").bind(id, postId, c.var.currentUser.id, input.body, now, now).run();
-  return c.json({ id, body: input.body, userId: c.var.currentUser.id, authorName: c.var.currentUser.displayName, createdAt: now, canDelete: true }, 201);
+  return c.json({ id, body: input.body, userId: c.var.currentUser.id, authorName: c.var.currentUser.displayName, avatarUrl: c.var.currentUser.avatarUrl ?? null, createdAt: now, canDelete: true }, 201);
 });
 
 app.delete("/comments/:commentId", async (c) => {

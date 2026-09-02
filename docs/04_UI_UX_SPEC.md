@@ -104,6 +104,8 @@ Day 2 - シュトゥットガルト
 
 各Eventカードの背景全面にCover Mediaを表示。
 
+Eventカードの縦横比は16:9とする。
+
 下部へdark gradient。
 
 表示:

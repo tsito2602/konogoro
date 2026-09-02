@@ -60,6 +60,8 @@
   }
   :root:not([data-theme]) .login-icon-light { display: none; }
   :root:not([data-theme]) .login-icon-dark { display: block; }
+  :root:not([data-theme]) .settings-app-icon-light { display: none; }
+  :root:not([data-theme]) .settings-app-icon-dark { display: block; }
 }
 
 :root[data-theme="light"] { color-scheme: light; }
@@ -92,6 +94,8 @@
 
 :root[data-theme="dark"] .login-icon-light { display: none; }
 :root[data-theme="dark"] .login-icon-dark { display: block; }
+:root[data-theme="dark"] .settings-app-icon-light { display: none; }
+:root[data-theme="dark"] .settings-app-icon-dark { display: block; }
 
 * { box-sizing: border-box; }
 html { background: var(--frost); }
@@ -347,6 +351,12 @@ input:focus, select:focus, textarea:focus { border-color: var(--accent-ink); box
 .setting-status span { color: var(--ash); }
 .setting-status span.linked, .save-message { color: var(--success); }
 .settings-logout { align-self: center; }
+.settings-app-info { margin-top: 44px; padding-bottom: 12px; display: flex; flex-direction: column; align-items: center; color: var(--ash); text-align: center; }
+.settings-app-info > span { width: 58px; height: 58px; margin-bottom: 10px; display: block; }
+.settings-app-icon { width: 58px; height: 58px; border-radius: 13px; }
+.settings-app-icon-dark { display: none; }
+.settings-app-info strong { color: var(--carbon); font-size: 15px; }
+.settings-app-info small { margin-top: 2px; font-size: 11px; }
 
 .photo-picker { margin: 0 -16px; }
 .selected-photos { padding: 0 16px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }

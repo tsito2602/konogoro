@@ -1,5 +1,6 @@
 import { Monitor, Moon, Sun } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
+import packageInfo from "../../../package.json";
 import type { CurrentUser } from "../../shared/types";
 import { api } from "../api";
 import { ErrorState, Loading } from "../components/AsyncState";
@@ -56,7 +57,7 @@ export function SettingsPage() {
   return <>
     <PageHeader title="設定" back />
     <main className="page-content form-page">
-      {error && !user ? <ErrorState message={error} retry={load} /> : !user ? <Loading /> : <form className="form-stack settings-form" onSubmit={save}>
+      {error && !user ? <ErrorState message={error} retry={load} /> : !user ? <Loading /> : <><form className="form-stack settings-form" onSubmit={save}>
         <fieldset className="theme-setting">
           <legend>テーマ</legend>
           <div>{themeOptions.map(({ value, label, description, icon: Icon }) => <label className={theme === value ? "selected" : ""} key={value}>
@@ -74,7 +75,15 @@ export function SettingsPage() {
         {error && <p className="form-error" role="alert">{error}</p>}
         <button className="primary-button wide" disabled={busy || !displayName.trim()}>{busy ? "保存中…" : "保存"}</button>
         <button className="danger-button settings-logout" type="button" onClick={logout} disabled={busy}>ログアウト</button>
-      </form>}
+      </form>
+      <section className="settings-app-info" aria-label="アプリ情報">
+        <span aria-hidden>
+          <img className="settings-app-icon settings-app-icon-light" src="/icons/icon-light-192.png" alt="" />
+          <img className="settings-app-icon settings-app-icon-dark" src="/icons/icon-dark-192.png" alt="" />
+        </span>
+        <strong>このごろ</strong>
+        <small>バージョン {packageInfo.version}</small>
+      </section></>}
     </main>
   </>;
 }

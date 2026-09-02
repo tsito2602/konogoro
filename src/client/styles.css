@@ -1454,6 +1454,7 @@ a.icon-button {
   inset: 0;
   background-position: center;
   background-size: cover;
+  filter: blur(var(--event-cover-blur, 0));
   transform: scale(var(--event-cover-scale, 1));
   transform-origin: center;
   will-change: transform;
@@ -1465,7 +1466,7 @@ a.icon-button {
   background: linear-gradient(transparent, rgba(0, 0, 0, 0.72) 55%, #000);
   pointer-events: none;
 }
-.event-cover > div {
+.event-cover-copy {
   position: relative;
   z-index: 1;
   padding: 28px 20px;
@@ -2930,6 +2931,7 @@ textarea:focus {
 
 @media (prefers-reduced-motion: reduce) {
   .event-cover-image {
+    filter: none;
     transform: none;
   }
   .page-skeleton *,

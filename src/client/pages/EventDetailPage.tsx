@@ -34,8 +34,10 @@ export function EventDetailPage() {
     let animationFrame = 0;
     const updateScale = () => {
       animationFrame = 0;
-      const scale = 1 + Math.min(Math.max(window.scrollY, 0), 400) / 5000;
+      const scrollProgress = Math.min(Math.max(window.scrollY, 0), 400) / 400;
+      const scale = 1 + scrollProgress * 0.08;
       coverImage.style.setProperty("--event-cover-scale", scale.toFixed(3));
+      coverImage.style.setProperty("--event-cover-blur", `${(scrollProgress * 5).toFixed(2)}px`);
     };
     const handleScroll = () => {
       if (!animationFrame) animationFrame = window.requestAnimationFrame(updateScale);
@@ -94,7 +96,7 @@ export function EventDetailPage() {
               aria-hidden
             />
           )}
-          <div>
+          <div className="event-cover-copy">
             <p>{eventDate(detail.startDate, detail.endDate)}</p>
             <h2>{detail.title}</h2>
             <span>{eventCounts(detail.postCount, detail.photoCount, detail.videoCount)}</span>

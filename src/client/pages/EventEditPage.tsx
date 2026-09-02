@@ -1,6 +1,6 @@
 import { Plus, Trash2, Video } from "lucide-react";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import type { EventCoverMedia, EventDetail } from "../../shared/types";
 import { api } from "../api";
 import { ErrorState } from "../components/AsyncState";
@@ -12,6 +12,7 @@ type EditableScene = { key: string; id?: string; title: string };
 
 export function EventEditPage() {
   const { eventId = "" } = useParams();
+  const location = useLocation();
   const navigate = useNavigate();
   const showToast = useToast();
   const [detail, setDetail] = useState<EventDetail | null>(null);
@@ -94,7 +95,8 @@ export function EventEditPage() {
         }),
       });
       showToast("イベントを更新しました");
-      navigate(`/events/${eventId}`);
+      if ((location.state as { returnToDetail?: boolean } | null)?.returnToDetail) navigate(-1);
+      else navigate(`/events/${eventId}`, { replace: true });
     } catch (reason) {
       setError((reason as Error).message);
       setSaving(false);

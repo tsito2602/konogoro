@@ -74,7 +74,12 @@ export function EventDetailPage() {
         back
         action={
           canManageEvent(currentUser) ? (
-            <Link className="icon-button" to={`/events/${detail.id}/edit`} aria-label="イベントを編集">
+            <Link
+              className="icon-button"
+              to={`/events/${detail.id}/edit`}
+              state={{ returnToDetail: true }}
+              aria-label="イベントを編集"
+            >
               <Pencil />
             </Link>
           ) : undefined

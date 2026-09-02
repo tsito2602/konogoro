@@ -291,7 +291,8 @@ export function PostEditPage() {
     });
     for (const mediaId of removedMediaIds) await api(`/posts/${post.id}/media/${mediaId}`, { method: "DELETE" });
     showToast("投稿を更新しました");
-    navigate(`/posts/${post.id}`, { replace: true, state: location.state });
+    if ((location.state as { returnToDetail?: boolean } | null)?.returnToDetail) navigate(-1);
+    else navigate(`/posts/${post.id}`, { replace: true, state: location.state });
   };
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {

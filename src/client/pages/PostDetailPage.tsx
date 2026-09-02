@@ -134,7 +134,7 @@ export function PostDetailPage() {
                   {post.canEdit && (
                     <Link
                       to={`/posts/${post.id}/edit`}
-                      state={location.state}
+                      state={{ ...(location.state as object | null), returnToDetail: true }}
                       role="menuitem"
                       onClick={() => setMenuOpen(false)}
                     >

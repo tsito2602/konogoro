@@ -541,6 +541,7 @@ a.icon-button {
 .skeleton-viewers .skeleton-circle {
   width: 52px;
   height: 52px;
+  flex-basis: 52px;
 }
 .skeleton-viewers .skeleton-line {
   width: 38px;

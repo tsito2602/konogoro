@@ -1,4 +1,4 @@
-import { Monitor, Moon, Sun } from "lucide-react";
+import { Bell, BellOff, Check, Monitor, Moon, Sun, X } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
 import packageInfo from "../../../package.json";
 import type { CurrentUser } from "../../shared/types";
@@ -67,7 +67,12 @@ export function SettingsPage() {
           </label>)}</div>
         </fieldset>
         <label>表示名<input value={displayName} onChange={(event) => setDisplayName(event.target.value)} required maxLength={100} disabled={busy} /></label>
-        <label className="toggle-row"><span><strong>LINE通知</strong><small>{user.lineFriend ? "新しい投稿のお知らせを受け取る" : "友だち追加後に利用できる"}</small></span><input type="checkbox" checked={notificationEnabled} onChange={(event) => setNotificationEnabled(event.target.checked)} disabled={busy || !user.lineFriend} /></label>
+        <label className={`notification-toggle${notificationEnabled ? " enabled" : ""}${!user.lineFriend ? " unavailable" : ""}`}>
+          <input className="notification-toggle-input" type="checkbox" checked={notificationEnabled} onChange={(event) => setNotificationEnabled(event.target.checked)} disabled={busy || !user.lineFriend} />
+          <span className="notification-toggle-icon" aria-hidden><Bell className="notification-bell-on" /><BellOff className="notification-bell-off" /></span>
+          <span className="notification-toggle-copy"><strong>LINE通知 <small>{!user.lineFriend ? "利用不可" : notificationEnabled ? "オン" : "オフ"}</small></strong><span>{!user.lineFriend ? "友だち追加後に利用できる" : notificationEnabled ? "新しい投稿をLINEでお知らせします" : "新しい投稿のLINE通知は届きません"}</span></span>
+          <span className="notification-switch" aria-hidden><span><Check className="notification-switch-on" /><X className="notification-switch-off" /></span></span>
+        </label>
         <div className="setting-status"><strong>LINE連携状態</strong><span className={user.lineConnected ? "linked" : ""}>{user.lineConnected ? "連携済み" : "未連携"}</span></div>
         <div className="setting-status"><strong>公式アカウント</strong><span className={user.lineFriend ? "linked" : ""}>{user.lineFriend ? "友だち追加済み" : "未追加"}</span></div>
         {user.lineConnected && !user.lineFriend && <a className="outline-button wide" href="/api/auth/line">友だち追加を確認</a>}

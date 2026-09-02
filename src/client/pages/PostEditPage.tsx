@@ -3,8 +3,9 @@ import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "r
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import type { EventDetail, EventScene, EventSummary, Post, UploadTarget } from "../../shared/types";
 import { api } from "../api";
-import { ErrorState, Loading } from "../components/AsyncState";
+import { ErrorState } from "../components/AsyncState";
 import { PageHeader } from "../components/PageHeader";
+import { PageSkeleton } from "../components/PageSkeleton";
 import { useToast } from "../components/Toast";
 import {
   acceptedMediaTypes,
@@ -71,7 +72,7 @@ export function PostEditPage() {
     return (
       <>
         <PageHeader title="投稿を編集" back />
-        <Loading />
+        <PageSkeleton variant="form" />
       </>
     );
   if (!post)

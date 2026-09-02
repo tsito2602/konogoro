@@ -3,8 +3,9 @@ import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import type { EventCoverMedia, EventDetail } from "../../shared/types";
 import { api } from "../api";
-import { ErrorState, Loading } from "../components/AsyncState";
+import { ErrorState } from "../components/AsyncState";
 import { PageHeader } from "../components/PageHeader";
+import { PageSkeleton } from "../components/PageSkeleton";
 import { useToast } from "../components/Toast";
 
 type EditableScene = { key: string; id?: string; title: string };
@@ -56,7 +57,7 @@ export function EventEditPage() {
     return (
       <>
         <PageHeader title="イベントを編集" back />
-        <Loading />
+        <PageSkeleton variant="form" />
       </>
     );
   if (!detail)

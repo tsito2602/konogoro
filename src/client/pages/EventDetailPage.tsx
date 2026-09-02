@@ -3,8 +3,9 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import type { EventDetail } from "../../shared/types";
 import { api, eventDate } from "../api";
-import { EmptyState, ErrorState, Loading } from "../components/AsyncState";
+import { EmptyState, ErrorState } from "../components/AsyncState";
 import { PageHeader } from "../components/PageHeader";
+import { PageSkeleton } from "../components/PageSkeleton";
 import { PostCard } from "../components/PostCard";
 import { useCurrentUser } from "../components/AppLayout";
 import { canCreatePost, canManageEvent } from "../../shared/permissions";
@@ -30,7 +31,7 @@ export function EventDetailPage() {
     return (
       <>
         <PageHeader title="イベント" back />
-        <Loading />
+        <PageSkeleton variant="event-detail" />
       </>
     );
   if (error)

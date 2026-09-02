@@ -2,8 +2,9 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import type { Post } from "../../shared/types";
 import { api } from "../api";
-import { EmptyState, ErrorState, Loading } from "../components/AsyncState";
+import { EmptyState, ErrorState } from "../components/AsyncState";
 import { PageHeader } from "../components/PageHeader";
+import { PageSkeleton } from "../components/PageSkeleton";
 import { PostCard } from "../components/PostCard";
 import { useCurrentUser } from "../components/AppLayout";
 
@@ -51,7 +52,7 @@ export function TimelinePage() {
     <>
       <PageHeader title="タイムライン" />
       <main className="feed">
-        {!posts && !error && <Loading />}
+        {!posts && !error && <PageSkeleton variant="timeline" />}
         {error && <ErrorState message={error} retry={load} />}
         {posts?.length === 0 && (
           <EmptyState

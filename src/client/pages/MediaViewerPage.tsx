@@ -3,7 +3,8 @@ import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPoi
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import type { Post } from "../../shared/types";
 import { api, formatDate } from "../api";
-import { ErrorState, Loading } from "../components/AsyncState";
+import { ErrorState } from "../components/AsyncState";
+import { PageSkeleton } from "../components/PageSkeleton";
 
 export function swipeDirection(deltaX: number, deltaY: number): "previous" | "next" | null {
   if (Math.abs(deltaX) < 50 || Math.abs(deltaX) <= Math.abs(deltaY) * 1.2) return null;
@@ -112,7 +113,7 @@ export function MediaViewerPage() {
   if (!post && !error)
     return (
       <div className="media-viewer">
-        <Loading />
+        <PageSkeleton variant="viewer" />
       </div>
     );
   if (error || !post || !current)

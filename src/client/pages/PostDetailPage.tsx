@@ -11,8 +11,9 @@ import {
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import type { Comment, Post } from "../../shared/types";
 import { api, formatDate } from "../api";
-import { ErrorState, Loading } from "../components/AsyncState";
+import { ErrorState } from "../components/AsyncState";
 import { useCurrentUser } from "../components/AppLayout";
+import { CommentComposerSkeleton, PageSkeleton } from "../components/PageSkeleton";
 import { SeenBy } from "../components/SeenBy";
 import { useToast } from "../components/Toast";
 
@@ -47,8 +48,8 @@ export function PostDetailPage() {
   }, [postId]);
   if (!post && !error)
     return (
-      <PostSheet onClose={closeSheet}>
-        <Loading />
+      <PostSheet onClose={closeSheet} footer={<CommentComposerSkeleton />}>
+        <PageSkeleton variant="post-detail" />
       </PostSheet>
     );
   if (error)

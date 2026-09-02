@@ -4,8 +4,9 @@ import { Link } from "react-router-dom";
 import packageInfo from "../../../package.json";
 import type { CurrentUser, FamilyMember, User } from "../../shared/types";
 import { api } from "../api";
-import { ErrorState, Loading } from "../components/AsyncState";
+import { ErrorState } from "../components/AsyncState";
 import { PageHeader } from "../components/PageHeader";
+import { PageSkeleton } from "../components/PageSkeleton";
 import { useToast } from "../components/Toast";
 import { getThemePreference, setThemePreference, type ThemePreference } from "../theme";
 
@@ -105,7 +106,7 @@ export function SettingsPage() {
         {error && !user ? (
           <ErrorState message={error} retry={load} />
         ) : !user ? (
-          <Loading />
+          <PageSkeleton variant="settings" />
         ) : (
           <>
             <form id="settings-save-form" className="settings-form" onSubmit={save}>

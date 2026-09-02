@@ -3,8 +3,9 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import type { EventSummary } from "../../shared/types";
 import { api, eventDate } from "../api";
-import { EmptyState, ErrorState, Loading } from "../components/AsyncState";
+import { EmptyState, ErrorState } from "../components/AsyncState";
 import { PageHeader } from "../components/PageHeader";
+import { PageSkeleton } from "../components/PageSkeleton";
 import { useCurrentUser } from "../components/AppLayout";
 import { canManageEvent } from "../../shared/permissions";
 import { eventTiming } from "../../shared/event-timing";
@@ -38,7 +39,7 @@ export function EventsPage() {
         }
       />
       <main className="event-list page-content">
-        {!events && !error && <Loading />}
+        {!events && !error && <PageSkeleton variant="events" />}
         {error && <ErrorState message={error} retry={load} />}
         {events?.length === 0 && (
           <EmptyState

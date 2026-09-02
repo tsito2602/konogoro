@@ -3,8 +3,9 @@ import { useEffect, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import type { Activity, MemberLastViewed } from "../../shared/types";
 import { api } from "../api";
-import { EmptyState, ErrorState, Loading } from "../components/AsyncState";
+import { EmptyState, ErrorState } from "../components/AsyncState";
 import { PageHeader } from "../components/PageHeader";
+import { PageSkeleton } from "../components/PageSkeleton";
 
 type ActivityResponse = { activities: Activity[]; memberLastViewed: MemberLastViewed[]; nextCursor: string | null };
 
@@ -58,7 +59,7 @@ export function ActivityPage() {
     <>
       <PageHeader title="近況" />
       <main className="activity-page page-content">
-        {!activities && !error && <Loading />}
+        {!activities && !error && <PageSkeleton variant="activity" />}
         {error && <ErrorState message={error} retry={load} />}
         {activities && <MemberLastViewedList members={memberLastViewed} />}
         {activities?.length === 0 && (

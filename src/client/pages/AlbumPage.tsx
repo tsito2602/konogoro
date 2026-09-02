@@ -3,7 +3,8 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import type { AlbumMedia } from "../../shared/types";
 import { api } from "../api";
-import { EmptyState, ErrorState, Loading } from "../components/AsyncState";
+import { EmptyState, ErrorState } from "../components/AsyncState";
+import { PageSkeleton } from "../components/PageSkeleton";
 
 type AlbumResponse = { media: AlbumMedia[]; nextCursor: string | null };
 
@@ -70,7 +71,7 @@ export function AlbumPage() {
 
   return (
     <main className="album-page page-content">
-      {!media && !error && <Loading />}
+      {!media && !error && <PageSkeleton variant="album" />}
       {error && <ErrorState message={error} retry={load} />}
       {media?.length === 0 && (
         <EmptyState title="まだ写真がありません" body="投稿した写真や動画が、撮影した月ごとに表示されます。" />

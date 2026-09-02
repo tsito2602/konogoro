@@ -3,8 +3,9 @@ import { useEffect, useState } from "react";
 import type { FamilyMember, User } from "../../shared/types";
 import { api } from "../api";
 import { useCurrentUser } from "../components/AppLayout";
-import { EmptyState, ErrorState, Loading } from "../components/AsyncState";
+import { EmptyState, ErrorState } from "../components/AsyncState";
 import { PageHeader } from "../components/PageHeader";
+import { PageSkeleton } from "../components/PageSkeleton";
 import { useToast } from "../components/Toast";
 
 const roleLabels: Record<User["role"], string> = {
@@ -105,7 +106,7 @@ export function FamilySettingsPage() {
         {error ? (
           <ErrorState message={error} retry={load} />
         ) : members === null ? (
-          <Loading />
+          <PageSkeleton variant="members" />
         ) : (
           <>
             <section className="family-section">

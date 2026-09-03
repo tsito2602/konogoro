@@ -8,6 +8,7 @@ import {
   randomToken,
   refreshSession,
   safeEqual,
+  safeReturnPath,
   SESSION_MAX_AGE_SECONDS,
 } from "./auth";
 
@@ -19,6 +20,13 @@ describe("auth helpers", () => {
   it("文字列を比較する", () => {
     expect(safeEqual("abc", "abc")).toBe(true);
     expect(safeEqual("abc", "abd")).toBe(false);
+  });
+  it("アプリ内のLINEログイン復帰先だけを許可する", () => {
+    expect(safeReturnPath("/unread")).toBe("/unread");
+    expect(safeReturnPath("/unread?from=line#latest")).toBe("/unread?from=line#latest");
+    expect(safeReturnPath("https://evil.example/unread")).toBe("/");
+    expect(safeReturnPath("//evil.example/unread")).toBe("/");
+    expect(safeReturnPath(undefined)).toBe("/");
   });
   it("90日間のsessionを作成する", async () => {
     let values: unknown[] = [];

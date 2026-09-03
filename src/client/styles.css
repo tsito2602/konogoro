@@ -403,6 +403,110 @@ a.icon-button {
   padding: 0 12px 16px;
   background: var(--frost);
 }
+.unread-summary {
+  margin: 12px 0 16px;
+  padding: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+}
+.unread-summary div {
+  min-width: 0;
+}
+.unread-summary strong {
+  color: var(--accent-ink);
+  font-size: 22px;
+}
+.unread-summary h2 {
+  margin: 2px 0 0;
+  font-size: 15px;
+  line-height: 1.4;
+}
+.unread-summary .primary-button {
+  flex: 0 0 auto;
+  font-size: 14px;
+  font-weight: 650;
+}
+.unread-flow {
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 16px 12px 32px;
+}
+.unread-flow .post-card {
+  overflow: hidden;
+  border: 1px solid var(--separator);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+}
+.unread-progress {
+  margin: 0 2px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: var(--ash);
+  font-size: 14px;
+}
+.unread-progress strong {
+  color: var(--carbon);
+}
+.unread-actions {
+  padding: 16px 4px 0;
+  text-align: center;
+}
+.unread-actions > p {
+  margin: 9px 0 0;
+  color: var(--ash);
+  font-size: 13px;
+}
+.unread-view-error {
+  margin-bottom: 12px;
+  padding: 12px;
+  border: 1px solid var(--danger-border);
+  border-radius: var(--radius);
+}
+.unread-view-error p {
+  margin: 0 0 10px;
+  color: var(--danger);
+  font-size: 14px;
+}
+.unread-complete {
+  min-height: 58vh;
+  padding: 48px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+.unread-complete > span {
+  width: 64px;
+  height: 64px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--accent-contrast);
+  background: var(--accent);
+}
+.unread-complete svg {
+  width: 34px;
+  height: 34px;
+  stroke-width: 2.5;
+}
+.unread-complete h2 {
+  margin: 20px 0 8px;
+  font-size: 21px;
+}
+.unread-complete p {
+  margin: 0 0 24px;
+  color: var(--ash);
+  font-size: 15px;
+  line-height: 1.5;
+}
 .state-message {
   min-height: 40vh;
   display: flex;
@@ -3205,6 +3309,9 @@ textarea:focus {
   .feed {
     margin-top: 20px;
   }
+  .unread-flow {
+    padding-top: 24px;
+  }
   .post-page-layer .detail-media-grid {
     border-radius: 0;
   }
@@ -3222,6 +3329,9 @@ textarea:focus {
   }
   .feed .post-card {
     margin-bottom: 14px;
+    border-radius: var(--radius-card);
+  }
+  .unread-flow .post-card {
     border-radius: var(--radius-card);
   }
   .feed .media-grid {

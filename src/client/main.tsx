@@ -15,6 +15,7 @@ import { PostCreatePage } from "./pages/PostCreatePage";
 import { PostDetailPage } from "./pages/PostDetailPage";
 import { PostEditPage } from "./pages/PostEditPage";
 import { TimelinePage } from "./pages/TimelinePage";
+import { UnreadPostsPage } from "./pages/UnreadPostsPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { initializeTheme } from "./theme";
 import "./styles.css";
@@ -28,6 +29,7 @@ const router = createBrowserRouter([
       { path: "/", element: <TimelinePage /> },
       { path: "/activity", element: <ActivityPage /> },
       { path: "/timeline", element: <TimelinePage /> },
+      { path: "/unread", element: <UnreadPostsPage /> },
       { path: "/album", element: <AlbumPage /> },
       { path: "/events", element: <EventsPage /> },
       { path: "/events/new", element: <EventCreatePage /> },

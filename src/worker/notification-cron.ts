@@ -5,7 +5,6 @@ type NotificationBatch = {
   post_count: number;
   photo_count: number;
   video_count: number;
-  latest_post_id: string | null;
 };
 
 type NotificationRecipient = {
@@ -32,15 +31,7 @@ export async function processNotificationBatches(
     SELECT b.id,
            COUNT(DISTINCT p.id) AS post_count,
            COUNT(DISTINCT CASE WHEN m.status = 'uploaded' AND m.kind = 'image' THEN m.id END) AS photo_count,
-           COUNT(DISTINCT CASE WHEN m.status = 'uploaded' AND m.kind = 'video' THEN m.id END) AS video_count,
-           (
-             SELECT latest_bp.post_id
-               FROM notification_batch_posts latest_bp
-               JOIN posts latest_post ON latest_post.id = latest_bp.post_id
-              WHERE latest_bp.batch_id = b.id AND latest_post.status = 'published'
-              ORDER BY latest_post.published_at DESC, latest_post.id DESC
-              LIMIT 1
-           ) AS latest_post_id
+           COUNT(DISTINCT CASE WHEN m.status = 'uploaded' AND m.kind = 'video' THEN m.id END) AS video_count
       FROM notification_batches b
       JOIN notification_batch_posts bp ON bp.batch_id = b.id
       JOIN posts p ON p.id = bp.post_id
@@ -72,7 +63,6 @@ export async function processNotificationBatches(
       photoCount: Number(batch.photo_count),
       videoCount: Number(batch.video_count),
       appOrigin: env.APP_ORIGIN ?? "",
-      latestPostId: batch.latest_post_id,
     });
     const results = await Promise.allSettled(
       recipients.results.map(async (recipient) => {

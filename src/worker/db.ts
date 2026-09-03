@@ -159,4 +159,41 @@ export const postSelect = `
     LEFT JOIN events e ON e.id = p.event_id
     LEFT JOIN event_scenes s ON s.id = p.scene_id`;
 
+export async function countUnreadPosts(db: D1Database, userId: string): Promise<number> {
+  const result = await db
+    .prepare(
+      `SELECT COUNT(*) AS count
+         FROM posts p
+        WHERE p.status = 'published'
+          AND NOT EXISTS (
+            SELECT 1 FROM view_histories v WHERE v.post_id = p.id AND v.user_id = ?
+          )`,
+    )
+    .bind(userId)
+    .first<{ count: number }>();
+  return Number(result?.count ?? 0);
+}
+
+export async function loadNextUnreadPost(
+  db: D1Database,
+  currentUser: User,
+): Promise<{ posts: Post[]; unreadCount: number }> {
+  const [result, unreadCount] = await Promise.all([
+    db
+      .prepare(
+        `${postSelect}
+          WHERE p.status = 'published'
+            AND NOT EXISTS (
+              SELECT 1 FROM view_histories v WHERE v.post_id = p.id AND v.user_id = ?
+            )
+          ORDER BY COALESCE(p.published_at, p.created_at), p.id
+          LIMIT 1`,
+      )
+      .bind(currentUser.id)
+      .all<PostRow>(),
+    countUnreadPosts(db, currentUser.id),
+  ]);
+  return { posts: await loadPosts(db, result.results, currentUser), unreadCount };
+}
+
 export type { PostRow };

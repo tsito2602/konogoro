@@ -40,7 +40,7 @@ import {
   type LineSecrets,
 } from "./auth";
 import { createPresignedDownloadUrl, createPresignedUploadUrl, hasUploadCredentials } from "./r2";
-import { loadPosts, postSelect, type PostRow } from "./db";
+import { countUnreadPosts, loadNextUnreadPost, loadPosts, postSelect, type PostRow } from "./db";
 import { matchesUploadFiles, type ExistingMedia } from "./upload-request";
 import { createInviteToken } from "./invite-token";
 import { processNotificationBatches, type NotificationCronEnv } from "./notification-cron";
@@ -555,13 +555,22 @@ app.get("/timeline", async (c) => {
     : c.env.DB.prepare(
         `${postSelect} WHERE p.status = 'published' ORDER BY p.captured_at DESC, p.id DESC LIMIT ?`,
       ).bind(limit + 1);
-  const result = await statement.all<PostRow>();
+  const [result, unreadCount] = await Promise.all([
+    statement.all<PostRow>(),
+    countUnreadPosts(c.env.DB, c.var.currentUser.id),
+  ]);
   const hasMore = result.results.length > limit;
   const rows = result.results.slice(0, limit);
   const posts = await loadPosts(c.env.DB, rows, c.var.currentUser);
   const last = rows.at(-1);
-  return c.json({ posts, nextCursor: hasMore && last?.captured_at ? `${last.captured_at}|${last.id}` : null });
+  return c.json({
+    posts,
+    nextCursor: hasMore && last?.captured_at ? `${last.captured_at}|${last.id}` : null,
+    unreadCount,
+  });
 });
+
+app.get("/unread-posts", async (c) => c.json(await loadNextUnreadPost(c.env.DB, c.var.currentUser)));
 
 app.get("/album", async (c) => {
   const cursor = parseCursor(c.req.query("cursor"));

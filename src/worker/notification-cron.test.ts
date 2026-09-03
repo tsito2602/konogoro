@@ -11,7 +11,7 @@ describe("notificationRetryKey", () => {
 });
 
 describe("processNotificationBatches", () => {
-  it("batch内で最も新しく公開された投稿へのURLを送る", async () => {
+  it("batchの集計件数と新着閲覧URLを送る", async () => {
     const sqlStatements: string[] = [];
     const db = {
       prepare: (sql: string) => {
@@ -27,7 +27,6 @@ describe("processNotificationBatches", () => {
                     post_count: 2,
                     photo_count: 3,
                     video_count: 0,
-                    latest_post_id: "post-2",
                   },
                 ],
               };
@@ -56,8 +55,8 @@ describe("processNotificationBatches", () => {
       send,
     );
 
-    expect(sqlStatements[0]).toContain("ORDER BY latest_post.published_at DESC, latest_post.id DESC");
+    expect(sqlStatements[0]).not.toContain("latest_post_id");
     expect(send).toHaveBeenCalledOnce();
-    expect(messages).toEqual([expect.stringContaining("https://family.example.com/posts/post-2")]);
+    expect(messages).toEqual([expect.stringContaining("https://family.example.com/unread")]);
   });
 });

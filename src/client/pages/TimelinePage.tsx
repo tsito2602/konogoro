@@ -15,12 +15,14 @@ export function TimelinePage() {
   const [error, setError] = useState("");
   const [moreError, setMoreError] = useState("");
   const [loadingMore, setLoadingMore] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const load = () => {
     setError("");
     void api<TimelineResponse>("/timeline")
       .then((data) => {
         setPosts(data.posts);
         setNextCursor(data.nextCursor);
+        setUnreadCount(data.unreadCount);
       })
       .catch((reason: Error) => setError(reason.message));
   };
@@ -29,6 +31,7 @@ export function TimelinePage() {
       .then((data) => {
         setPosts(data.posts);
         setNextCursor(data.nextCursor);
+        setUnreadCount(data.unreadCount);
       })
       .catch((reason: Error) => setError(reason.message));
   }, []);
@@ -71,6 +74,7 @@ export function TimelinePage() {
             }
           />
         )}
+        {posts && currentUser.role === "viewer" && unreadCount > 0 && <UnreadSummary count={unreadCount} />}
         {posts?.map((post, index) => {
           const month = formatTimelineMonth(post.capturedAt ?? post.publishedAt);
           const previous = posts[index - 1];
@@ -78,7 +82,7 @@ export function TimelinePage() {
           return (
             <Fragment key={post.id}>
               {month !== previousMonth && <h2 className="timeline-month-heading">{month}</h2>}
-              <PostCard post={post} />
+              <PostCard post={post} onViewed={() => setUnreadCount((count) => Math.max(0, count - 1))} />
             </Fragment>
           );
         })}
@@ -104,7 +108,21 @@ export function TimelinePage() {
   );
 }
 
-type TimelineResponse = { posts: Post[]; nextCursor: string | null };
+type TimelineResponse = { posts: Post[]; nextCursor: string | null; unreadCount: number };
+
+export function UnreadSummary({ count }: { count: number }) {
+  return (
+    <section className="unread-summary" aria-labelledby="unread-summary-title">
+      <div>
+        <strong>{count}件</strong>
+        <h2 id="unread-summary-title">新しい思い出があります</h2>
+      </div>
+      <Link className="primary-button" to="/unread">
+        新しい思い出を見る
+      </Link>
+    </section>
+  );
+}
 
 export function appendUniquePosts(current: Post[], incoming: Post[]): Post[] {
   const ids = new Set(current.map((post) => post.id));

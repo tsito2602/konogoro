@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { User } from "../shared/types";
-import { loadPosts, type PostRow } from "./db";
+import { countUnreadPosts, loadNextUnreadPost, loadPosts, type PostRow } from "./db";
 
 const currentUser: User = {
   id: "user-1",
@@ -64,5 +64,50 @@ describe("loadPosts", () => {
 
     expect(result.media[0].contentUrl).toBe("/api/media/image-1/content?variant=preview");
     expect(result.media[1].contentUrl).toBe("/api/media/video-1/content?variant=video-v2");
+  });
+});
+
+describe("unread posts", () => {
+  it("現在のユーザーが未閲覧の投稿数を数える", async () => {
+    const statements: Array<{ sql: string; values: unknown[] }> = [];
+    const db = {
+      prepare: (sql: string) => ({
+        bind: (...values: unknown[]) => {
+          statements.push({ sql, values });
+          return { first: async () => ({ count: 4 }) };
+        },
+      }),
+    } as unknown as D1Database;
+
+    expect(await countUnreadPosts(db, currentUser.id)).toBe(4);
+    expect(statements[0].sql).toContain("NOT EXISTS");
+    expect(statements[0].values).toEqual([currentUser.id]);
+  });
+
+  it("公開日時が古い未閲覧投稿を1件だけ取得する", async () => {
+    const statements: Array<{ sql: string; values: unknown[] }> = [];
+    const db = {
+      prepare: (sql: string) => ({
+        bind: (...values: unknown[]) => {
+          statements.push({ sql, values });
+          return {
+            first: async () => ({ count: 2 }),
+            all: async () => {
+              if (sql.includes("LIMIT 1")) return { results: [post] };
+              return { results: [] };
+            },
+          };
+        },
+      }),
+    } as unknown as D1Database;
+
+    const result = await loadNextUnreadPost(db, currentUser);
+
+    expect(result.unreadCount).toBe(2);
+    expect(result.posts.map(({ id }) => id)).toEqual([post.id]);
+    const unreadQuery = statements.find(({ sql }) => sql.includes("LIMIT 1"));
+    expect(unreadQuery?.sql).toContain("NOT EXISTS");
+    expect(unreadQuery?.sql).toContain("ORDER BY COALESCE(p.published_at, p.created_at), p.id");
+    expect(unreadQuery?.values).toEqual([currentUser.id]);
   });
 });

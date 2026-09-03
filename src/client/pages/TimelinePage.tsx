@@ -76,9 +76,9 @@ export function TimelinePage() {
         )}
         {posts && currentUser.role === "viewer" && unreadCount > 0 && <UnreadSummary count={unreadCount} />}
         {posts?.map((post, index) => {
-          const month = formatTimelineMonth(post.capturedAt ?? post.publishedAt);
+          const month = formatTimelineMonth(timelineDate(post));
           const previous = posts[index - 1];
-          const previousMonth = previous ? formatTimelineMonth(previous.capturedAt ?? previous.publishedAt) : null;
+          const previousMonth = previous ? formatTimelineMonth(timelineDate(previous)) : null;
           return (
             <Fragment key={post.id}>
               {month !== previousMonth && <h2 className="timeline-month-heading">{month}</h2>}
@@ -136,4 +136,8 @@ export function formatTimelineMonth(value: string | null): string {
     month: "long",
     timeZone: "Asia/Tokyo",
   }).format(new Date(value));
+}
+
+export function timelineDate(post: Post): string | null {
+  return post.eventStartDate ?? post.eventEndDate ?? post.capturedAt ?? post.publishedAt;
 }

@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { mediaExitOffset, swipeDirection, swipeDragOffset, viewerNavigationItems } from "./MediaViewerPage";
+import {
+  mediaExitOffset,
+  swipeDirection,
+  swipeDragOffset,
+  viewerCommentNavigation,
+  viewerNavigationItems,
+} from "./MediaViewerPage";
 
 describe("swipeDirection", () => {
   it("右へ十分に動かすと前のメディアへ移動する", () => {
@@ -67,5 +73,14 @@ describe("viewerNavigationItems", () => {
 
   it("通常表示では現在の投稿内だけを返す", () => {
     expect(viewerNavigationItems("post-1", postMedia)).toEqual([{ ...postMedia[0], postId: "post-1" }]);
+  });
+});
+
+describe("viewerCommentNavigation", () => {
+  it("投稿詳細を開いてコメント入力へフォーカスする状態を付ける", () => {
+    expect(viewerCommentNavigation("post-1", { returnToPrevious: true })).toEqual({
+      to: "/posts/post-1",
+      state: { returnToPrevious: true, postPage: true, focusComment: true },
+    });
   });
 });

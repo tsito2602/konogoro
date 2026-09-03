@@ -1,0 +1,85 @@
+/* Viewer-facing accessibility safeguards.
+ * Keep this layer small and generic so every primary screen benefits without
+ * having to duplicate accessibility fixes in individual page styles.
+ */
+
+:root {
+  --focus-ring: #7a5c00;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --focus-ring: #ffd166;
+  }
+}
+
+:root[data-theme="dark"] {
+  --focus-ring: #ffd166;
+}
+
+:where(a, button, input, select, textarea, [tabindex]):focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 3px;
+}
+
+:where(button, [role="button"], .header-link, .tab-item, .add-menu a, .line-login-button) {
+  min-height: 44px;
+  touch-action: manipulation;
+}
+
+:where(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea) {
+  min-height: 44px;
+}
+
+:where(p, li, dd, dt, label, button, a, input, select, textarea) {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 420px) {
+  .page-header {
+    height: auto;
+    min-height: 56px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+  }
+
+  .page-header h1 {
+    max-width: min(65vw, 18rem);
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+    text-align: center;
+    line-height: 1.25;
+  }
+
+  .header-side {
+    align-self: stretch;
+    align-items: center;
+  }
+
+  .tab-item {
+    font-size: clamp(10px, 2.8vw, 12px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@media (forced-colors: active) {
+  :where(a, button, input, select, textarea, [tabindex]):focus-visible {
+    outline: 3px solid Highlight;
+  }
+
+  .tab-item.active {
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+  }
+}

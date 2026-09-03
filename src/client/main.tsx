@@ -19,6 +19,7 @@ import { UnreadPostsPage } from "./pages/UnreadPostsPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { initializeTheme } from "./theme";
 import "./styles.css";
+import "./accessibility.css";
 
 initializeTheme();
 

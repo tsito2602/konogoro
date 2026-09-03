@@ -235,7 +235,13 @@ export function MediaViewerPage() {
           className="outline-button"
           to={commentNavigation.to}
           state={commentNavigation.state}
-          style={{ alignSelf: "flex-start", marginTop: 7, gap: 7, color: "white", borderColor: "rgba(255, 255, 255, 0.62)" }}
+          style={{
+            alignSelf: "flex-start",
+            marginTop: 7,
+            gap: 7,
+            color: "white",
+            borderColor: "rgba(255, 255, 255, 0.62)",
+          }}
         >
           <MessageCircle aria-hidden />
           この投稿にコメント

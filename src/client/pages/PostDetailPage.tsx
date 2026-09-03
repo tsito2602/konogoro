@@ -215,7 +215,11 @@ export function PostDetailPage() {
               required
               disabled={commentSending}
             />
-            <button type="submit" aria-label={commentSending ? "コメントを送信中" : "コメントを送信"} disabled={commentSending}>
+            <button
+              type="submit"
+              aria-label={commentSending ? "コメントを送信中" : "コメントを送信"}
+              disabled={commentSending}
+            >
               <Send aria-hidden />
             </button>
           </form>

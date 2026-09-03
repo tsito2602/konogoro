@@ -30,6 +30,7 @@ export function SettingsPage() {
   const [error, setError] = useState("");
   const [familyError, setFamilyError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [roleBusy, setRoleBusy] = useState(false);
   const [theme, setTheme] = useState<ThemePreference>(getThemePreference);
   const showToast = useToast();
   const hasChanges = Boolean(
@@ -96,6 +97,22 @@ export function SettingsPage() {
     } catch (reason) {
       setError((reason as Error).message);
       setBusy(false);
+    }
+  };
+
+  const switchStagingRole = async (role: User["role"]) => {
+    if (role === user?.role) return;
+    setRoleBusy(true);
+    setError("");
+    try {
+      await api<{ role: User["role"] }>("/staging/role", {
+        method: "PATCH",
+        body: JSON.stringify({ role }),
+      });
+      window.location.reload();
+    } catch (reason) {
+      setError((reason as Error).message);
+      setRoleBusy(false);
     }
   };
 
@@ -225,6 +242,27 @@ export function SettingsPage() {
                 </div>
               </fieldset>
             </section>
+
+            {user.canSwitchStagingRole && (
+              <section className="settings-section">
+                <h2>ステージング確認</h2>
+                <div className="settings-card staging-role-setting">
+                  <label className="settings-field">
+                    <span>確認する権限</span>
+                    <select
+                      value={user.role}
+                      disabled={roleBusy}
+                      onChange={(event) => void switchStagingRole(event.target.value as User["role"])}
+                    >
+                      <option value="owner">管理者</option>
+                      <option value="uploader">投稿者</option>
+                      <option value="viewer">閲覧者</option>
+                    </select>
+                  </label>
+                  <p>切り替えると画面を再読み込みし、選んだ権限で表示と操作を確認できます。</p>
+                </div>
+              </section>
+            )}
 
             {user.role === "owner" && (
               <section className="settings-section">

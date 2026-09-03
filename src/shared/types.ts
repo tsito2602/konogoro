@@ -16,6 +16,7 @@ export type CurrentUser = User & {
   notificationEnabled?: boolean;
   lineConnected?: boolean;
   lineFriend?: boolean;
+  canSwitchStagingRole?: boolean;
 };
 
 export type Media = {

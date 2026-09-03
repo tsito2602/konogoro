@@ -13,8 +13,10 @@ describe("staging deployment configuration", () => {
     expect(stagingConfig).toContain('"name": "konogoro-staging"');
     expect(stagingConfig).toContain('"database_name": "family-timeline-staging"');
     expect(stagingConfig).toContain('"bucket_name": "family-timeline-media-staging"');
+    expect(stagingConfig).toContain('"STAGING_ROLE_SWITCH_ENABLED": "true"');
     expect(stagingConfig).not.toContain(productionDatabaseId);
     expect(stagingConfig).not.toContain('"triggers"');
+    expect(productionConfig).not.toContain("STAGING_ROLE_SWITCH_ENABLED");
   });
 
   it("deploys only from the staging branch", () => {

@@ -2368,6 +2368,16 @@ textarea:focus {
 .settings-field input {
   background: var(--surface-muted);
 }
+.settings-field select {
+  background: var(--surface-muted);
+}
+.staging-role-setting > p {
+  margin: 0;
+  padding: 0 14px 14px;
+  color: var(--ash);
+  font-size: 12px;
+  line-height: 1.5;
+}
 .theme-setting {
   margin: 0;
   padding: 12px;

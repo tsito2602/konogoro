@@ -47,7 +47,10 @@ import { processNotificationBatches, type NotificationCronEnv } from "./notifica
 import { addPostToNotificationBatch } from "./notification-batch";
 import { lineFriendshipStatements, verifyLineWebhookSignature, type LineWebhookSecrets } from "./line-webhook";
 
-type Bindings = Cloudflare.Env & R2Secrets & LineSecrets & LineWebhookSecrets;
+type Bindings = Cloudflare.Env &
+  R2Secrets &
+  LineSecrets &
+  LineWebhookSecrets & { STAGING_ROLE_SWITCH_ENABLED?: string };
 type EventRow = {
   id: string;
   title: string;
@@ -86,6 +89,10 @@ type MemberLastViewedRow = {
 
 type AppEnv = { Bindings: Bindings; Variables: { currentUser: User } };
 export const app = new Hono<AppEnv>().basePath("/api");
+
+export function canSwitchStagingRole(env: Pick<Bindings, "STAGING_ROLE_SWITCH_ENABLED">): boolean {
+  return env.STAGING_ROLE_SWITCH_ENABLED === "true";
+}
 
 function setSessionCookie(c: Context<AppEnv>, session: string): void {
   setCookie(c, "family_session", session, {
@@ -190,7 +197,18 @@ app.get("/me", async (c) => {
     lineConnected: Boolean(profile?.line_user_id),
     lineFriend: Boolean(profile?.line_friend_enabled),
     notificationEnabled: Boolean(profile?.notification_enabled),
+    canSwitchStagingRole: canSwitchStagingRole(c.env),
   });
+});
+
+app.patch("/staging/role", async (c) => {
+  if (!canSwitchStagingRole(c.env)) return c.json({ error: "見つかりませんでした" }, 404);
+  const { role } = memberRoleInputSchema.parse(await c.req.json());
+  const now = new Date().toISOString();
+  await c.env.DB.prepare("UPDATE users SET role = ?, updated_at = ? WHERE id = ?")
+    .bind(role, now, c.var.currentUser.id)
+    .run();
+  return c.json({ role });
 });
 
 app.patch("/me", async (c) => {
@@ -234,6 +252,7 @@ app.patch("/me", async (c) => {
     lineConnected: Boolean(user.line_user_id),
     lineFriend: Boolean(user.line_friend_enabled),
     notificationEnabled: Boolean(user.notification_enabled),
+    canSwitchStagingRole: canSwitchStagingRole(c.env),
   });
 });
 

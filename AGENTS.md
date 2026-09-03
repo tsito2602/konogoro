@@ -26,12 +26,11 @@
 
 ## 本番反映
 
-- ユーザーがデプロイ不要と明示した場合を除き、実装作業の完了時は次の固定手順で本番反映する。コード・設定・配信物が変わらないドキュメントのみの変更はデプロイしない。
+- `main`へのpushを契機に`.github/workflows/deploy.yml`がD1 migration、Workerのデプロイ、配信状態とHTTP 200の確認まで自動実行する。通常はローカルからmigration適用や`npm run deploy`を実行しない。
+- ユーザーがデプロイ不要と明示した場合を除き、実装作業の完了時は次の固定手順で本番反映する。コード・設定・配信物が変わらないドキュメントのみの変更は本番確認を不要とする。
   1. `npm run check`を実行する。
   2. `git diff --check`と`git status --short`で差分を確認し、対象変更だけをコミットして`main`へpushする。
-  3. 新しいD1 migrationがある場合だけ、`npx wrangler d1 migrations apply DB --remote`で本番D1へ先に適用する。
-  4. `npm run deploy`を実行する。このscriptはbuild、R2 CORS反映、Workerデプロイを行う。
-  5. `npx wrangler deployments status --json`で最新Versionが100%配信されていることを確認する。
-  6. `curl -fsSI https://konogoro.tsito-apps.workers.dev/`でHTTP 200を確認し、変更内容に応じた最小限の本番確認を行う。
-- 通常デプロイではこの固定手順を使い、追加の手順探索を行わない。Cloudflare・Wranglerの追加調査は、`wrangler.jsonc`、binding、migration、package script、デプロイ方式を変更するとき、コマンドが失敗したとき、または上位指示で必要なときだけ行う。
-- 作業ツリーに別作業の未コミット差分がある場合は混ぜず、対象コミットの一時worktreeからデプロイする。
+  3. 対象コミットのGitHub Actionsが成功するまで確認する。失敗した場合はjob logを確認し、原因を修正して再度pushする。
+  4. 変更内容に応じた最小限の本番確認を行う。
+- Cloudflare・Wranglerの追加調査や手動デプロイは、`wrangler.jsonc`、binding、migration、package script、デプロイ方式を変更するとき、自動デプロイが失敗したとき、または上位指示で必要なときだけ行う。
+- 作業ツリーに別作業の未コミット差分がある場合は混ぜず、対象変更用の一時worktreeで検証・コミット・pushする。

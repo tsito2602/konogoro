@@ -46,6 +46,10 @@ jobs:
         if: steps.credentials.outputs.ready == 'true'
         run: npm ci
 
+      - name: Generate Cloudflare types
+        if: steps.credentials.outputs.ready == 'true'
+        run: npm run cf-typegen
+
       - name: Run checks
         if: steps.credentials.outputs.ready == 'true'
         run: npm run check

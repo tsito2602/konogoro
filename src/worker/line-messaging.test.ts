@@ -10,9 +10,7 @@ describe("buildNotificationText", () => {
         videoCount: 2,
         appOrigin: "https://family.example.com/",
       }),
-    ).toBe(
-      "新しい思い出が届きました。投稿3件（写真15枚・動画2本）\nまとめて見る：https://family.example.com/unread",
-    );
+    ).toBe("新しい思い出が届きました。投稿3件（写真15枚・動画2本）\nまとめて見る：https://family.example.com/unread");
   });
 
   it("存在するmedia種別だけを表示する", () => {

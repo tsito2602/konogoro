@@ -756,6 +756,9 @@ a.icon-button {
 }
 
 .timeline-month-heading {
+  position: sticky;
+  z-index: 10;
+  top: 56px;
   margin: 0;
   padding: 18px 14px 9px;
   color: var(--ash);
@@ -3116,7 +3119,7 @@ textarea:focus {
   .feed {
     margin-top: 20px;
     border-radius: var(--radius);
-    overflow: hidden;
+    overflow: clip;
   }
   .post-page-layer .detail-media-grid {
     border-radius: 0;

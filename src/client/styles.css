@@ -2210,6 +2210,19 @@ textarea:focus {
   font-weight: 400;
   line-height: 1.5;
 }
+.staging-role-guide {
+  gap: 8px;
+  padding: 16px;
+}
+.staging-role-guide legend {
+  padding-top: 16px;
+}
+.settings-hint {
+  margin: 8px 4px 0;
+  color: var(--ash);
+  font-size: 12px;
+  line-height: 1.5;
+}
 .invite-result {
   display: grid;
   gap: 10px;

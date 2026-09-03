@@ -22,6 +22,12 @@ const roleLabels: Record<User["role"], string> = {
   viewer: "閲覧者",
 };
 
+const stagingRoleOptions = [
+  { value: "owner", label: "管理者", description: "投稿・イベント・メンバーをすべて管理できます" },
+  { value: "uploader", label: "投稿者", description: "投稿とイベントを作成・編集できます" },
+  { value: "viewer", label: "閲覧者", description: "思い出の閲覧とコメントだけができます" },
+] satisfies { value: User["role"]; label: string; description: string }[];
+
 export function SettingsPage() {
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [members, setMembers] = useState<FamilyMember[] | null>(null);
@@ -30,6 +36,7 @@ export function SettingsPage() {
   const [error, setError] = useState("");
   const [familyError, setFamilyError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [switchingRole, setSwitchingRole] = useState(false);
   const [theme, setTheme] = useState<ThemePreference>(getThemePreference);
   const showToast = useToast();
   const hasChanges = Boolean(
@@ -96,6 +103,22 @@ export function SettingsPage() {
     } catch (reason) {
       setError((reason as Error).message);
       setBusy(false);
+    }
+  };
+
+  const switchStagingRole = async (role: User["role"]) => {
+    if (!user || role === user.role) return;
+    setSwitchingRole(true);
+    setError("");
+    try {
+      await api<void>("/staging/role", {
+        method: "POST",
+        body: JSON.stringify({ role }),
+      });
+      window.location.assign("/");
+    } catch (reason) {
+      setError((reason as Error).message);
+      setSwitchingRole(false);
     }
   };
 
@@ -186,6 +209,31 @@ export function SettingsPage() {
                 </p>
               )}
             </form>
+
+            {user.isStaging && (
+              <section className="settings-section">
+                <h2>ステージング確認</h2>
+                <fieldset className="settings-card role-guide staging-role-guide" disabled={switchingRole}>
+                  <legend>確認する権限</legend>
+                  {stagingRoleOptions.map((option) => (
+                    <label className={user.role === option.value ? "selected" : ""} key={option.value}>
+                      <input
+                        type="radio"
+                        name="staging-role"
+                        value={option.value}
+                        checked={user.role === option.value}
+                        onChange={() => void switchStagingRole(option.value)}
+                      />
+                      <span>
+                        <strong>{option.label}</strong>
+                        <p>{option.description}</p>
+                      </span>
+                    </label>
+                  ))}
+                </fieldset>
+                <p className="settings-hint">このブラウザだけの確認用設定です。切り替えるとホームへ移動します。</p>
+              </section>
+            )}
 
             <div className={`change-save-bar${hasChanges ? " visible" : ""}`} aria-hidden={!hasChanges}>
               <button

@@ -47,7 +47,7 @@ import { processNotificationBatches, type NotificationCronEnv } from "./notifica
 import { addPostToNotificationBatch } from "./notification-batch";
 import { lineFriendshipStatements, verifyLineWebhookSignature, type LineWebhookSecrets } from "./line-webhook";
 
-type Bindings = Cloudflare.Env & R2Secrets & LineSecrets & LineWebhookSecrets;
+type Bindings = Cloudflare.Env & R2Secrets & LineSecrets & LineWebhookSecrets & { STAGING?: string };
 type EventRow = {
   id: string;
   title: string;
@@ -97,6 +97,16 @@ function setSessionCookie(c: Context<AppEnv>, session: string): void {
   });
 }
 
+const STAGING_ROLE_COOKIE = "konogoro_staging_role";
+
+function stagingRole(value: string | undefined): User["role"] | null {
+  return value === "owner" || value === "uploader" || value === "viewer" ? value : null;
+}
+
+function isStaging(c: Context<AppEnv>): boolean {
+  return c.env.STAGING === "true";
+}
+
 app.use("*", async (c, next) => {
   if (c.req.path === "/api/webhooks/line") {
     await next();
@@ -130,6 +140,8 @@ app.use("*", async (c, next) => {
     }
   }
   if (!user && !publicAuth) return c.json({ error: "ログインが必要です" }, 401);
+  const roleOverride = isStaging(c) ? stagingRole(getCookie(c, STAGING_ROLE_COOKIE)) : null;
+  if (user && roleOverride) user = { ...user, role: roleOverride };
   if (user) c.set("currentUser", user);
   await next();
 });
@@ -190,7 +202,21 @@ app.get("/me", async (c) => {
     lineConnected: Boolean(profile?.line_user_id),
     lineFriend: Boolean(profile?.line_friend_enabled),
     notificationEnabled: Boolean(profile?.notification_enabled),
+    isStaging: isStaging(c),
   });
+});
+
+app.post("/staging/role", async (c) => {
+  if (!isStaging(c)) return c.notFound();
+  const input = memberRoleInputSchema.parse(await c.req.json());
+  setCookie(c, STAGING_ROLE_COOKIE, input.role, {
+    httpOnly: true,
+    secure: true,
+    sameSite: "Lax",
+    maxAge: SESSION_MAX_AGE_SECONDS,
+    path: "/",
+  });
+  return c.body(null, 204);
 });
 
 app.patch("/me", async (c) => {
@@ -229,11 +255,12 @@ app.patch("/me", async (c) => {
   return c.json({
     id: user.id,
     displayName: user.display_name,
-    role: user.role,
+    role: c.var.currentUser.role,
     avatarUrl: user.avatar_url,
     lineConnected: Boolean(user.line_user_id),
     lineFriend: Boolean(user.line_friend_enabled),
     notificationEnabled: Boolean(user.notification_enabled),
+    isStaging: isStaging(c),
   });
 });
 

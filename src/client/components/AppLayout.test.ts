@@ -42,6 +42,12 @@ describe("LoginScreen", () => {
     expect(html).toContain("このごろ");
     expect(html).toContain('href="/api/auth/line"');
   });
+
+  it("現在の画面をLINEログイン後の遷移先として渡す", () => {
+    const html = renderToStaticMarkup(createElement(LoginScreen, { returnTo: "/posts/post-1?from=line" }));
+
+    expect(html).toContain('href="/api/auth/line?returnTo=%2Fposts%2Fpost-1%3Ffrom%3Dline"');
+  });
 });
 
 describe("BootScreen", () => {

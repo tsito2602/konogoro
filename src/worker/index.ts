@@ -34,6 +34,7 @@ import {
   hasLineConfig,
   pkceChallenge,
   randomToken,
+  safeReturnPath,
   type LineSecrets,
 } from "./auth";
 import { createPresignedDownloadUrl, createPresignedUploadUrl, hasUploadCredentials } from "./r2";
@@ -118,6 +119,7 @@ app.use("*", async (c, next) => {
         path: "/",
       });
       deleteCookie(c, "line_state", { path: "/" });
+      deleteCookie(c, "line_return_to", { path: "/" });
       user = await getCurrentUser(c.env.DB, session, false);
     }
   }
@@ -233,6 +235,7 @@ app.get("/auth/line", async (c) => {
   const nonce = randomToken();
   const verifier = randomToken(48);
   const invite = c.req.query("invite");
+  const returnTo = safeReturnPath(c.req.query("returnTo"));
   const now = new Date();
   await c.env.DB.batch([
     c.env.DB.prepare("DELETE FROM line_login_requests WHERE expires_at <= ?").bind(now.toISOString()),
@@ -251,6 +254,13 @@ app.get("/auth/line", async (c) => {
     ),
   ]);
   setCookie(c, "line_state", state, { httpOnly: true, secure: true, sameSite: "Lax", maxAge: 600, path: "/" });
+  setCookie(c, "line_return_to", returnTo, {
+    httpOnly: true,
+    secure: true,
+    sameSite: "Lax",
+    maxAge: 600,
+    path: "/",
+  });
   const callback = `${c.env.APP_ORIGIN}/api/auth/line/callback`;
   const url = new URL("https://access.line.me/oauth2/v2.1/authorize");
   url.search = new URLSearchParams({
@@ -409,7 +419,9 @@ app.get("/auth/line/callback", async (c) => {
   for (const name of ["line_state", "line_nonce", "line_verifier", "line_invite"])
     deleteCookie(c, name, { path: "/api/auth/line/callback" });
   deleteCookie(c, "line_state", { path: "/" });
-  return c.redirect(c.env.APP_ORIGIN);
+  const returnTo = safeReturnPath(getCookie(c, "line_return_to"));
+  deleteCookie(c, "line_return_to", { path: "/" });
+  return c.redirect(new URL(returnTo, `${c.env.APP_ORIGIN.replace(/\/+$/, "")}/`).toString());
 });
 
 app.post("/auth/logout", async (c) => {

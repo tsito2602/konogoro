@@ -427,6 +427,8 @@ Mediaごと / Postごとの即時通知はしない。
 
 Cloudflare Cron Triggersで通知batchを処理。
 
+通知本文のURLはbatch内で最も新しく公開された投稿を直接開く。通知に写真や動画のサムネイルは載せない。ログインが必要な場合も、LINE Login完了後に同じ投稿へ戻す。
+
 ユーザーごとに通知ON/OFFを持つ。「このごろ」のLINEアカウントを友だち追加済みかつブロックしていないユーザーだけを送信対象にする。友だち状態はLINE Login後の確認に加え、Messaging APIの`follow`・`unfollow`Webhookで更新する。
 
 ---

@@ -78,7 +78,7 @@ export function AppLayout() {
         <ErrorState message={authError} retry={loadAuth} />
       </div>
     );
-  if (!authenticated) return <LoginScreen />;
+  if (!authenticated) return <LoginScreen returnTo={`${location.pathname}${location.search}${location.hash}`} />;
   if (!currentUser) return <BootScreen />;
   if (!canAccessPath(currentUser, pathname)) return <Navigate to="/" replace />;
 
@@ -160,7 +160,9 @@ export function BootScreen() {
   );
 }
 
-export function LoginScreen() {
+export function LoginScreen({ returnTo = "/" }: { returnTo?: string }) {
+  const loginUrl = returnTo === "/" ? "/api/auth/line" : `/api/auth/line?returnTo=${encodeURIComponent(returnTo)}`;
+
   return (
     <main className="login-page">
       <section>
@@ -171,7 +173,7 @@ export function LoginScreen() {
         <p className="login-eyebrow">このごろ</p>
         <h1>メンバーの思い出を、ひとつの場所に</h1>
         <p>写真や動画を招待したメンバーだけで共有できます。</p>
-        <a className="line-login-button" href="/api/auth/line">
+        <a className="line-login-button" href={loginUrl}>
           LINEでログイン
         </a>
       </section>

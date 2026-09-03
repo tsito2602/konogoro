@@ -8,6 +8,18 @@ export function hasLineConfig(env: LineSecrets): env is Required<LineSecrets> {
   return Boolean(env.LINE_CHANNEL_ID && env.LINE_CHANNEL_SECRET && env.APP_ORIGIN);
 }
 
+export function safeReturnPath(value?: string | null): string {
+  if (!value?.startsWith("/") || value.startsWith("//")) return "/";
+  try {
+    const base = new URL("https://return-path.invalid");
+    const resolved = new URL(value, base);
+    if (resolved.origin !== base.origin) return "/";
+    return `${resolved.pathname}${resolved.search}${resolved.hash}`;
+  } catch {
+    return "/";
+  }
+}
+
 export async function getCurrentUser(
   db: D1Database,
   sessionToken?: string,

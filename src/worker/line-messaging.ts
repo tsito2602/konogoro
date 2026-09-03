@@ -5,6 +5,7 @@ export type NotificationCounts = {
   photoCount: number;
   videoCount: number;
   appOrigin: string;
+  latestPostId: string | null;
 };
 
 export function buildNotificationText(counts: NotificationCounts): string {
@@ -15,8 +16,12 @@ export function buildNotificationText(counts: NotificationCounts): string {
     .filter((value): value is string => value !== null)
     .join("・");
   const summary = media ? `（${media}）` : "";
+  const appOrigin = counts.appOrigin.replace(/\/+$/, "");
+  const destination = counts.latestPostId
+    ? `${appOrigin}/posts/${encodeURIComponent(counts.latestPostId)}`
+    : `${appOrigin}/`;
 
-  return `新しい投稿${counts.postCount}件${summary}が追加されました。\n${counts.appOrigin.replace(/\/$/, "")}/`;
+  return `新しい投稿${counts.postCount}件${summary}が追加されました。\n${destination}`;
 }
 
 type LineNotification = {

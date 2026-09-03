@@ -89,8 +89,8 @@ export function AppLayout() {
         {showPostPage && backgroundContent ? routedContent : null}
         {!hideNavigation && (
           <nav className="tab-bar" aria-label="メインナビゲーション">
-            <NavItem to="/" label="タイムライン" icon={<Images />} end />
-            <NavItem to="/activity" label="近況" icon={<Bell />} />
+            <NavItem to="/" label="ホーム" icon={<Images />} end />
+            <NavItem to="/activity" label="新着" icon={<Bell />} />
             <NavItem to="/events" label="イベント" icon={<CalendarDays />} />
             <NavItem to="/album" label="アルバム" icon={<GalleryVerticalEnd />} />
             <NavItem to="/settings" label="設定" icon={<Settings />} />

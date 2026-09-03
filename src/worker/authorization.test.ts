@@ -48,4 +48,18 @@ describe("viewer API authorization", () => {
 
     expect(response.status).toBe(403);
   });
+
+  it("見出し作成を拒否するエラーにも利用者向けの名称を使う", async () => {
+    const response = await app.request(
+      "/api/events/event-1/scenes",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: "1日目" }),
+      },
+      viewerEnv(),
+    );
+
+    expect(await response.json()).toEqual({ error: "見出しを作成する権限がありません" });
+  });
 });

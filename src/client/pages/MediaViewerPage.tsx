@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Download, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, MessageCircle, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import type { AlbumMedia, Media, Post } from "../../shared/types";
@@ -31,6 +31,14 @@ export function viewerNavigationItems(
     return albumMedia;
   }
   return postMedia.map((media) => ({ ...media, postId }));
+}
+
+export function viewerCommentNavigation(postId: string, currentState: unknown) {
+  const state = currentState && typeof currentState === "object" ? currentState : {};
+  return {
+    to: `/posts/${postId}`,
+    state: { ...state, postPage: true, focusComment: true },
+  };
 }
 
 export function MediaViewerPage() {
@@ -151,6 +159,7 @@ export function MediaViewerPage() {
         <ErrorState message={error || "写真が見つかりません"} retry={error ? load : undefined} />
       </div>
     );
+  const commentNavigation = viewerCommentNavigation(postId, location.state);
   return (
     <main className="media-viewer">
       <header className="viewer-header">
@@ -222,6 +231,15 @@ export function MediaViewerPage() {
         {(post.eventTitle || post.sceneTitle) && (
           <span>{[post.eventTitle, post.sceneTitle].filter(Boolean).join(" · ")}</span>
         )}
+        <Link
+          className="outline-button"
+          to={commentNavigation.to}
+          state={commentNavigation.state}
+          style={{ alignSelf: "flex-start", marginTop: 7, gap: 7, color: "white", borderColor: "rgba(255, 255, 255, 0.62)" }}
+        >
+          <MessageCircle aria-hidden />
+          この投稿にコメント
+        </Link>
       </div>
       <div className="thumbnail-strip">
         {navigationItems.map((media) => (

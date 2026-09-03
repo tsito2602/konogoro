@@ -63,6 +63,7 @@ export function AlbumPage() {
   const years = [...new Set(groups.map((group) => group.year))];
   const selectedYearIndex = selectedYear ? years.indexOf(selectedYear) : -1;
   const months = selectedYear ? groups.filter((group) => group.year === selectedYear) : [];
+  const yearMedia = months.flatMap((group) => group.media);
   const allSelected = selectedYear !== undefined && selectedMonthKey === `all-${selectedYear}`;
   const selectYear = (year: number) => {
     const firstMonth = groups.find((group) => group.year === year);
@@ -124,19 +125,17 @@ export function AlbumPage() {
           {allSelected ? (
             <section className="album-month" aria-label={`${selectedYear}年のすべて`}>
               <div className="album-grid">
-                {months
-                  .flatMap((group) => group.media)
-                  .map((item) => (
-                    <AlbumMediaLink item={item} key={item.id}>
-                      <img src={item.thumbnailUrl} alt="" loading="lazy" />
-                    </AlbumMediaLink>
-                  ))}
+                {yearMedia.map((item) => (
+                  <AlbumMediaLink item={item} viewerMedia={yearMedia} key={item.id}>
+                    <img src={item.thumbnailUrl} alt="" loading="lazy" />
+                  </AlbumMediaLink>
+                ))}
               </div>
             </section>
           ) : (
             selectedMonth && (
               <section className="album-month" aria-label={selectedMonth.label}>
-                <AlbumMediaLink item={selectedMonth.media[0]} className="album-cover">
+                <AlbumMediaLink item={selectedMonth.media[0]} viewerMedia={selectedMonth.media} className="album-cover">
                   <img src={selectedMonth.media[0].previewUrl} alt="" />
                   <span className="album-cover-label">
                     <strong>{selectedMonth.month}月</strong>
@@ -147,7 +146,7 @@ export function AlbumPage() {
                 {selectedMonth.media.length > 1 && (
                   <div className="album-grid">
                     {selectedMonth.media.slice(1).map((item) => (
-                      <AlbumMediaLink item={item} key={item.id}>
+                      <AlbumMediaLink item={item} viewerMedia={selectedMonth.media} key={item.id}>
                         <img src={item.thumbnailUrl} alt="" loading="lazy" />
                       </AlbumMediaLink>
                     ))}
@@ -176,10 +175,12 @@ export function AlbumPage() {
 
 function AlbumMediaLink({
   item,
+  viewerMedia,
   className,
   children,
 }: {
   item: AlbumMedia;
+  viewerMedia: AlbumMedia[];
   className?: string;
   children: React.ReactNode;
 }) {
@@ -187,7 +188,7 @@ function AlbumMediaLink({
     <Link
       className={className}
       to={`/posts/${item.postId}/media/${item.id}`}
-      state={{ returnToPrevious: true }}
+      state={{ returnToPrevious: true, albumMedia: viewerMedia }}
       aria-label={`${new Intl.DateTimeFormat("ja-JP", { month: "long", day: "numeric" }).format(new Date(item.capturedAt))}の投稿の${item.kind === "video" ? "動画" : "写真"}`}
     >
       {children}

@@ -1,7 +1,7 @@
 import { ChevronLeft, ChevronRight, Download, X } from "lucide-react";
-import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
-import type { Post } from "../../shared/types";
+import type { AlbumMedia, Media, Post } from "../../shared/types";
 import { api, formatDate } from "../api";
 import { ErrorState } from "../components/AsyncState";
 import { PageSkeleton } from "../components/PageSkeleton";
@@ -20,11 +20,25 @@ export function mediaExitOffset(direction: "previous" | "next", width: number): 
   return direction === "previous" ? width : -width;
 }
 
+type ViewerNavigationItem = Pick<AlbumMedia, "id" | "postId" | "kind" | "thumbnailUrl">;
+
+export function viewerNavigationItems(
+  postId: string,
+  postMedia: Array<Pick<Media, "id" | "kind" | "thumbnailUrl">>,
+  albumMedia?: AlbumMedia[],
+): ViewerNavigationItem[] {
+  if (albumMedia?.some((item) => item.postId === postId && postMedia.some((media) => media.id === item.id))) {
+    return albumMedia;
+  }
+  return postMedia.map((media) => ({ ...media, postId }));
+}
+
 export function MediaViewerPage() {
   const { postId = "", mediaId = "" } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const [post, setPost] = useState<Post | null>(null);
+  const viewerState = location.state as { returnToPrevious?: boolean; albumMedia?: AlbumMedia[] } | null;
+  const [loadedPost, setLoadedPost] = useState<{ postId: string; post: Post } | null>(null);
   const [error, setError] = useState("");
   const [dragOffset, setDragOffset] = useState(0);
   const [dragging, setDragging] = useState(false);
@@ -34,12 +48,12 @@ export function MediaViewerPage() {
   const load = () => {
     setError("");
     void api<Post>(`/posts/${postId}`)
-      .then(setPost)
+      .then((post) => setLoadedPost({ postId, post }))
       .catch((reason: Error) => setError(reason.message));
   };
   useEffect(() => {
     void api<Post>(`/posts/${postId}`)
-      .then(setPost)
+      .then((post) => setLoadedPost({ postId, post }))
       .catch((reason: Error) => setError(reason.message));
   }, [postId]);
   useEffect(
@@ -48,22 +62,28 @@ export function MediaViewerPage() {
     },
     [],
   );
-  const index = post?.media.findIndex((item) => item.id === mediaId) ?? -1;
-  const current = post?.media[index];
+  const post = loadedPost?.postId === postId ? loadedPost.post : null;
+  const current = post?.media.find((item) => item.id === mediaId);
+  const navigationItems = useMemo(
+    () => (post ? viewerNavigationItems(postId, post.media, viewerState?.albumMedia) : []),
+    [post, postId, viewerState?.albumMedia],
+  );
+  const index = navigationItems.findIndex((item) => item.id === mediaId && item.postId === postId);
   const closeViewer = useCallback(() => {
-    if (location.state?.returnToPrevious) navigate(-1);
+    if (viewerState?.returnToPrevious) navigate(-1);
     else navigate(`/posts/${postId}`, { replace: true });
-  }, [location.state?.returnToPrevious, navigate, postId]);
+  }, [navigate, postId, viewerState?.returnToPrevious]);
   const showMedia = useCallback(
     (targetIndex: number) => {
-      if (!post || targetIndex < 0 || targetIndex >= post.media.length) return;
-      navigate(`/posts/${postId}/media/${post.media[targetIndex].id}`, { replace: true, state: location.state });
+      const target = navigationItems[targetIndex];
+      if (!target) return;
+      navigate(`/posts/${target.postId}/media/${target.id}`, { replace: true, state: location.state });
     },
-    [location.state, navigate, post, postId],
+    [location.state, navigate, navigationItems],
   );
   const animateToMedia = useCallback(
     (targetIndex: number, direction: "previous" | "next") => {
-      if (!post || targetIndex < 0 || targetIndex >= post.media.length || swipeAnimation.current !== null) return;
+      if (targetIndex < 0 || targetIndex >= navigationItems.length || swipeAnimation.current !== null) return;
       setDragging(false);
       setDragOffset(mediaExitOffset(direction, stageRef.current?.clientWidth ?? window.innerWidth));
       swipeAnimation.current = window.setTimeout(() => {
@@ -72,7 +92,7 @@ export function MediaViewerPage() {
         swipeAnimation.current = null;
       }, 200);
     },
-    [post, showMedia],
+    [navigationItems.length, showMedia],
   );
   useEffect(() => {
     const keydown = (event: KeyboardEvent) => {
@@ -99,7 +119,7 @@ export function MediaViewerPage() {
     if (!event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.setPointerCapture(event.pointerId);
     event.preventDefault();
     setDragging(true);
-    setDragOffset(swipeDragOffset(deltaX, index > 0, index < (post?.media.length ?? 0) - 1));
+    setDragOffset(swipeDragOffset(deltaX, index > 0, index < navigationItems.length - 1));
   };
   const finishSwipe = (event: ReactPointerEvent<HTMLDivElement>) => {
     const start = swipeStart.current;
@@ -107,7 +127,7 @@ export function MediaViewerPage() {
     if (!start || start.pointerId !== event.pointerId) return;
     const direction = swipeDirection(event.clientX - start.x, event.clientY - start.y);
     const targetIndex = direction === "previous" ? index - 1 : direction === "next" ? index + 1 : -1;
-    if (direction && post && targetIndex >= 0 && targetIndex < post.media.length) {
+    if (direction && targetIndex >= 0 && targetIndex < navigationItems.length) {
       animateToMedia(targetIndex, direction);
       return;
     }
@@ -138,7 +158,7 @@ export function MediaViewerPage() {
           <X />
         </button>
         <span>
-          {index + 1} / {post.media.length}
+          {index + 1} / {navigationItems.length}
         </span>
         <a className="viewer-button" href={current.downloadUrl} aria-label="保存">
           <Download />
@@ -155,7 +175,7 @@ export function MediaViewerPage() {
         {index > 0 && (
           <Link
             className="viewer-arrow previous"
-            to={`/posts/${postId}/media/${post.media[index - 1].id}`}
+            to={`/posts/${navigationItems[index - 1].postId}/media/${navigationItems[index - 1].id}`}
             replace
             state={location.state}
             aria-label="前の写真"
@@ -178,10 +198,10 @@ export function MediaViewerPage() {
             <img src={current.contentUrl} alt={`投稿の写真 ${index + 1}`} draggable={false} />
           )}
         </div>
-        {index < post.media.length - 1 && (
+        {index < navigationItems.length - 1 && (
           <Link
             className="viewer-arrow next"
-            to={`/posts/${postId}/media/${post.media[index + 1].id}`}
+            to={`/posts/${navigationItems[index + 1].postId}/media/${navigationItems[index + 1].id}`}
             replace
             state={location.state}
             aria-label="次の写真"
@@ -204,11 +224,11 @@ export function MediaViewerPage() {
         )}
       </div>
       <div className="thumbnail-strip">
-        {post.media.map((media) => (
+        {navigationItems.map((media) => (
           <Link
             className={media.id === current.id ? "selected" : ""}
             key={media.id}
-            to={`/posts/${postId}/media/${media.id}`}
+            to={`/posts/${media.postId}/media/${media.id}`}
             replace
             state={location.state}
           >

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mediaExitOffset, swipeDirection, swipeDragOffset } from "./MediaViewerPage";
+import { mediaExitOffset, swipeDirection, swipeDragOffset, viewerNavigationItems } from "./MediaViewerPage";
 
 describe("swipeDirection", () => {
   it("右へ十分に動かすと前のメディアへ移動する", () => {
@@ -40,5 +40,32 @@ describe("swipeDragOffset", () => {
 
   it("末尾より後ろへ引いた場合は抵抗を付ける", () => {
     expect(swipeDragOffset(-100, true, false)).toBe(-24);
+  });
+});
+
+describe("viewerNavigationItems", () => {
+  const postMedia = [{ id: "media-1", kind: "image" as const, thumbnailUrl: "/media-1" }];
+
+  it("アルバムから開いた場合は投稿をまたぐメディアを返す", () => {
+    const albumMedia = [
+      { ...postMedia[0], postId: "post-1", capturedAt: "2026-09-01", previewUrl: "/preview-1" },
+      {
+        id: "media-2",
+        postId: "post-2",
+        kind: "image" as const,
+        capturedAt: "2026-09-02",
+        thumbnailUrl: "/media-2",
+        previewUrl: "/preview-2",
+      },
+    ];
+
+    expect(viewerNavigationItems("post-1", postMedia, albumMedia).map(({ postId, id }) => `${postId}/${id}`)).toEqual([
+      "post-1/media-1",
+      "post-2/media-2",
+    ]);
+  });
+
+  it("通常表示では現在の投稿内だけを返す", () => {
+    expect(viewerNavigationItems("post-1", postMedia)).toEqual([{ ...postMedia[0], postId: "post-1" }]);
   });
 });

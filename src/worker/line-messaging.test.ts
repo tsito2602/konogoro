@@ -2,16 +2,17 @@ import { describe, expect, it, vi } from "vitest";
 import { buildNotificationText, sendLineNotification } from "./line-messaging";
 
 describe("buildNotificationText", () => {
-  it("投稿と写真・動画の件数をリンク付きで案内する", () => {
+  it("投稿と写真・動画の件数を新着閲覧リンク付きで案内する", () => {
     expect(
       buildNotificationText({
         postCount: 3,
         photoCount: 15,
         videoCount: 2,
         appOrigin: "https://family.example.com/",
-        latestPostId: "post-3",
       }),
-    ).toBe("新しい投稿3件（写真15枚・動画2本）が追加されました。\nhttps://family.example.com/posts/post-3");
+    ).toBe(
+      "新しい思い出が届きました。投稿3件（写真15枚・動画2本）\nまとめて見る：https://family.example.com/unread",
+    );
   });
 
   it("存在するmedia種別だけを表示する", () => {
@@ -21,21 +22,19 @@ describe("buildNotificationText", () => {
         photoCount: 0,
         videoCount: 1,
         appOrigin: "https://family.example.com",
-        latestPostId: "post/with spaces",
       }),
-    ).toBe("新しい投稿1件（動画1本）が追加されました。\nhttps://family.example.com/posts/post%2Fwith%20spaces");
+    ).toBe("新しい思い出が届きました。投稿1件（動画1本）\nまとめて見る：https://family.example.com/unread");
   });
 
-  it("投稿IDがない場合はタイムラインへ戻す", () => {
+  it("mediaがない場合も投稿件数と新着閲覧リンクだけを表示する", () => {
     expect(
       buildNotificationText({
         postCount: 1,
         photoCount: 0,
         videoCount: 0,
         appOrigin: "https://family.example.com",
-        latestPostId: null,
       }),
-    ).toBe("新しい投稿1件が追加されました。\nhttps://family.example.com/");
+    ).toBe("新しい思い出が届きました。投稿1件\nまとめて見る：https://family.example.com/unread");
   });
 });
 

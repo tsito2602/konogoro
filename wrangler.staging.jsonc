@@ -24,6 +24,7 @@
     },
   ],
   "vars": {
+    "STAGING": "true",
     "APP_ORIGIN": "https://konogoro-staging.tsito-apps.workers.dev",
     "R2_ACCOUNT_ID": "__CLOUDFLARE_ACCOUNT_ID__",
     "R2_BUCKET_NAME": "family-timeline-media-staging",

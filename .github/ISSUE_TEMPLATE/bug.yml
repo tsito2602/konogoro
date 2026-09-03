@@ -1,0 +1,98 @@
+name: 不具合報告
+description: 期待どおりに動かない・表示されない問題を報告する
+title: "[Bug] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        報告ありがとうございます。再現手順と期待する動作があると、原因調査と修正確認を進めやすくなります。
+        家族の写真・氏名・連絡先、認証情報、秘密情報は記載・添付しないでください。
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: 不具合の概要
+      description: 何が起きているかを短く記載してください。
+      placeholder: 例）イベントカードを開いても詳細画面へ移動しない。
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: 発生した画面・機能
+      options:
+        - タイムライン
+        - アルバム
+        - イベント
+        - 投稿・コメント
+        - LINE通知
+        - 設定・管理
+        - ログイン・認証
+        - アプリ全体
+        - その他
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: 再現手順
+      description: 問題が起きるまでの操作を順番に記載してください。
+      placeholder: |
+        1. イベント一覧を開く
+        2. 「運動会」のカードを押す
+        3. 画面が切り替わらない
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual_behavior
+    attributes:
+      label: 実際の結果
+      description: 現在どのようになるかを記載してください。
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected_behavior
+    attributes:
+      label: 期待する結果
+      description: 本来どうなるべきかを記載してください。
+    validations:
+      required: true
+
+  - type: dropdown
+    id: frequency
+    attributes:
+      label: 発生頻度
+      options:
+        - 毎回
+        - ときどき
+        - 一度だけ
+        - 不明
+    validations:
+      required: true
+
+  - type: input
+    id: environment
+    attributes:
+      label: 利用環境
+      description: 端末、OS、ブラウザが分かる範囲で記載してください。
+      placeholder: 例）iPhone / iOS 20 / Safari
+
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: 補足・公開可能な資料
+      description: エラー文や個人情報を含まないスクリーンショットなどがあれば記載してください。
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: 確認
+      options:
+        - label: 同じ内容のIssueがないことを確認しました
+          required: true
+        - label: 家族の写真・氏名・連絡先、認証情報、秘密情報を含めていません
+          required: true

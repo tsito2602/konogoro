@@ -1,0 +1,93 @@
+name: 機能・改善提案
+description: 新しい機能や、既存画面・操作の改善を提案する
+title: "[Feature] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        提案ありがとうございます。背景と完了条件を先にそろえると、AIも人も同じゴールに向かって実装できます。
+        家族の写真・氏名・連絡先など、個人情報を含む内容は記載しないでください。
+
+  - type: textarea
+    id: background
+    attributes:
+      label: 背景・困っていること
+      description: 誰が、どの場面で、何に困っているかを記載してください。
+      placeholder: 例）親がタイムラインを見るとき、未読の投稿を見つけにくい。
+    validations:
+      required: true
+
+  - type: dropdown
+    id: users
+    attributes:
+      label: 主な利用者
+      description: この改善の対象になる利用者を選択してください。
+      multiple: true
+      options:
+        - 閲覧者（親など）
+        - 投稿者
+        - 管理者
+        - 全員
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: 対象画面・機能
+      options:
+        - タイムライン
+        - アルバム
+        - イベント
+        - 投稿・コメント
+        - LINE通知
+        - 設定・管理
+        - ログイン・認証
+        - アプリ全体
+        - その他
+    validations:
+      required: true
+
+  - type: textarea
+    id: desired_behavior
+    attributes:
+      label: 実現したいこと
+      description: 実装方法ではなく、利用者にとってどうなってほしいかを記載してください。
+      placeholder: 例）最後に見た投稿以降を、タイムラインを開いた直後に判別できる。
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: 完了条件
+      description: 実装後に確認できる条件をチェックリストで記載してください。
+      placeholder: |
+        - [ ] 閲覧者が未読の境界を確認できる
+        - [ ] 既読だけの場合は不要な表示が出ない
+        - [ ] スマートフォン幅でも表示が崩れない
+    validations:
+      required: true
+
+  - type: textarea
+    id: out_of_scope
+    attributes:
+      label: 今回やらないこと
+      description: スコープを明確にするため、関連していても今回含めない内容があれば記載してください。
+      placeholder: 例）通知設定の変更は今回の対象外。
+
+  - type: textarea
+    id: references
+    attributes:
+      label: 参考情報
+      description: 関連Issue、公開可能な画面例、参考資料などがあれば記載してください。
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: 確認
+      options:
+        - label: 同じ内容のIssueがないことを確認しました
+          required: true
+        - label: 家族の写真・氏名・連絡先などの個人情報を含めていません
+          required: true

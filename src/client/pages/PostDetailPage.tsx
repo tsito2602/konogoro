@@ -9,6 +9,10 @@ import { CommentComposerSkeleton, PageSkeleton } from "../components/PageSkeleto
 import { SeenBy } from "../components/SeenBy";
 import { useToast } from "../components/Toast";
 
+export function shouldFocusComment(state: unknown): boolean {
+  return Boolean(state && typeof state === "object" && "focusComment" in state && state.focusComment);
+}
+
 export function PostDetailPage() {
   const { postId = "" } = useParams();
   const navigate = useNavigate();
@@ -18,10 +22,12 @@ export function PostDetailPage() {
   const [post, setPost] = useState<Post | null>(null);
   const [error, setError] = useState("");
   const [commentError, setCommentError] = useState("");
+  const [commentSending, setCommentSending] = useState(false);
   const [deleteError, setDeleteError] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const commentInputRef = useRef<HTMLInputElement>(null);
   const fallbackPath = post?.eventId ? `/events/${post.eventId}` : "/";
   const closePage = useCallback(() => {
     if ((location.state as { postPage?: boolean } | null)?.postPage) navigate(-1);
@@ -38,6 +44,11 @@ export function PostDetailPage() {
       .then(setPost)
       .catch((reason: Error) => setError(reason.message));
   }, [postId]);
+  useEffect(() => {
+    if (!post || !shouldFocusComment(location.state)) return;
+    const frame = window.requestAnimationFrame(() => commentInputRef.current?.focus());
+    return () => window.cancelAnimationFrame(frame);
+  }, [location.state, post]);
   if (!post && !error)
     return (
       <PostPage onClose={closePage} footer={<CommentComposerSkeleton />}>
@@ -172,7 +183,9 @@ export function PostDetailPage() {
             className="comment-form"
             onSubmit={async (event: FormEvent<HTMLFormElement>) => {
               event.preventDefault();
+              if (commentSending) return;
               setCommentError("");
+              setCommentSending(true);
               const form = event.currentTarget;
               const body = new FormData(form).get("body");
               try {
@@ -182,16 +195,27 @@ export function PostDetailPage() {
                 });
                 setPost((current) => (current ? { ...current, comments: [...current.comments, comment] } : current));
                 form.reset();
+                showToast("コメントを送信しました");
               } catch (reason) {
                 setCommentError((reason as Error).message);
+              } finally {
+                setCommentSending(false);
               }
             }}
           >
             <span className="comment-composer-avatar" aria-hidden>
               {currentUser.avatarUrl ? <img src={currentUser.avatarUrl} alt="" /> : currentUser.displayName.slice(0, 1)}
             </span>
-            <input name="body" aria-label="コメント" placeholder="コメントを書く" maxLength={1000} required />
-            <button type="submit" aria-label="コメントを送信">
+            <input
+              ref={commentInputRef}
+              name="body"
+              aria-label="この投稿へのコメント"
+              placeholder="この投稿にコメント"
+              maxLength={1000}
+              required
+              disabled={commentSending}
+            />
+            <button type="submit" aria-label={commentSending ? "コメントを送信中" : "コメントを送信"} disabled={commentSending}>
               <Send aria-hidden />
             </button>
           </form>

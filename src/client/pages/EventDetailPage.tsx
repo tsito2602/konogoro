@@ -67,6 +67,7 @@ export function EventDetailPage() {
       </>
     );
   if (!detail) return null;
+  const description = detail.description.trim();
   return (
     <>
       <PageHeader
@@ -102,6 +103,12 @@ export function EventDetailPage() {
           </div>
         </section>
         <section className="event-post-feed" aria-label="イベントの投稿">
+          {description && (
+            <section className="event-memo" aria-labelledby="event-memo-title">
+              <h3 id="event-memo-title">メモ</h3>
+              <p>{description}</p>
+            </section>
+          )}
           {detail.posts.length === 0 && (
             <EmptyState
               title="まだ投稿がありません"

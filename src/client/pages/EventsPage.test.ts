@@ -1,6 +1,9 @@
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 import type { EventSummary } from "../../shared/types";
-import { filterEvents, groupEvents, type EventFilters } from "./EventsPage";
+import { EventCard, filterEvents, groupEvents, type EventFilters } from "./EventsPage";
 
 const event = (
   id: string,
@@ -97,5 +100,22 @@ describe("event groups", () => {
 
   it("該当するイベントがない区切りは表示対象から外す", () => {
     expect(groupEvents([events[3]], "2026-09-02").map(({ title }) => title)).toEqual(["これまで"]);
+  });
+});
+
+describe("event card", () => {
+  it("イベントのメモをカードに表示する", () => {
+    const html = renderToStaticMarkup(
+      createElement(MemoryRouter, null, createElement(EventCard, { event: events[0] })),
+    );
+    expect(html).toContain('class="event-card-description"');
+    expect(html).toContain("京都の思い出");
+  });
+
+  it("メモが空ならメモ用の領域を表示しない", () => {
+    const html = renderToStaticMarkup(
+      createElement(MemoryRouter, null, createElement(EventCard, { event: event("empty", "日常", null, null) })),
+    );
+    expect(html).not.toContain("event-card-description");
   });
 });

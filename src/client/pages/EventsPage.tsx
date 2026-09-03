@@ -88,21 +88,7 @@ export function EventsPage() {
               {group.title}
             </h2>
             {group.events.map((event) => (
-              <Link
-                className={`event-card${event.coverUrl ? "" : " no-cover"}`}
-                to={`/events/${event.id}`}
-                key={event.id}
-                style={event.coverUrl ? { backgroundImage: `url(${event.coverUrl})` } : undefined}
-              >
-                <div className="event-card-badges">
-                  {eventStatusLabel(event.startDate, event.endDate)}
-                  <span className="event-media-count">{mediaCounts(event.photoCount, event.videoCount)}</span>
-                </div>
-                <div className="event-card-copy">
-                  <h3>{event.title}</h3>
-                  <p>{eventDate(event.startDate, event.endDate)}</p>
-                </div>
-              </Link>
+              <EventCard event={event} key={event.id} />
             ))}
           </section>
         ))}
@@ -201,6 +187,27 @@ export function EventsPage() {
         </div>
       )}
     </>
+  );
+}
+
+export function EventCard({ event }: { event: EventSummary }) {
+  const description = event.description.trim();
+  return (
+    <Link
+      className={`event-card${event.coverUrl ? "" : " no-cover"}`}
+      to={`/events/${event.id}`}
+      style={event.coverUrl ? { backgroundImage: `url(${event.coverUrl})` } : undefined}
+    >
+      <div className="event-card-badges">
+        {eventStatusLabel(event.startDate, event.endDate)}
+        <span className="event-media-count">{mediaCounts(event.photoCount, event.videoCount)}</span>
+      </div>
+      <div className="event-card-copy">
+        <h3>{event.title}</h3>
+        <p>{eventDate(event.startDate, event.endDate)}</p>
+        {description && <p className="event-card-description">{description}</p>}
+      </div>
+    </Link>
   );
 }
 

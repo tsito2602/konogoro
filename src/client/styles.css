@@ -1517,6 +1517,7 @@ a.icon-button {
 .event-card-copy {
   position: relative;
   z-index: 1;
+  width: 100%;
   padding: 20px;
 }
 .event-card-copy p {
@@ -1526,9 +1527,23 @@ a.icon-button {
 }
 .event-card-copy h3 {
   margin: 0 0 6px;
+  display: -webkit-box;
+  overflow: hidden;
   font-size: 24px;
   line-height: 1.15;
   letter-spacing: -0.02em;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.event-card-copy .event-card-description {
+  margin-top: 8px;
+  display: -webkit-box;
+  overflow: hidden;
+  color: rgba(255, 255, 255, 0.94);
+  line-height: 1.45;
+  white-space: pre-line;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .event-cover {
@@ -1587,6 +1602,23 @@ a.icon-button {
   overflow: hidden;
   border-radius: 18px 18px 0 0;
   background: var(--surface);
+}
+.event-memo {
+  padding: 22px 16px 20px;
+  border-bottom: 1px solid var(--separator);
+}
+.event-memo h3 {
+  margin: 0 0 8px;
+  color: var(--ash);
+  font-size: 13px;
+  font-weight: 700;
+}
+.event-memo p {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
 }
 .form-page {
   padding: 24px 16px 40px;
@@ -3137,6 +3169,9 @@ textarea:focus {
 }
 
 @media (max-width: 390px) {
+  .event-card-copy .event-card-description {
+    -webkit-line-clamp: 1;
+  }
   .date-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;

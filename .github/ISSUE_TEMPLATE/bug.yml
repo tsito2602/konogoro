@@ -1,6 +1,8 @@
 name: 不具合報告
 description: 期待どおりに動かない・表示されない問題を報告する
 title: "[Bug] "
+labels:
+  - "bug"
 body:
   - type: markdown
     attributes:

@@ -15,12 +15,18 @@ describe("canAccessPath", () => {
     },
   );
 
-  it.each(["/", "/events", "/events/event-1", "/posts/post-1", "/posts/post-1/media/media-1", "/settings", "/family"])(
-    "viewerの閲覧ルート%sを許可する",
-    (pathname) => {
-      expect(canAccessPath(viewer, pathname)).toBe(true);
-    },
-  );
+  it.each([
+    "/",
+    "/unread",
+    "/events",
+    "/events/event-1",
+    "/posts/post-1",
+    "/posts/post-1/media/media-1",
+    "/settings",
+    "/family",
+  ])("viewerの閲覧ルート%sを許可する", (pathname) => {
+    expect(canAccessPath(viewer, pathname)).toBe(true);
+  });
 
   it("uploaderは投稿画面とイベント管理画面を利用できる", () => {
     expect(canAccessPath(uploader, "/posts/new")).toBe(true);
@@ -47,6 +53,12 @@ describe("LoginScreen", () => {
     const html = renderToStaticMarkup(createElement(LoginScreen, { returnTo: "/posts/post-1?from=line" }));
 
     expect(html).toContain('href="/api/auth/line?returnTo=%2Fposts%2Fpost-1%3Ffrom%3Dline"');
+  });
+
+  it("LINE通知から開いた新着閲覧画面へログイン後に戻れる", () => {
+    const html = renderToStaticMarkup(createElement(LoginScreen, { returnTo: "/unread" }));
+
+    expect(html).toContain('href="/api/auth/line?returnTo=%2Funread"');
   });
 });
 

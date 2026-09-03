@@ -1,4 +1,17 @@
-import { Bell, BellOff, Check, ChevronRight, LogOut, Monitor, Moon, Sun, Users, X } from "lucide-react";
+import {
+  Bell,
+  BellOff,
+  BookOpen,
+  Check,
+  ChevronRight,
+  LogOut,
+  Monitor,
+  Moon,
+  Smartphone,
+  Sun,
+  Users,
+  X,
+} from "lucide-react";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import packageInfo from "../../../package.json";
@@ -7,6 +20,7 @@ import { api } from "../api";
 import { ErrorState } from "../components/AsyncState";
 import { PageHeader } from "../components/PageHeader";
 import { PageSkeleton } from "../components/PageSkeleton";
+import { openInstallGuide, openOnboardingGuide } from "../components/PwaGuide";
 import { useToast } from "../components/Toast";
 import { getThemePreference, setThemePreference, type ThemePreference } from "../theme";
 
@@ -272,6 +286,28 @@ export function SettingsPage() {
                   ))}
                 </div>
               </fieldset>
+            </section>
+
+            <section className="settings-section">
+              <h2>使い方</h2>
+              <div className="settings-card">
+                <button className="settings-menu-row" type="button" onClick={openOnboardingGuide}>
+                  <BookOpen aria-hidden />
+                  <span>
+                    <strong>このごろの使い方</strong>
+                    <small>初回ガイドをもう一度見る</small>
+                  </span>
+                  <ChevronRight aria-hidden />
+                </button>
+                <button className="settings-menu-row bordered" type="button" onClick={openInstallGuide}>
+                  <Smartphone aria-hidden />
+                  <span>
+                    <strong>ホーム画面に追加</strong>
+                    <small>この端末に合った手順を見る</small>
+                  </span>
+                  <ChevronRight aria-hidden />
+                </button>
+              </div>
             </section>
 
             {user.role === "owner" && (

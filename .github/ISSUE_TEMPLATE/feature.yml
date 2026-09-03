@@ -1,6 +1,8 @@
 name: 機能・改善提案
 description: 新しい機能や、既存画面・操作の改善を提案する
 title: "[Feature] "
+labels:
+  - "enhancement"
 body:
   - type: markdown
     attributes:

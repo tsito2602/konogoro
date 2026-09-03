@@ -40,6 +40,7 @@ export function EventsPage() {
     Boolean,
   ).length;
   const invalidRange = Boolean(draftFilters.from && draftFilters.to && draftFilters.from > draftFilters.to);
+  const eventGroups = filteredEvents ? groupEvents(filteredEvents) : [];
   const openFilters = () => {
     setDraftFilters(filters);
     setFilterClosing(false);
@@ -81,20 +82,29 @@ export function EventsPage() {
             }
           />
         )}
-        {filteredEvents?.map((event) => (
-          <Link
-            className={`event-card${event.coverUrl ? "" : " no-cover"}`}
-            to={`/events/${event.id}`}
-            key={event.id}
-            style={event.coverUrl ? { backgroundImage: `url(${event.coverUrl})` } : undefined}
-          >
-            <div className="event-card-copy">
-              {eventStatusLabel(event.startDate, event.endDate)}
-              <p>{eventDate(event.startDate, event.endDate)}</p>
-              <h2>{event.title}</h2>
-              <span>{mediaCounts(event.photoCount, event.videoCount)}</span>
-            </div>
-          </Link>
+        {eventGroups.map((group) => (
+          <section className="event-list-section" aria-labelledby={`event-list-${group.key}`} key={group.key}>
+            <h2 className="event-list-section-title" id={`event-list-${group.key}`}>
+              {group.title}
+            </h2>
+            {group.events.map((event) => (
+              <Link
+                className={`event-card${event.coverUrl ? "" : " no-cover"}`}
+                to={`/events/${event.id}`}
+                key={event.id}
+                style={event.coverUrl ? { backgroundImage: `url(${event.coverUrl})` } : undefined}
+              >
+                <div className="event-card-badges">
+                  {eventStatusLabel(event.startDate, event.endDate)}
+                  <span className="event-media-count">{mediaCounts(event.photoCount, event.videoCount)}</span>
+                </div>
+                <div className="event-card-copy">
+                  <h3>{event.title}</h3>
+                  <p>{eventDate(event.startDate, event.endDate)}</p>
+                </div>
+              </Link>
+            ))}
+          </section>
         ))}
       </main>
       {filterOpen && (
@@ -208,6 +218,24 @@ export function filterEvents(events: EventSummary[], filters: EventFilters, toda
     }
     return true;
   });
+}
+
+export function groupEvents(events: EventSummary[], today?: string) {
+  const groups = {
+    current: [] as EventSummary[],
+    undated: [] as EventSummary[],
+    past: [] as EventSummary[],
+  };
+  events.forEach((event) => {
+    const timing = eventTiming(event.startDate, event.endDate, today);
+    if (timing === "ongoing" || timing === "upcoming") groups.current.push(event);
+    else groups[timing].push(event);
+  });
+  return [
+    { key: "current", title: "進行中・これから", events: groups.current },
+    { key: "undated", title: "日付未定", events: groups.undated },
+    { key: "past", title: "これまで", events: groups.past },
+  ].filter((group) => group.events.length > 0);
 }
 
 function mediaCounts(photos: number, videos: number): string {

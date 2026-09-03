@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { EventSummary } from "../../shared/types";
-import { filterEvents, type EventFilters } from "./EventsPage";
+import { filterEvents, groupEvents, type EventFilters } from "./EventsPage";
 
 const event = (
   id: string,
@@ -78,5 +78,24 @@ describe("event filters", () => {
       ).map(({ id }) => id),
     ).toEqual(["ongoing"]);
     expect(filterEvents(events, filters({ keyword: "京都", status: "past" }), "2026-09-02")).toEqual([]);
+  });
+});
+
+describe("event groups", () => {
+  it("進行中と予定、日付未定、終了済みに分けて元の順番を保つ", () => {
+    expect(
+      groupEvents(events, "2026-09-02").map((group) => ({
+        title: group.title,
+        ids: group.events.map(({ id }) => id),
+      })),
+    ).toEqual([
+      { title: "進行中・これから", ids: ["ongoing", "upcoming"] },
+      { title: "日付未定", ids: ["undated"] },
+      { title: "これまで", ids: ["past"] },
+    ]);
+  });
+
+  it("該当するイベントがない区切りは表示対象から外す", () => {
+    expect(groupEvents([events[3]], "2026-09-02").map(({ title }) => title)).toEqual(["これまで"]);
   });
 });

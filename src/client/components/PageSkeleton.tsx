@@ -66,6 +66,7 @@ function skeletonContent(variant: SkeletonVariant) {
   if (variant === "events")
     return (
       <div className="skeleton-event-list">
+        <span className="skeleton-line short skeleton-event-section-title" />
         {Array.from({ length: 4 }, (_, index) => (
           <div className="skeleton-event-card" key={index}>
             <span className="skeleton-line short" />

@@ -587,6 +587,9 @@ a.icon-button {
   animation: none;
   background: color-mix(in srgb, var(--surface) 42%, transparent);
 }
+.skeleton-event-section-title {
+  margin: 4px 4px -2px;
+}
 .skeleton-album-picker {
   height: 106px;
   padding: 18px 14px;
@@ -1115,8 +1118,21 @@ a.icon-button {
 
 .event-list {
   padding: 16px;
+}
+.event-list-section {
+  margin: 0 0 24px;
   display: grid;
   gap: 12px;
+}
+.event-list-section:last-child {
+  margin-bottom: 0;
+}
+.event-list-section-title {
+  margin: 4px 4px -2px;
+  color: var(--ash);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.01em;
 }
 .event-filter-button {
   position: relative;
@@ -1470,35 +1486,46 @@ a.icon-button {
 .event-cover.no-cover {
   background: linear-gradient(145deg, #333, #111);
 }
+.event-card-badges {
+  position: absolute;
+  z-index: 2;
+  inset: 12px 12px auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.event-card-badges .event-status,
+.event-media-count {
+  width: fit-content;
+  padding: 6px 9px;
+  display: block;
+  border-radius: var(--pill);
+  color: #fff;
+  background: rgba(0, 0, 0, 0.52);
+  backdrop-filter: blur(8px);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+}
+.event-card-badges .event-status.ongoing {
+  color: var(--accent-contrast);
+  background: var(--accent);
+}
+.event-media-count {
+  margin-left: auto;
+}
 .event-card-copy {
   position: relative;
   z-index: 1;
   padding: 20px;
 }
-.event-card-copy p,
-.event-card-copy span {
+.event-card-copy p {
   margin: 0;
   font-size: 13px;
   color: rgba(255, 255, 255, 0.8);
 }
-.event-card-copy .event-status {
-  width: fit-content;
-  margin-bottom: 7px;
-  padding: 5px 9px;
-  display: block;
-  border-radius: var(--pill);
-  color: var(--accent-contrast);
-  background: var(--accent);
-  font-size: 12px;
-  font-weight: 700;
-  line-height: 1;
-}
-.event-card-copy .event-status.upcoming {
-  color: #fff;
-  background: rgba(0, 0, 0, 0.52);
-}
-.event-card-copy h2 {
-  margin: 4px 0 8px;
+.event-card-copy h3 {
+  margin: 0 0 6px;
   font-size: 24px;
   line-height: 1.15;
   letter-spacing: -0.02em;
@@ -3125,8 +3152,17 @@ textarea:focus {
 
 @media (min-width: 720px) {
   .event-list {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
     max-width: 1080px;
+  }
+  .event-list-section,
+  .event-list > .page-skeleton .skeleton-event-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .event-list-section-title {
+    grid-column: 1 / -1;
+  }
+  .skeleton-event-section-title {
+    grid-column: 1 / -1;
   }
   .page-content {
     max-width: 760px;

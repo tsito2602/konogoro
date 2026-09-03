@@ -19,3 +19,7 @@ export function canManageEvent(user: User): boolean {
 export function canInviteFamily(user: User): boolean {
   return user.role === "owner";
 }
+
+export function canViewMemberLastViewed(user: User): boolean {
+  return user.role === "owner";
+}

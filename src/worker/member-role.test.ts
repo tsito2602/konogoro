@@ -30,7 +30,7 @@ function ownerEnv(
         }),
       }),
     } as unknown as D1Database,
-  } as Cloudflare.Env;
+  } as unknown as Cloudflare.Env;
 }
 
 describe("member role API", () => {
@@ -112,7 +112,7 @@ function memberDeletionEnv(
         return [];
       },
     } as unknown as D1Database,
-  } as Cloudflare.Env;
+  } as unknown as Cloudflare.Env;
 }
 
 describe("member deletion API", () => {

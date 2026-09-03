@@ -27,7 +27,7 @@ function ownerEnv(onBatch: (statements: Array<{ sql: string; values: unknown[] }
         return [];
       },
     } as unknown as D1Database,
-  } as Cloudflare.Env;
+  } as unknown as Cloudflare.Env;
 }
 
 describe("投稿メディアの並び順API", () => {

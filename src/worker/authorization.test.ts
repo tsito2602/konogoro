@@ -11,7 +11,7 @@ function viewerEnv(): Cloudflare.Env {
         bind: () => ({ first: async () => viewer }),
       }),
     } as unknown as D1Database,
-  } as Cloudflare.Env;
+  } as unknown as Cloudflare.Env;
 }
 
 describe("viewer API authorization", () => {

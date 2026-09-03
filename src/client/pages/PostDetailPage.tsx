@@ -347,7 +347,9 @@ function PostPage({
 
 function formatPostDate(value: string | null): string {
   if (!value) return "日付なし";
-  return new Intl.DateTimeFormat("ja-JP", { month: "short", day: "numeric" }).format(new Date(value));
+  return new Intl.DateTimeFormat("ja-JP", { month: "short", day: "numeric", timeZone: "Asia/Tokyo" }).format(
+    new Date(value),
+  );
 }
 
 function CommentRow({ comment, onDelete }: { comment: Comment; onDelete: () => Promise<void> }) {

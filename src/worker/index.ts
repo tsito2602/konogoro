@@ -17,7 +17,14 @@ import {
   profileInputSchema,
 } from "../shared/schemas";
 import type { EventCoverMedia, EventDetail, EventSummary, UploadTarget } from "../shared/types";
-import { canCreatePost, canDeleteComment, canDeletePost, canInviteFamily, canManageEvent } from "../shared/permissions";
+import {
+  canCreatePost,
+  canDeleteComment,
+  canDeletePost,
+  canInviteFamily,
+  canManageEvent,
+  canViewMemberLastViewed,
+} from "../shared/permissions";
 import type { User } from "../shared/types";
 import {
   createSession,
@@ -615,22 +622,25 @@ app.get("/activity", async (c) => {
     body: item.body,
     thumbnailUrl: item.media_id ? `/api/media/${item.media_id}/content?variant=thumbnail` : null,
   }));
-  const memberResult = await c.env.DB.prepare(
-    `
-    SELECT u.id, u.display_name, u.avatar_url, MAX(v.last_viewed_at) AS last_viewed_at
-      FROM users u
-      LEFT JOIN view_histories v ON v.user_id = u.id
-     WHERE u.is_active = 1
-     GROUP BY u.id, u.display_name, u.avatar_url, u.created_at
-     ORDER BY last_viewed_at IS NULL, last_viewed_at DESC, u.created_at, u.id
-  `,
-  ).all<MemberLastViewedRow>();
-  const memberLastViewed = memberResult.results.map((member) => ({
-    id: member.id,
-    displayName: member.display_name,
-    avatarUrl: member.avatar_url,
-    lastViewedAt: member.last_viewed_at,
-  }));
+  const memberLastViewed = canViewMemberLastViewed(c.var.currentUser)
+    ? (
+        await c.env.DB.prepare(
+          `
+          SELECT u.id, u.display_name, u.avatar_url, MAX(v.last_viewed_at) AS last_viewed_at
+            FROM users u
+            LEFT JOIN view_histories v ON v.user_id = u.id
+           WHERE u.is_active = 1
+           GROUP BY u.id, u.display_name, u.avatar_url, u.created_at
+           ORDER BY last_viewed_at IS NULL, last_viewed_at DESC, u.created_at, u.id
+        `,
+        ).all<MemberLastViewedRow>()
+      ).results.map((member) => ({
+        id: member.id,
+        displayName: member.display_name,
+        avatarUrl: member.avatar_url,
+        lastViewedAt: member.last_viewed_at,
+      }))
+    : [];
   const last = rows.at(-1);
   return c.json({
     activities,

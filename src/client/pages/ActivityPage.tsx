@@ -2,7 +2,9 @@ import { MessageCircle, Send } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import type { Activity, MemberLastViewed } from "../../shared/types";
+import { canViewMemberLastViewed } from "../../shared/permissions";
 import { api } from "../api";
+import { useCurrentUser } from "../components/AppLayout";
 import { EmptyState, ErrorState } from "../components/AsyncState";
 import { PageHeader } from "../components/PageHeader";
 import { PageSkeleton } from "../components/PageSkeleton";
@@ -10,6 +12,7 @@ import { PageSkeleton } from "../components/PageSkeleton";
 type ActivityResponse = { activities: Activity[]; memberLastViewed: MemberLastViewed[]; nextCursor: string | null };
 
 export function ActivityPage() {
+  const currentUser = useCurrentUser();
   const postPageState = { postPage: true };
   const [activities, setActivities] = useState<Activity[] | null>(null);
   const [memberLastViewed, setMemberLastViewed] = useState<MemberLastViewed[]>([]);
@@ -79,7 +82,7 @@ export function ActivityPage() {
       <main className="activity-page page-content">
         {!activities && !error && <PageSkeleton variant="activity" />}
         {error && <ErrorState message={error} retry={load} />}
-        {activities && <MemberLastViewedList members={memberLastViewed} />}
+        {activities && canViewMemberLastViewed(currentUser) && <MemberLastViewedList members={memberLastViewed} />}
         {activities?.length === 0 && (
           <EmptyState title="まだ近況はありません" body="投稿やコメントがここに表示されます。" />
         )}

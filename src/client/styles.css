@@ -400,7 +400,8 @@ a.icon-button {
   margin: 0 auto;
 }
 .feed {
-  background: var(--surface);
+  padding: 0 12px 16px;
+  background: var(--frost);
 }
 .state-message {
   min-height: 40vh;
@@ -489,6 +490,12 @@ a.icon-button {
 .skeleton-post {
   margin-bottom: 8px;
   background: var(--surface);
+}
+.page-skeleton.timeline .skeleton-post {
+  overflow: hidden;
+  margin-bottom: 14px;
+  border: 1px solid var(--separator);
+  border-radius: var(--radius-card);
 }
 .skeleton-post-head {
   min-height: 64px;
@@ -759,10 +766,10 @@ a.icon-button {
   position: sticky;
   z-index: 10;
   top: 56px;
-  margin: 0;
-  padding: 18px 14px 9px;
+  margin: 0 -12px 12px;
+  padding: 18px 16px 9px;
   color: var(--ash);
-  background: var(--surface);
+  background: var(--frost);
   font-size: 13px;
   font-weight: 650;
   letter-spacing: 0.01em;
@@ -771,6 +778,13 @@ a.icon-button {
 .post-card {
   padding: 0 0 15px;
   border-bottom: 8px solid var(--surface-subtle);
+}
+.feed .post-card {
+  overflow: hidden;
+  margin-bottom: 14px;
+  border: 1px solid var(--separator);
+  border-radius: var(--radius-card);
+  background: var(--surface);
 }
 .post-head {
   min-height: 54px;
@@ -3119,8 +3133,6 @@ textarea:focus {
   }
   .feed {
     margin-top: 20px;
-    border-radius: var(--radius);
-    overflow: clip;
   }
   .post-page-layer .detail-media-grid {
     border-radius: 0;
@@ -3136,6 +3148,13 @@ textarea:focus {
     margin-bottom: 8px;
     border: 1px solid var(--separator);
     border-radius: var(--radius);
+  }
+  .feed .post-card {
+    margin-bottom: 14px;
+    border-radius: var(--radius-card);
+  }
+  .feed .media-grid {
+    border-radius: 0;
   }
   .post-copy {
     padding-right: 14px;

@@ -755,6 +755,16 @@ a.icon-button {
   line-height: 1.5;
 }
 
+.timeline-month-heading {
+  margin: 0;
+  padding: 18px 14px 9px;
+  color: var(--ash);
+  background: var(--surface);
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+}
+
 .post-card {
   padding: 0 0 15px;
   border-bottom: 8px solid var(--surface-subtle);

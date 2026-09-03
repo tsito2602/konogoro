@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import type { Post } from "../../shared/types";
 import { api } from "../api";
@@ -71,9 +71,17 @@ export function TimelinePage() {
             }
           />
         )}
-        {posts?.map((post) => (
-          <PostCard post={post} key={post.id} />
-        ))}
+        {posts?.map((post, index) => {
+          const month = formatTimelineMonth(post.capturedAt ?? post.publishedAt);
+          const previous = posts[index - 1];
+          const previousMonth = previous ? formatTimelineMonth(previous.capturedAt ?? previous.publishedAt) : null;
+          return (
+            <Fragment key={post.id}>
+              {month !== previousMonth && <h2 className="timeline-month-heading">{month}</h2>}
+              <PostCard post={post} />
+            </Fragment>
+          );
+        })}
         {posts && nextCursor && (
           <div className="form-page">
             {moreError && (
@@ -101,4 +109,13 @@ type TimelineResponse = { posts: Post[]; nextCursor: string | null };
 export function appendUniquePosts(current: Post[], incoming: Post[]): Post[] {
   const ids = new Set(current.map((post) => post.id));
   return [...current, ...incoming.filter((post) => !ids.has(post.id))];
+}
+
+export function formatTimelineMonth(value: string | null): string {
+  if (!value) return "日付なし";
+  return new Intl.DateTimeFormat("ja-JP", {
+    year: "numeric",
+    month: "long",
+    timeZone: "Asia/Tokyo",
+  }).format(new Date(value));
 }

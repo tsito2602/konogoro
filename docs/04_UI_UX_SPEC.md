@@ -55,6 +55,8 @@ Bottom Navigationのタブを押して画面を切り替えたときは、遷移
 
 Postは複数Mediaのまとまり。
 
+撮影日時を基準に、最初のPostと月が変わる位置へ`2026年9月`形式の年月見出しを表示する。撮影日時がない場合は投稿日を使い、どちらもない場合は「日付なし」とする。同じ月のPostが続く間は見出しを繰り返さない。
+
 現在のユーザーがまだ見ていないPostは、Media Grid上へ「未閲覧」バッジを表示する。Post Cardが自動既読になったらバッジを消す。
 
 Media Gridの上には、小さなプロフィールアイコンと投稿者名を横並びにし、その下の独立した行へEvent titleとScene titleを表示する。投稿者アイコンは投稿者名の文字と同程度の大きさに抑え、Event titleとScene titleにはアクセントカラーを使わず、投稿者と投稿の分類を混同させない。TimelineではEvent titleとScene titleを`Event title ＞ Scene title`の順に表示し、Event titleにはカレンダーアイコンを付ける。EventとSceneのどちらもないPostでは分類の代替文言を表示しない。

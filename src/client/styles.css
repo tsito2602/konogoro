@@ -928,6 +928,7 @@ a.icon-button {
   background: transparent;
   font-size: 13px;
   font-weight: 400;
+  white-space: nowrap;
 }
 .post-engagement .seen-icon {
   width: 24px;

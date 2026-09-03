@@ -139,6 +139,7 @@ describe("PostCard", () => {
     expect(html).toContain("最新のコメント");
     expect(html).not.toContain("最初のコメント");
     expect(html).toContain('aria-label="コメント2件を開く"');
+    expect(html).toContain(">コメント2件</span>");
     expect(html).toContain("ほかのコメントを見る");
     expect(html).not.toContain("ほかのコメント1件を見る");
   });
@@ -161,16 +162,18 @@ describe("PostCard", () => {
       </MemoryRouter>,
     );
     expect(html).toContain('aria-label="コメント1件を開く"');
+    expect(html).toContain(">コメント1件</span>");
     expect(html).not.toContain("ほかのコメントを見る");
   });
 
-  it("コメントがないときもコメント数0を表示する", () => {
+  it("コメントがないときはコメントを書く導線を表示する", () => {
     const html = renderToStaticMarkup(
       <MemoryRouter>
         <PostCard post={post} />
       </MemoryRouter>,
     );
-    expect(html).toContain('aria-label="コメント0件を開く"');
+    expect(html).toContain('aria-label="コメントを書く"');
+    expect(html).toContain(">コメントを書く</span>");
     expect(html).toContain('aria-label="見た人 0人"');
   });
 

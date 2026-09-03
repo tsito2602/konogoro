@@ -9,6 +9,7 @@ export function PostCard({ post, showContext = true }: { post: Post; showContext
   const mediaViewerState = { returnToPrevious: true };
   const { ref: seenRef, viewed } = useSeenTracking(post.id, post.viewedByCurrentUser);
   const latestComment = post.comments.at(-1);
+  const commentLinkLabel = post.comments.length === 0 ? "コメントを書く" : `コメント${post.comments.length}件`;
   const date = post.capturedAt ?? post.publishedAt;
   const dateLabel = post.capturedAt ? "撮影日" : "投稿日";
   return (
@@ -64,10 +65,10 @@ export function PostCard({ post, showContext = true }: { post: Post; showContext
             className="comment-count-link"
             to={`/posts/${post.id}`}
             state={postPageState}
-            aria-label={`コメント${post.comments.length}件を開く`}
+            aria-label={post.comments.length === 0 ? commentLinkLabel : `${commentLinkLabel}を開く`}
           >
             <MessageCircle aria-hidden />
-            <span>{post.comments.length}</span>
+            <span>{commentLinkLabel}</span>
           </Link>
           <time className="post-date" dateTime={date ?? undefined} aria-label={`${dateLabel} ${formatPostDate(date)}`}>
             {post.capturedAt ? <Camera aria-hidden /> : <Upload aria-hidden />}

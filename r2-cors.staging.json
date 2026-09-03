@@ -1,0 +1,13 @@
+{
+  "rules": [
+    {
+      "allowed": {
+        "origins": ["https://konogoro-staging.tsito-apps.workers.dev"],
+        "methods": ["GET", "HEAD", "PUT"],
+        "headers": ["Content-Type", "Range"]
+      },
+      "exposeHeaders": ["Accept-Ranges", "Content-Length", "Content-Range", "Content-Type", "ETag"],
+      "maxAgeSeconds": 3600
+    }
+  ]
+}

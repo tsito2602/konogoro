@@ -165,6 +165,7 @@ LINE公式アカウントはLINE Login Channelへリンクする。Messaging API
 | [UI / UX Spec](docs/04_UI_UX_SPEC.md) | 画面構成と操作仕様 |
 | [Design Guide](docs/05_DESIGN_GUIDE.md) | モバイル・配色・テーマ方針 |
 | [Operations](docs/08_OPERATIONS.md) | 監視、D1復旧、バックアップ |
+| [Staging](docs/09_STAGING.md) | 複数PRをまとめて実機確認する検証環境 |
 
 <details>
 <summary><strong>現在の上限</strong></summary>

@@ -4,10 +4,23 @@ import type { Post } from "../../shared/types";
 import { useSeenTracking } from "../hooks/useSeenTracking";
 import { SeenBy } from "./SeenBy";
 
-export function PostCard({ post, showContext = true }: { post: Post; showContext?: boolean }) {
+export function PostCard({
+  post,
+  showContext = true,
+  onViewed,
+  onViewError,
+}: {
+  post: Post;
+  showContext?: boolean;
+  onViewed?: () => void;
+  onViewError?: (message: string) => void;
+}) {
   const postPageState = { postPage: true };
   const mediaViewerState = { returnToPrevious: true };
-  const { ref: seenRef, viewed } = useSeenTracking(post.id, post.viewedByCurrentUser);
+  const { ref: seenRef, viewed } = useSeenTracking(post.id, post.viewedByCurrentUser, {
+    onViewed,
+    onError: onViewError,
+  });
   const latestComment = post.comments.at(-1);
   const commentLinkLabel = post.comments.length === 0 ? "コメントを書く" : `コメント${post.comments.length}件`;
   const date = post.capturedAt ?? post.publishedAt;

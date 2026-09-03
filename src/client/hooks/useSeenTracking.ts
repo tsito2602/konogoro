@@ -1,9 +1,19 @@
 import { useEffect, useRef, useState } from "react";
 import { api } from "../api";
 
-export function useSeenTracking(postId: string, initiallyViewed = false) {
+type SeenTrackingCallbacks = {
+  onViewed?: () => void;
+  onError?: (message: string) => void;
+};
+
+export function useSeenTracking(postId: string, initiallyViewed = false, callbacks: SeenTrackingCallbacks = {}) {
   const ref = useRef<HTMLElement>(null);
   const [viewed, setViewed] = useState(initiallyViewed);
+  const callbacksRef = useRef(callbacks);
+
+  useEffect(() => {
+    callbacksRef.current = callbacks;
+  }, [callbacks]);
 
   useEffect(() => {
     const element = ref.current;
@@ -20,10 +30,17 @@ export function useSeenTracking(postId: string, initiallyViewed = false) {
             void markPostSeen(postId, sessionStorage)
               .then(() => {
                 setViewed(true);
+                callbacksRef.current.onViewed?.();
                 observer.disconnect();
               })
-              .catch(() => {
-                if (active) observer.observe(element);
+              .catch((reason: Error) => {
+                if (active && callbacksRef.current.onError) {
+                  callbacksRef.current.onError(reason.message);
+                  observer.disconnect();
+                } else if (active) {
+                  observer.unobserve(element);
+                  observer.observe(element);
+                }
               });
           }, 2000);
         } else if (timer) {

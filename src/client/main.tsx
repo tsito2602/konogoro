@@ -18,6 +18,7 @@ import { TimelinePage } from "./pages/TimelinePage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { initializeTheme } from "./theme";
 import "./styles.css";
+import "./accessibility.css";
 
 initializeTheme();
 

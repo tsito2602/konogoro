@@ -23,5 +23,7 @@ describe("staging deployment configuration", () => {
     expect(stagingWorkflow).toContain("wrangler.staging.jsonc");
     expect(stagingWorkflow).toContain("family-timeline-staging");
     expect(stagingWorkflow).toContain("family-timeline-media-staging");
+    expect(stagingWorkflow).not.toContain("r2 bucket list --json");
+    expect(stagingWorkflow).toContain("already exists, and you own it");
   });
 });

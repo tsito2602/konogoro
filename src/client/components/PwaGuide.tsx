@@ -1,16 +1,12 @@
 import { Check, ShieldCheck, Smartphone, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import type { CurrentUser } from "../../shared/types";
+import { installPromptStore } from "../install-prompt";
 
 export const OPEN_ONBOARDING_GUIDE_EVENT = "konogoro:open-onboarding-guide";
 export const OPEN_INSTALL_GUIDE_EVENT = "konogoro:open-install-guide";
 const ONBOARDING_SEEN_KEY = "konogoro:onboarding-seen:v1";
 const INSTALL_GUIDE_DISMISSED_KEY = "konogoro:install-guide-dismissed:v1";
-
-type BeforeInstallPromptEvent = Event & {
-  prompt: () => Promise<void>;
-  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
-};
 
 export type PwaEnvironment = "installed" | "ios-line" | "ios-browser" | "android-line" | "android-browser" | "other";
 
@@ -54,17 +50,13 @@ function isStandalone(): boolean {
 export function PwaGuide({ user, pathname }: { user: CurrentUser; pathname: string }) {
   const [welcomeOpen, setWelcomeOpen] = useState(() => user.role === "viewer" && !stored(ONBOARDING_SEEN_KEY));
   const [installOpen, setInstallOpen] = useState(false);
-  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const installPrompt = useSyncExternalStore(installPromptStore.subscribe, installPromptStore.getSnapshot, () => null);
   const [installed, setInstalled] = useState(isStandalone);
   const environment = useMemo(() => detectPwaEnvironment(navigator.userAgent, installed), [installed]);
 
   useEffect(() => {
     const showWelcome = () => setWelcomeOpen(true);
     const showInstall = () => setInstallOpen(true);
-    const captureInstallPrompt = (event: Event) => {
-      event.preventDefault();
-      setInstallPrompt(event as BeforeInstallPromptEvent);
-    };
     const markInstalled = () => {
       setInstalled(true);
       setInstallOpen(false);
@@ -72,12 +64,10 @@ export function PwaGuide({ user, pathname }: { user: CurrentUser; pathname: stri
     };
     window.addEventListener(OPEN_ONBOARDING_GUIDE_EVENT, showWelcome);
     window.addEventListener(OPEN_INSTALL_GUIDE_EVENT, showInstall);
-    window.addEventListener("beforeinstallprompt", captureInstallPrompt);
     window.addEventListener("appinstalled", markInstalled);
     return () => {
       window.removeEventListener(OPEN_ONBOARDING_GUIDE_EVENT, showWelcome);
       window.removeEventListener(OPEN_INSTALL_GUIDE_EVENT, showInstall);
-      window.removeEventListener("beforeinstallprompt", captureInstallPrompt);
       window.removeEventListener("appinstalled", markInstalled);
     };
   }, []);
@@ -108,11 +98,14 @@ export function PwaGuide({ user, pathname }: { user: CurrentUser; pathname: stri
 
   const requestInstall = async () => {
     if (!installPrompt) return;
-    await installPrompt.prompt();
-    const choice = await installPrompt.userChoice;
-    if (choice.outcome === "accepted") remember(INSTALL_GUIDE_DISMISSED_KEY);
-    setInstallPrompt(null);
-    setInstallOpen(false);
+    try {
+      await installPrompt.prompt();
+      const choice = await installPrompt.userChoice;
+      if (choice.outcome === "accepted") remember(INSTALL_GUIDE_DISMISSED_KEY);
+      setInstallOpen(false);
+    } finally {
+      installPromptStore.consume(installPrompt);
+    }
   };
 
   return (

@@ -50,3 +50,10 @@
   6. 必要な確認が完了したら、GitHubの自動削除によってマージ済みPRの作業ブランチが残っていないことを確認する。残っている場合だけ手動で削除する。
 - Cloudflare・Wranglerの追加調査や手動デプロイは、`wrangler.jsonc`、binding、migration、package script、デプロイ方式を変更するとき、自動デプロイが失敗したとき、または上位指示で必要なときだけ行う。
 - 作業ツリーに別作業の未コミット差分がある場合は混ぜず、対象変更用の一時worktreeで検証・コミット・pushする。
+
+## 検証環境
+
+- 複数PRをまとめて実機確認するときは、`docs/09_STAGING.md`に従って常設の`staging`ブランチへ対象ブランチを統合し、staging専用Cloudflare環境へデプロイする。
+- `staging`は統合確認専用とし、作業ブランチの派生元や`main`へのPRのheadには使わない。各作業ブランチは最新の`main`から作成し、元のPRを個別に`main`へマージする。
+- staging確認前は`staging`を最新の`main`と同じcommitへ更新し、対象ブランチを依存関係の順に統合する。本番反映後は再び最新の`main`と同じcommitへ戻す。
+- stagingには本番データを複製せず、個人情報を含む写真・動画・コメントを登録しない。stagingからLINE通知を送信しない。

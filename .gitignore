@@ -4,5 +4,6 @@ backups/
 .wrangler
 .dev.vars*
 worker-configuration.d.ts
+.wrangler.staging.generated.jsonc
 .DS_Store
 *.tsbuildinfo

@@ -1,0 +1,35 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "konogoro-staging",
+  "main": "src/worker/index.ts",
+  "compatibility_date": "2026-09-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"],
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "family-timeline-staging",
+      "database_id": "__STAGING_D1_DATABASE_ID__",
+      "migrations_dir": "migrations",
+    },
+  ],
+  "r2_buckets": [
+    {
+      "binding": "MEDIA",
+      "bucket_name": "family-timeline-media-staging",
+      "remote": true,
+    },
+  ],
+  "vars": {
+    "APP_ORIGIN": "https://konogoro-staging.tsito-apps.workers.dev",
+    "R2_ACCOUNT_ID": "__CLOUDFLARE_ACCOUNT_ID__",
+    "R2_BUCKET_NAME": "family-timeline-media-staging",
+  },
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1,
+  },
+}

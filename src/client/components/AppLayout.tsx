@@ -15,6 +15,11 @@ export function canAccessPath(user: CurrentUser, pathname: string): boolean {
   return true;
 }
 
+export function postCreatePath(pathname: string): string {
+  const eventMatch = pathname.match(/^\/events\/([^/]+)$/);
+  return eventMatch ? `/posts/new?event=${encodeURIComponent(eventMatch[1])}` : "/posts/new";
+}
+
 export function useCurrentUser(): CurrentUser {
   return useOutletContext<CurrentUser>();
 }
@@ -38,6 +43,8 @@ export function AppLayout() {
     setBackgroundSnapshot({ routeIdentity, content: routedContent });
   }
   const hideNavigation = viewerPattern.test(pathname);
+  const addPostPath = postCreatePath(pathname);
+  const addingToEvent = addPostPath !== "/posts/new";
   const hideAddButton =
     /^\/posts\/[^/]+$/.test(pathname) ||
     pathname === "/posts/new" ||
@@ -110,11 +117,11 @@ export function AppLayout() {
                     aria-label="追加メニューを閉じる"
                   />
                   <div className="add-menu" role="menu" aria-label="追加するものを選択">
-                    <Link to="/posts/new" role="menuitem" onClick={() => setAddMenuOpen(false)}>
+                    <Link to={addPostPath} role="menuitem" onClick={() => setAddMenuOpen(false)}>
                       <ImagePlus />
                       <span>
-                        <strong>写真・動画</strong>
-                        <small>思い出を投稿する</small>
+                        <strong>{addingToEvent ? "このイベントに写真・動画" : "写真・動画"}</strong>
+                        <small>{addingToEvent ? "表示中のイベントを選択して投稿" : "思い出を投稿する"}</small>
                       </span>
                     </Link>
                     <Link to="/events/new" role="menuitem" onClick={() => setAddMenuOpen(false)}>
@@ -135,11 +142,13 @@ export function AppLayout() {
                 aria-label={addMenuOpen ? "追加メニューを閉じる" : "追加メニューを開く"}
               >
                 <Plus />
+                <span className="floating-add-label">追加</span>
               </button>
             </>
           ) : (
-            <Link className="floating-add-button" to="/posts/new" aria-label="写真・動画を追加">
+            <Link className="floating-add-button" to={addPostPath} aria-label="写真・動画を追加">
               <Plus />
+              <span className="floating-add-label">追加</span>
             </Link>
           ))}
       </div>

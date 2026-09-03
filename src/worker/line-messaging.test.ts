@@ -23,9 +23,7 @@ describe("buildNotificationText", () => {
         videoCount: 1,
         appOrigin: "https://family.example.com",
       }),
-    ).toBe(
-      "新しい思い出が届きました。投稿1件（動画1本）\nまとめて見る：https://family.example.com/unread",
-    );
+    ).toBe("新しい思い出が届きました。投稿1件（動画1本）\nまとめて見る：https://family.example.com/unread");
   });
 
   it("mediaがない場合も投稿件数と新着閲覧リンクだけを表示する", () => {

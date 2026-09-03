@@ -144,6 +144,17 @@ created_by
 created_at
 ```
 
+## sessions
+
+LINE Login後のログイン状態を保持する。token本体はCookieだけに保存し、D1にはhashのみ保存する。有効期限はアプリ起動時の認証確認で最終利用から約90日へ更新する。
+
+```text
+token_hash
+user_id
+expires_at
+created_at
+```
+
 ## line_login_requests
 
 LINE認証を開始したブラウザとCallbackを受け取るブラウザが異なる場合に備え、認証要求と完了ユーザーを10分間保持する。

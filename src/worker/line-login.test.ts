@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { hashToken, safeReturnPath } from "./auth";
+import { hashToken, safeReturnPath, SESSION_MAX_AGE_SECONDS } from "./auth";
 import { app } from "./index";
 
 describe("LINE Login", () => {
@@ -47,5 +47,46 @@ describe("LINE Login", () => {
     [null, "/"],
   ])("ログイン後の遷移先を安全なアプリ内パスに限定する", (value, expected) => {
     expect(safeReturnPath(value)).toBe(expected);
+  });
+
+  it("アプリ起動時に有効なsessionとCookieを90日先へ更新する", async () => {
+    const statements: Array<{ sql: string; values: unknown[] }> = [];
+    const db = {
+      prepare: (sql: string) => {
+        const statement = {
+          values: [] as unknown[],
+          bind: (...values: unknown[]) => {
+            statement.values = values;
+            statements.push({ sql, values });
+            return statement;
+          },
+          first: async () => {
+            if (sql.includes("FROM sessions s")) {
+              return { id: "user-1", display_name: "母", role: "viewer", avatar_url: null };
+            }
+            return {
+              avatar_url: null,
+              line_user_id: "U123",
+              line_friend_enabled: 1,
+              notification_enabled: 1,
+            };
+          },
+          run: async () => ({ meta: { changes: 1 } }),
+        };
+        return statement;
+      },
+    } as unknown as D1Database;
+
+    const response = await app.request("/api/me", { headers: { Cookie: "family_session=session-token" } }, {
+      DB: db,
+      APP_ORIGIN: "https://example.com",
+      LINE_CHANNEL_ID: "line-channel-id",
+      LINE_CHANNEL_SECRET: "line-channel-secret",
+    } as unknown as Cloudflare.Env);
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Set-Cookie")).toContain("family_session=session-token");
+    expect(response.headers.get("Set-Cookie")).toContain(`Max-Age=${SESSION_MAX_AGE_SECONDS}`);
+    expect(statements.some(({ sql }) => sql.startsWith("UPDATE sessions SET expires_at"))).toBe(true);
   });
 });

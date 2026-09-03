@@ -34,7 +34,9 @@ import {
   hasLineConfig,
   pkceChallenge,
   randomToken,
+  refreshSession,
   safeReturnPath,
+  SESSION_MAX_AGE_SECONDS,
   type LineSecrets,
 } from "./auth";
 import { createPresignedDownloadUrl, createPresignedUploadUrl, hasUploadCredentials } from "./r2";
@@ -85,6 +87,16 @@ type MemberLastViewedRow = {
 type AppEnv = { Bindings: Bindings; Variables: { currentUser: User } };
 export const app = new Hono<AppEnv>().basePath("/api");
 
+function setSessionCookie(c: Context<AppEnv>, session: string): void {
+  setCookie(c, "family_session", session, {
+    httpOnly: true,
+    secure: true,
+    sameSite: "Lax",
+    maxAge: SESSION_MAX_AGE_SECONDS,
+    path: "/",
+  });
+}
+
 app.use("*", async (c, next) => {
   if (c.req.path === "/api/webhooks/line") {
     await next();
@@ -111,13 +123,7 @@ app.use("*", async (c, next) => {
       .first<{ completed_user_id: string }>();
     if (completedLogin) {
       const session = await createSession(c.env.DB, completedLogin.completed_user_id);
-      setCookie(c, "family_session", session, {
-        httpOnly: true,
-        secure: true,
-        sameSite: "Lax",
-        maxAge: 30 * 86400,
-        path: "/",
-      });
+      setSessionCookie(c, session);
       deleteCookie(c, "line_state", { path: "/" });
       deleteCookie(c, "line_return_to", { path: "/" });
       user = await getCurrentUser(c.env.DB, session, false);
@@ -166,6 +172,8 @@ app.post("/webhooks/line", async (c) => {
 });
 
 app.get("/me", async (c) => {
+  const session = getCookie(c, "family_session");
+  if (session && (await refreshSession(c.env.DB, session))) setSessionCookie(c, session);
   const profile = await c.env.DB.prepare(
     "SELECT avatar_url, line_user_id, line_friend_enabled, notification_enabled FROM users WHERE id = ?",
   )
@@ -409,13 +417,7 @@ app.get("/auth/line/callback", async (c) => {
 </html>`);
   }
   const session = await createSession(c.env.DB, user.id);
-  setCookie(c, "family_session", session, {
-    httpOnly: true,
-    secure: true,
-    sameSite: "Lax",
-    maxAge: 30 * 86400,
-    path: "/",
-  });
+  setSessionCookie(c, session);
   for (const name of ["line_state", "line_nonce", "line_verifier", "line_invite"])
     deleteCookie(c, name, { path: "/api/auth/line/callback" });
   deleteCookie(c, "line_state", { path: "/" });

@@ -6,7 +6,9 @@ import {
   hashToken,
   pkceChallenge,
   randomToken,
+  refreshSession,
   safeEqual,
+  SESSION_MAX_AGE_SECONDS,
 } from "./auth";
 
 describe("auth helpers", () => {
@@ -18,7 +20,7 @@ describe("auth helpers", () => {
     expect(safeEqual("abc", "abc")).toBe(true);
     expect(safeEqual("abc", "abd")).toBe(false);
   });
-  it("30日間のsessionを作成する", async () => {
+  it("90日間のsessionを作成する", async () => {
     let values: unknown[] = [];
     const db = {
       prepare: () => ({
@@ -29,12 +31,39 @@ describe("auth helpers", () => {
       }),
     } as unknown as D1Database;
 
-    const session = await createSession(db, "user-1");
+    const now = new Date("2026-09-03T00:00:00.000Z");
+    const session = await createSession(db, "user-1", now);
 
     expect(session).toMatch(/^[A-Za-z0-9_-]{43}$/);
     expect(values[0]).toBe(await hashToken(session));
     expect(values[1]).toBe("user-1");
-    expect(new Date(String(values[2])).getTime() - new Date(String(values[3])).getTime()).toBe(30 * 86400000);
+    expect(values[2]).toBe(new Date(now.getTime() + SESSION_MAX_AGE_SECONDS * 1000).toISOString());
+    expect(values[3]).toBe(now.toISOString());
+  });
+  it("有効期限が1日以上減ったsessionを最終利用から90日へ更新する", async () => {
+    let query = "";
+    let values: unknown[] = [];
+    const db = {
+      prepare: (sql: string) => {
+        query = sql;
+        return {
+          bind: (...bound: unknown[]) => {
+            values = bound;
+            return { run: async () => ({ meta: { changes: 1 } }) };
+          },
+        };
+      },
+    } as unknown as D1Database;
+    const now = new Date("2026-09-03T00:00:00.000Z");
+
+    expect(await refreshSession(db, "session-token", now)).toBe(true);
+    expect(query).toContain("expires_at > ? AND expires_at < ?");
+    expect(values).toEqual([
+      new Date(now.getTime() + SESSION_MAX_AGE_SECONDS * 1000).toISOString(),
+      await hashToken("session-token"),
+      now.toISOString(),
+      new Date(now.getTime() + (SESSION_MAX_AGE_SECONDS - 86400) * 1000).toISOString(),
+    ]);
   });
   it("無効化されたユーザーをsession認証の対象外にする", async () => {
     let query = "";

@@ -1,6 +1,9 @@
 import type { User } from "../shared/types";
 
 const DEV_USER_ID = "01JDEVUSER0000000000000000";
+const DAY_SECONDS = 86400;
+export const SESSION_MAX_AGE_SECONDS = 90 * DAY_SECONDS;
+const SESSION_REFRESH_BEFORE_SECONDS = SESSION_MAX_AGE_SECONDS - DAY_SECONDS;
 
 export type LineSecrets = { LINE_CHANNEL_ID?: string; LINE_CHANNEL_SECRET?: string; APP_ORIGIN?: string };
 
@@ -41,14 +44,28 @@ export async function getCurrentUser(
   return user ? { id: user.id, displayName: user.display_name, role: user.role, avatarUrl: user.avatar_url } : null;
 }
 
-export async function createSession(db: D1Database, userId: string): Promise<string> {
+export async function createSession(db: D1Database, userId: string, now = new Date()): Promise<string> {
   const session = randomToken();
-  const now = new Date();
   await db
     .prepare("INSERT INTO sessions (token_hash, user_id, expires_at, created_at) VALUES (?, ?, ?, ?)")
-    .bind(await hashToken(session), userId, new Date(now.getTime() + 30 * 86400000).toISOString(), now.toISOString())
+    .bind(
+      await hashToken(session),
+      userId,
+      new Date(now.getTime() + SESSION_MAX_AGE_SECONDS * 1000).toISOString(),
+      now.toISOString(),
+    )
     .run();
   return session;
+}
+
+export async function refreshSession(db: D1Database, sessionToken: string, now = new Date()): Promise<boolean> {
+  const refreshedExpiry = new Date(now.getTime() + SESSION_MAX_AGE_SECONDS * 1000).toISOString();
+  const refreshBefore = new Date(now.getTime() + SESSION_REFRESH_BEFORE_SECONDS * 1000).toISOString();
+  const result = await db
+    .prepare("UPDATE sessions SET expires_at = ? WHERE token_hash = ? AND expires_at > ? AND expires_at < ?")
+    .bind(refreshedExpiry, await hashToken(sessionToken), now.toISOString(), refreshBefore)
+    .run();
+  return result.meta.changes > 0;
 }
 
 export function randomToken(bytes = 32): string {

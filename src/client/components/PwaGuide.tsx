@@ -127,8 +127,8 @@ export function onboardingGuideSlides(): GuideSlide[] {
   return [
     {
       eyebrow: "このごろへようこそ",
-      titleLines: ["家族だけで、", "思い出を残す"],
-      body: "招待されたメンバーだけで写真や動画を共有できます。大切な記録を、安心して見返せる場所です。",
+      titleLines: ["家族だけで、", "思い出を見返す"],
+      body: "写真や動画で近況を見たり、思い出を振り返ったりできます。見ることができるのは、招待されたメンバーだけです。",
       visual: "welcome",
     },
     {

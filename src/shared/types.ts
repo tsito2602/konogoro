@@ -79,6 +79,8 @@ export type Post = {
   caption: string;
   eventId: string | null;
   eventTitle: string | null;
+  eventStartDate?: string | null;
+  eventEndDate?: string | null;
   sceneId: string | null;
   sceneTitle: string | null;
   capturedAt: string | null;

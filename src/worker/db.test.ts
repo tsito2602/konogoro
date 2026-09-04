@@ -14,6 +14,8 @@ const post: PostRow = {
   caption: "海",
   event_id: null,
   event_title: null,
+  event_start_date: null,
+  event_end_date: null,
   scene_id: null,
   scene_title: null,
   captured_at: "2026-09-02T00:00:00.000Z",

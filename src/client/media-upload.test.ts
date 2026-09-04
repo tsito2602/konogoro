@@ -1,5 +1,22 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { prepareMediaFiles, type SelectedMediaFile } from "./media-upload";
+import { prepareMediaFiles, validateMediaFiles, type SelectedMediaFile } from "./media-upload";
+
+describe("validateMediaFiles", () => {
+  it("対象ファイル名と非対応理由を返す", () => {
+    expect(validateMediaFiles([new File([], "empty.mp4", { type: "video/mp4" })], 0)).toBe(
+      "empty.mp4: ファイルの容量が0バイトです。",
+    );
+    expect(validateMediaFiles([new File(["data"], "clip.avi", { type: "video/x-msvideo" })], 0)).toContain(
+      "clip.avi: 対応していない形式です。",
+    );
+  });
+
+  it("上限超過時に現在数と追加数を返す", () => {
+    expect(validateMediaFiles([new File(["data"], "photo.jpg", { type: "image/jpeg" })], 30)).toBe(
+      "選べる写真・動画は合計30件までです（現在30件、追加1件）。",
+    );
+  });
+});
 
 describe("prepareMediaFiles", () => {
   afterEach(() => vi.unstubAllGlobals());

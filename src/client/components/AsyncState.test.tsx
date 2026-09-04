@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { ErrorState } from "./AsyncState";
+import { ErrorState, loginUrl } from "./AsyncState";
 
 describe("ErrorState", () => {
   it("再試行処理がある場合だけ再読み込みボタンを表示する", () => {
@@ -15,5 +15,9 @@ describe("ErrorState", () => {
     expect(html).toContain('href="/api/auth/line"');
     expect(html).toContain("LINEでログイン");
     expect(html).not.toContain("再読み込み");
+  });
+
+  it("再ログイン後に元の閲覧先へ戻す", () => {
+    expect(loginUrl("/posts/post-1?from=line")).toBe("/api/auth/line?returnTo=%2Fposts%2Fpost-1%3Ffrom%3Dline");
   });
 });

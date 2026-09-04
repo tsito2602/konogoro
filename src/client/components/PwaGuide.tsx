@@ -1,5 +1,19 @@
-import { Check, ShieldCheck, Smartphone, X } from "lucide-react";
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import {
+  Bell,
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  Grid2X2,
+  Heart,
+  Images,
+  MessageCircle,
+  ShieldCheck,
+  Smile,
+  Smartphone,
+  UserRound,
+  X,
+} from "lucide-react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type KeyboardEvent } from "react";
 import type { CurrentUser } from "../../shared/types";
 import { installPromptStore } from "../install-prompt";
 
@@ -105,44 +119,282 @@ export function PwaGuide({ user }: { user: CurrentUser }) {
   );
 }
 
+type GuideVisual = "welcome" | "timeline" | "events" | "album" | "comments" | "line";
+
+type GuideSlide = { eyebrow: string; titleLines: string[]; body: string; visual: GuideVisual };
+
+export function onboardingGuideSlides(): GuideSlide[] {
+  return [
+    {
+      eyebrow: "このごろへようこそ",
+      titleLines: ["家族だけで、", "思い出を見返す"],
+      body: "写真や動画で近況を見たり、思い出を振り返ったりできます。見ることができるのは、招待されたメンバーだけです。",
+      visual: "welcome",
+    },
+    {
+      eyebrow: "タイムライン",
+      titleLines: ["新しい思い出から、", "順番に見られる"],
+      body: "未閲覧の件数がひと目で分かります。「新しい思い出を見る」を押すと、まだ見ていない投稿を続けて見られます。",
+      visual: "timeline",
+    },
+    {
+      eyebrow: "イベント",
+      titleLines: ["旅行やお出かけごとに、", "思い出を見られる"],
+      body: "旅行や記念日などのまとまりから、写真と動画を見られます。家族の思い出を出来事ごとに振り返れます。",
+      visual: "events",
+    },
+    {
+      eyebrow: "アルバム",
+      titleLines: ["撮影した時期から、", "すぐ探せる"],
+      body: "写真と動画は撮影年月ごとに自動で並びます。年と月を切り替えて、過去の思い出まで素早くたどれます。",
+      visual: "album",
+    },
+    {
+      eyebrow: "コメントとお知らせ",
+      titleLines: ["思い出に、", "家族の言葉を添える"],
+      body: "投稿にはコメントを残せます。新しい投稿やコメントは「お知らせ」にまとまり、見逃しません。",
+      visual: "comments",
+    },
+    {
+      eyebrow: "LINE通知",
+      titleLines: ["新しい思い出を、", "LINEでお知らせ"],
+      body: "新しい投稿が届くとLINEでお知らせします。通知から、そのまま新しい思い出を見られます。通知は設定画面でいつでも切り替えられます。",
+      visual: "line",
+    },
+  ];
+}
+
 function WelcomeGuide({ close }: { close: () => void }) {
+  const slides = useMemo(() => onboardingGuideSlides(), []);
+  const [page, setPage] = useState(0);
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
+  const lastPage = page === slides.length - 1;
+  const move = (nextPage: number) => setPage(Math.max(0, Math.min(slides.length - 1, nextPage)));
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, []);
+
+  const onKeyDown = (event: KeyboardEvent) => {
+    if (event.key === "ArrowLeft") move(page - 1);
+    if (event.key === "ArrowRight") move(page + 1);
+    if (event.key === "Escape") close();
+  };
+
+  const slide = slides[page];
   return (
-    <div className="modal-backdrop pwa-guide-backdrop">
+    <div className="onboarding-guide-backdrop">
       <section
-        className="pwa-guide-modal welcome-guide"
+        className="onboarding-guide"
         role="dialog"
         aria-modal="true"
         aria-labelledby="welcome-title"
+        onKeyDown={onKeyDown}
+        onTouchStart={(event) => {
+          const touch = event.touches[0];
+          touchStart.current = { x: touch.clientX, y: touch.clientY };
+        }}
+        onTouchEnd={(event) => {
+          const start = touchStart.current;
+          touchStart.current = null;
+          if (!start) return;
+          const touch = event.changedTouches[0];
+          const deltaX = touch.clientX - start.x;
+          const deltaY = touch.clientY - start.y;
+          if (Math.abs(deltaX) < 48 || Math.abs(deltaX) <= Math.abs(deltaY)) return;
+          move(deltaX < 0 ? page + 1 : page - 1);
+        }}
       >
-        <button className="icon-button pwa-guide-close" type="button" onClick={close} aria-label="初回ガイドを閉じる">
+        <button
+          className="icon-button onboarding-guide-close"
+          type="button"
+          onClick={close}
+          aria-label="使い方を閉じる"
+        >
           <X />
         </button>
-        <span className="pwa-guide-symbol" aria-hidden>
-          <ShieldCheck />
-        </span>
-        <p className="pwa-guide-eyebrow">このごろへようこそ</p>
-        <h2 id="welcome-title">家族だけで、思い出を見られます</h2>
-        <p>招待されたメンバーだけで写真や動画を共有する、家族のための場所です。</p>
-        <ul>
-          <li>
-            <Check aria-hidden />
-            タイムラインに未閲覧の件数が表示されます
-          </li>
-          <li>
-            <Check aria-hidden />
-            「新しい思い出を見る」で順番に確認できます
-          </li>
-          <li>
-            <Check aria-hidden />
-            写真にはコメントで一言返せます
-          </li>
-        </ul>
-        <button className="primary-button wide" type="button" onClick={close} autoFocus>
-          思い出を見る
-        </button>
+        <div className="onboarding-guide-page" key={`${slide.visual}-${page}`}>
+          <GuideIllustration kind={slide.visual} />
+          <div className="onboarding-guide-copy" aria-live="polite">
+            <p className="pwa-guide-eyebrow">{slide.eyebrow}</p>
+            <h2 id="welcome-title">
+              {slide.titleLines.map((line) => (
+                <span key={line}>{line}</span>
+              ))}
+            </h2>
+            <p>{slide.body}</p>
+          </div>
+        </div>
+        <footer className="onboarding-guide-footer">
+          <div className="onboarding-guide-dots" aria-label={`${slides.length}ページ中${page + 1}ページ目`}>
+            {slides.map((item, index) => (
+              <button
+                className={index === page ? "active" : ""}
+                type="button"
+                onClick={() => move(index)}
+                aria-label={`${index + 1}ページ目へ移動`}
+                aria-current={index === page ? "step" : undefined}
+                key={item.titleLines.join("")}
+              />
+            ))}
+          </div>
+          <div className="onboarding-guide-actions">
+            <button className="text-button" type="button" onClick={() => move(page - 1)} disabled={page === 0}>
+              <ChevronLeft />
+              前へ
+            </button>
+            {lastPage ? (
+              <button className="primary-button" type="button" onClick={close} autoFocus>
+                はじめる
+              </button>
+            ) : (
+              <button className="primary-button" type="button" onClick={() => move(page + 1)} autoFocus>
+                次へ
+                <ChevronRight />
+              </button>
+            )}
+          </div>
+        </footer>
       </section>
     </div>
   );
+}
+
+function GuideIllustration({ kind }: { kind: GuideVisual }) {
+  if (kind === "welcome")
+    return (
+      <div className="guide-visual guide-welcome" role="img" aria-label="家族だけで写真を共有するイメージ">
+        <div className="guide-photo guide-photo-one" />
+        <div className="guide-photo guide-photo-two" />
+        <span className="guide-shield">
+          <ShieldCheck />
+        </span>
+        <div className="guide-family">
+          <span>
+            <UserRound />
+          </span>
+          <span>
+            <Heart />
+          </span>
+          <span>
+            <Smile />
+          </span>
+        </div>
+      </div>
+    );
+  if (kind === "timeline")
+    return (
+      <div
+        className="guide-visual guide-phone"
+        role="img"
+        aria-label="未閲覧の思い出が表示されたタイムラインのイメージ"
+      >
+        <div className="guide-phone-top">
+          <Images />
+          <strong>タイムライン</strong>
+          <span>3</span>
+        </div>
+        <span className="guide-unread-button">新しい思い出を見る</span>
+        <div className="guide-post">
+          <div />
+          <div />
+          <small>未閲覧</small>
+        </div>
+      </div>
+    );
+  if (kind === "events")
+    return (
+      <div className="guide-visual guide-events" role="img" aria-label="旅行やお出かけのイベント一覧のイメージ">
+        <article>
+          <CalendarDays />
+          <span>
+            <strong>旅行</strong>
+            <small>2泊3日</small>
+          </span>
+        </article>
+        <article>
+          <CalendarDays />
+          <span>
+            <strong>記念日</strong>
+            <small>8月</small>
+          </span>
+        </article>
+      </div>
+    );
+  if (kind === "album")
+    return (
+      <div className="guide-visual guide-album" role="img" aria-label="年月ごとに写真を探せるアルバムのイメージ">
+        <div className="guide-album-year">
+          <ChevronLeft />
+          <strong>2026</strong>
+          <ChevronRight />
+        </div>
+        <div className="guide-months">
+          <span>
+            <Grid2X2 />
+          </span>
+          <span>7</span>
+          <span className="active">8</span>
+          <span>9</span>
+        </div>
+        <div className="guide-album-cover">
+          <strong>8月</strong>
+          <small>12件の思い出</small>
+        </div>
+        <div className="guide-album-grid">
+          <i />
+          <i />
+          <i />
+        </div>
+      </div>
+    );
+  if (kind === "comments")
+    return (
+      <div className="guide-visual guide-comments" role="img" aria-label="家族からのコメントとお知らせのイメージ">
+        <div>
+          <span className="guide-avatar">母</span>
+          <p>
+            <strong>いい写真だね！</strong>
+            <small>
+              <MessageCircle /> 旅行の思い出
+            </small>
+          </p>
+        </div>
+        <div>
+          <span className="guide-avatar accent">
+            <Bell />
+          </span>
+          <p>
+            <strong>新しい思い出が届きました</strong>
+            <small>たった今</small>
+          </p>
+        </div>
+      </div>
+    );
+  if (kind === "line")
+    return (
+      <div className="guide-visual guide-line" role="img" aria-label="新しい思い出を知らせるLINE通知のイメージ">
+        <div className="guide-line-header">
+          <MessageCircle />
+          <strong>LINE通知</strong>
+          <small>たった今</small>
+        </div>
+        <article>
+          <span>
+            <img src="/icons/icon-light-192.png" alt="" />
+          </span>
+          <p>
+            <strong>新しい思い出が届きました</strong>
+            <small>家族が写真を追加しました</small>
+          </p>
+        </article>
+      </div>
+    );
+  return null;
 }
 
 function InstallGuide({

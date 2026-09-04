@@ -3415,11 +3415,14 @@ textarea:focus {
     height: 100dvh;
     padding: 28px 14px;
     grid-template-columns: 1fr;
-    grid-template-rows: 94px repeat(5, 52px);
+    grid-template-rows: repeat(5, 52px);
     align-content: start;
     gap: 4px;
     border-top: 0;
     border-right: 1px solid var(--separator);
+  }
+  .tab-bar.has-desktop-add {
+    grid-template-rows: 94px repeat(5, 52px);
   }
   .desktop-add-slot {
     margin-bottom: 12px;

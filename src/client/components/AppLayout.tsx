@@ -95,7 +95,10 @@ export function AppLayout() {
         {showPostPage && backgroundContent ? backgroundContent : routedContent}
         {showPostPage && backgroundContent ? routedContent : null}
         {!hideNavigation && (
-          <nav className="tab-bar" aria-label="メインナビゲーション">
+          <nav
+            className={`tab-bar${canCreatePost(currentUser) ? " has-desktop-add" : ""}`}
+            aria-label="メインナビゲーション"
+          >
             {canCreatePost(currentUser) && (
               <div className="desktop-add-slot">
                 {canManageEvent(currentUser) ? (

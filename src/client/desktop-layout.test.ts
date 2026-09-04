@@ -15,8 +15,10 @@ describe("desktop layout contract", () => {
   it("places the add action in a dedicated desktop navigation slot", () => {
     const desktopCss = css.slice(css.indexOf("@media (min-width: 1024px)"));
     expect(appLayout).toContain('className="desktop-add-slot"');
+    expect(appLayout).toContain('" has-desktop-add"');
     expect(desktopCss).toContain(".desktop-add-slot");
     expect(desktopCss).toContain(".desktop-add-button");
+    expect(desktopCss).toMatch(/\.tab-bar\.has-desktop-add\s*{\s*grid-template-rows: 94px repeat\(5, 52px\);/);
     expect(desktopCss).toMatch(/\.mobile-add-button\s*{\s*display: none;/);
   });
 

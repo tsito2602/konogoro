@@ -2587,10 +2587,11 @@ textarea:focus {
   height: 14px;
 }
 .guide-line {
-  padding: 20px;
+  padding: 28px 20px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  justify-content: center;
+  gap: 18px;
   background: linear-gradient(160deg, #e9f8ec, var(--surface-subtle) 58%);
 }
 .guide-line-header {
@@ -2638,29 +2639,6 @@ textarea:focus {
 }
 .guide-line article small {
   color: var(--ash);
-}
-.guide-line-preview {
-  min-height: 82px;
-  display: grid;
-  grid-template-columns: 2fr 1fr 1fr;
-  gap: 3px;
-  overflow: hidden;
-  border-radius: 13px;
-}
-.guide-line-preview div {
-  background: linear-gradient(145deg, #7db0c4, #e8c176);
-}
-.guide-line-preview div:nth-child(2) {
-  background: linear-gradient(145deg, #c78469, #55795c);
-}
-.guide-line-action {
-  padding: 10px;
-  border-radius: 11px;
-  color: #fff;
-  background: #06a943;
-  font-size: 13px;
-  font-weight: 700;
-  text-align: center;
 }
 .guide-add {
   padding: 20px;

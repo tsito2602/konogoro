@@ -392,12 +392,6 @@ function GuideIllustration({ kind }: { kind: GuideVisual }) {
             <small>家族が写真を追加しました</small>
           </p>
         </article>
-        <div className="guide-line-preview">
-          <div />
-          <div />
-          <div />
-        </div>
-        <span className="guide-line-action">新しい思い出を見る</span>
       </div>
     );
   return null;

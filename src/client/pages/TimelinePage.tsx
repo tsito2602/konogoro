@@ -53,7 +53,7 @@ export function TimelinePage() {
 
   return (
     <>
-      <PageHeader title="ホーム" />
+      <PageHeader title="タイムライン" />
       <main className="timeline-layout page-content">
         {posts && currentUser.role === "viewer" && unreadCount > 0 && (
           <aside className="timeline-sidebar">

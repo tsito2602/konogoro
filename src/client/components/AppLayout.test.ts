@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { CurrentUser } from "../../shared/types";
-import { BootScreen, canAccessPath, LoginScreen, postCreatePath } from "./AppLayout";
+import { BootScreen, canAccessPath, LoginScreen, mainNavigationItems, postCreatePath } from "./AppLayout";
 
 const viewer: CurrentUser = { id: "viewer", displayName: "Viewer", role: "viewer" };
 const uploader: CurrentUser = { id: "uploader", displayName: "Uploader", role: "uploader" };
@@ -46,6 +46,19 @@ describe("投稿追加URL", () => {
   it("通常画面ではイベントを指定しない", () => {
     expect(postCreatePath("/")).toBe("/posts/new");
     expect(postCreatePath("/events")).toBe("/posts/new");
+  });
+});
+
+describe("mainNavigationItems", () => {
+  it("タイムラインの未閲覧導線と投稿・コメントのお知らせを区別する", () => {
+    expect(mainNavigationItems.map(({ to, label }) => [to, label])).toEqual([
+      ["/", "タイムライン"],
+      ["/activity", "お知らせ"],
+      ["/events", "イベント"],
+      ["/album", "アルバム"],
+      ["/settings", "設定"],
+    ]);
+    expect(mainNavigationItems.every((item) => item.description.length > 0)).toBe(true);
   });
 });
 

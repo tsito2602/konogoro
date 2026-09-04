@@ -78,13 +78,15 @@ export function ActivityPage() {
 
   return (
     <>
-      <PageHeader title="新着" />
+      <PageHeader title="お知らせ" />
       <main className="activity-page page-content">
-        {!activities && !error && <PageSkeleton variant="activity" />}
+        {!activities && !error && (
+          <PageSkeleton variant="activity" showActivityViewers={canViewMemberLastViewed(currentUser)} />
+        )}
         {error && <ErrorState message={error} retry={load} />}
         {activities && canViewMemberLastViewed(currentUser) && <MemberLastViewedList members={memberLastViewed} />}
         {activities?.length === 0 && (
-          <EmptyState title="新着はまだありません" body="新しい投稿やコメントがここに表示されます。" />
+          <EmptyState title="お知らせはまだありません" body="新しい投稿やコメントがここに表示されます。" />
         )}
         {activities && (
           <div className="activity-list">

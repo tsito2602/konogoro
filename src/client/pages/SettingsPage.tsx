@@ -28,6 +28,40 @@ const stagingRoleOptions = [
   { value: "viewer", label: "閲覧者", description: "思い出の閲覧とコメントだけができます" },
 ] satisfies { value: User["role"]; label: string; description: string }[];
 
+type StagingRoleGuideProps = {
+  currentRole: User["role"];
+  disabled: boolean;
+  onChange: (role: User["role"]) => void;
+};
+
+export function StagingRoleGuide({ currentRole, disabled, onChange }: StagingRoleGuideProps) {
+  return (
+    <div className="settings-card staging-role-guide">
+      <p className="staging-role-guide-title" aria-hidden="true">
+        確認する権限
+      </p>
+      <fieldset className="role-guide" disabled={disabled}>
+        <legend className="visually-hidden">確認する権限</legend>
+        {stagingRoleOptions.map((option) => (
+          <label className={currentRole === option.value ? "selected" : ""} key={option.value}>
+            <input
+              type="radio"
+              name="staging-role"
+              value={option.value}
+              checked={currentRole === option.value}
+              onChange={() => onChange(option.value)}
+            />
+            <span>
+              <strong>{option.label}</strong>
+              <p>{option.description}</p>
+            </span>
+          </label>
+        ))}
+      </fieldset>
+    </div>
+  );
+}
+
 export function SettingsPage() {
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [members, setMembers] = useState<FamilyMember[] | null>(null);
@@ -213,24 +247,11 @@ export function SettingsPage() {
             {user.isStaging && (
               <section className="settings-section">
                 <h2>ステージング確認</h2>
-                <fieldset className="settings-card role-guide staging-role-guide" disabled={switchingRole}>
-                  <legend>確認する権限</legend>
-                  {stagingRoleOptions.map((option) => (
-                    <label className={user.role === option.value ? "selected" : ""} key={option.value}>
-                      <input
-                        type="radio"
-                        name="staging-role"
-                        value={option.value}
-                        checked={user.role === option.value}
-                        onChange={() => void switchStagingRole(option.value)}
-                      />
-                      <span>
-                        <strong>{option.label}</strong>
-                        <p>{option.description}</p>
-                      </span>
-                    </label>
-                  ))}
-                </fieldset>
+                <StagingRoleGuide
+                  currentRole={user.role}
+                  disabled={switchingRole}
+                  onChange={(role) => void switchStagingRole(role)}
+                />
                 <p className="settings-hint">このブラウザだけの確認用設定です。切り替えるとホームへ移動します。</p>
               </section>
             )}

@@ -523,9 +523,9 @@ export function PostEditPage() {
           </label>
           {eventId && (
             <label>
-              シーン
+              見出し
               <select value={sceneId} onChange={(event) => setSceneId(event.target.value)} disabled={saving}>
-                <option value="">シーンなし</option>
+                <option value="">見出しなし</option>
                 {scenes.map((item) => (
                   <option value={item.id} key={item.id}>
                     {item.title}
@@ -538,7 +538,7 @@ export function PostEditPage() {
             (!showSceneForm ? (
               <button className="text-button inline-action" type="button" onClick={() => setShowSceneForm(true)}>
                 <Plus />
-                新しいシーン
+                新しい見出し
               </button>
             ) : (
               <div className="inline-form">

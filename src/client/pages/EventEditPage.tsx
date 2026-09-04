@@ -112,7 +112,7 @@ export function EventEditPage() {
   };
 
   const deleteScene = (scene: EditableScene) => {
-    if (!confirm(`「${scene.title}」を削除しますか？変更を保存するまで削除は確定しません。`)) return;
+    if (!confirm(`見出し「${scene.title}」を削除しますか？変更を保存するまで削除は確定しません。`)) return;
     setScenes((current) => current.filter((item) => item.key !== scene.key));
   };
 
@@ -179,11 +179,11 @@ export function EventEditPage() {
         </form>
 
         <section className="management-section">
-          <h2>シーン</h2>
+          <h2>見出し</h2>
           {scenes.map((scene) => (
             <div className="scene-editor" key={scene.key}>
               <input
-                aria-label={`${scene.title}の名前`}
+                aria-label={`見出し「${scene.title}」の名前`}
                 value={scene.title}
                 onChange={(event) =>
                   setScenes((current) =>
@@ -196,7 +196,7 @@ export function EventEditPage() {
               <button
                 className="icon-button"
                 type="button"
-                aria-label={`${scene.title}を削除`}
+                aria-label={`見出し「${scene.title}」を削除`}
                 onClick={() => deleteScene(scene)}
                 disabled={saving}
               >
@@ -210,7 +210,7 @@ export function EventEditPage() {
               onChange={(event) => setNewSceneTitle(event.target.value)}
               required
               maxLength={100}
-              placeholder="新しいシーン"
+              placeholder="新しい見出し"
               disabled={saving}
             />
             <button className="outline-button" disabled={saving}>

@@ -70,7 +70,7 @@ describe("PostCard", () => {
     expect(html).toContain('aria-label="未閲覧の投稿の写真 1/1を開く"');
   });
 
-  it("投稿者名とイベント・シーンを写真の上、撮影日を写真の下に表示する", () => {
+  it("投稿者名とイベント・見出しを写真の上、撮影日を写真の下に表示する", () => {
     const html = renderToStaticMarkup(
       <MemoryRouter>
         <PostCard post={{ ...post, eventId: "event-1", eventTitle: "箱根旅行", sceneTitle: "2日目" }} />
@@ -96,7 +96,7 @@ describe("PostCard", () => {
     expect(html).toContain("旅行の思い出");
   });
 
-  it("イベント詳細では投稿者名とシーン名だけをコンテキストに表示する", () => {
+  it("イベント詳細では投稿者名と見出し名だけをコンテキストに表示する", () => {
     const html = renderToStaticMarkup(
       <MemoryRouter>
         <PostCard

@@ -34,7 +34,7 @@ export const eventManagementInputSchema = z
       const ids = scenes.flatMap((scene) => (scene.id ? [scene.id] : []));
       return new Set(ids).size === ids.length;
     },
-    { message: "同じシーンが重複しています", path: ["scenes"] },
+    { message: "同じ見出しが重複しています", path: ["scenes"] },
   );
 
 export const eventCoverInputSchema = z.object({

@@ -2350,11 +2350,12 @@ textarea:focus {
   line-height: 1.5;
 }
 .staging-role-guide {
-  gap: 8px;
   padding: 16px;
 }
-.staging-role-guide legend {
-  padding-top: 16px;
+.staging-role-guide-title {
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 600;
 }
 .settings-hint {
   margin: 8px 4px 0;

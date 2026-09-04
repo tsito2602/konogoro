@@ -5,7 +5,16 @@ import type { CurrentUser } from "../../shared/types";
 import { canCreatePost, canInviteFamily, canManageEvent } from "../../shared/permissions";
 import { api } from "../api";
 import { ErrorState } from "./AsyncState";
+import { PwaGuide } from "./PwaGuide";
 import { ToastProvider } from "./Toast";
+
+export const mainNavigationItems = [
+  { to: "/", label: "タイムライン", description: "未閲覧の思い出と全投稿を見る", icon: Images, end: true },
+  { to: "/activity", label: "お知らせ", description: "新しい投稿やコメントの履歴を見る", icon: Bell },
+  { to: "/events", label: "イベント", description: "旅行やお出かけごとに思い出を見る", icon: CalendarDays },
+  { to: "/album", label: "アルバム", description: "写真と動画を撮影時期から探す", icon: GalleryVerticalEnd },
+  { to: "/settings", label: "設定", description: "表示や通知などを変更する", icon: Settings },
+] as const;
 
 const viewerPattern = /^\/posts\/[^/]+\/media\//;
 export function canAccessPath(user: CurrentUser, pathname: string): boolean {
@@ -87,13 +96,12 @@ export function AppLayout() {
       <div className={hideNavigation ? "app-shell viewer-shell" : "app-shell"}>
         {showPostPage && backgroundContent ? backgroundContent : routedContent}
         {showPostPage && backgroundContent ? routedContent : null}
+        <PwaGuide user={currentUser} />
         {!hideNavigation && (
           <nav className="tab-bar" aria-label="メインナビゲーション">
-            <NavItem to="/" label="ホーム" icon={<Images />} end />
-            <NavItem to="/activity" label="新着" icon={<Bell />} />
-            <NavItem to="/events" label="イベント" icon={<CalendarDays />} />
-            <NavItem to="/album" label="アルバム" icon={<GalleryVerticalEnd />} />
-            <NavItem to="/settings" label="設定" icon={<Settings />} />
+            {mainNavigationItems.map(({ icon: Icon, ...item }) => (
+              <NavItem {...item} icon={<Icon />} key={item.to} />
+            ))}
           </nav>
         )}
         {!hideNavigation &&
@@ -181,13 +189,26 @@ export function LoginScreen({ returnTo = "/" }: { returnTo?: string }) {
   );
 }
 
-function NavItem({ to, label, icon, end }: { to: string; label: string; icon: React.ReactNode; end?: boolean }) {
+function NavItem({
+  to,
+  label,
+  description,
+  icon,
+  end,
+}: {
+  to: string;
+  label: string;
+  description: string;
+  icon: React.ReactNode;
+  end?: boolean;
+}) {
   return (
     <NavLink
       to={to}
       end={end}
       onClick={() => window.scrollTo(0, 0)}
       className={({ isActive }) => `tab-item${isActive ? " active" : ""}`}
+      aria-label={`${label}：${description}`}
     >
       {icon}
       <span>{label}</span>

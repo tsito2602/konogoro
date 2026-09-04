@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { CurrentUser } from "../../shared/types";
-import { BootScreen, canAccessPath, LoginScreen } from "./AppLayout";
+import { BootScreen, canAccessPath, LoginScreen, mainNavigationItems } from "./AppLayout";
 
 const viewer: CurrentUser = { id: "viewer", displayName: "Viewer", role: "viewer" };
 const uploader: CurrentUser = { id: "uploader", displayName: "Uploader", role: "uploader" };
@@ -35,6 +35,19 @@ describe("canAccessPath", () => {
     expect(canAccessPath(uploader, "/events/event-1/edit")).toBe(true);
     expect(canAccessPath(uploader, "/family")).toBe(true);
     expect(canAccessPath(uploader, "/settings/family")).toBe(false);
+  });
+});
+
+describe("mainNavigationItems", () => {
+  it("タイムラインの未閲覧導線と投稿・コメントのお知らせを区別する", () => {
+    expect(mainNavigationItems.map(({ to, label }) => [to, label])).toEqual([
+      ["/", "タイムライン"],
+      ["/activity", "お知らせ"],
+      ["/events", "イベント"],
+      ["/album", "アルバム"],
+      ["/settings", "設定"],
+    ]);
+    expect(mainNavigationItems.every((item) => item.description.length > 0)).toBe(true);
   });
 });
 

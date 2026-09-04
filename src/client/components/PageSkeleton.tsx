@@ -11,11 +11,17 @@ type SkeletonVariant =
   | "members"
   | "viewer";
 
-export function PageSkeleton({ variant }: { variant: SkeletonVariant }) {
+export function PageSkeleton({
+  variant,
+  showActivityViewers = true,
+}: {
+  variant: SkeletonVariant;
+  showActivityViewers?: boolean;
+}) {
   return (
     <div className={`page-skeleton ${variant}`} role="status" aria-busy="true">
       <span className="visually-hidden">読み込み中</span>
-      <div aria-hidden>{skeletonContent(variant)}</div>
+      <div aria-hidden>{skeletonContent(variant, showActivityViewers)}</div>
     </div>
   );
 }
@@ -31,7 +37,7 @@ export function CommentComposerSkeleton() {
   );
 }
 
-function skeletonContent(variant: SkeletonVariant) {
+function skeletonContent(variant: SkeletonVariant, showActivityViewers: boolean) {
   if (variant === "timeline")
     return (
       <>
@@ -41,14 +47,16 @@ function skeletonContent(variant: SkeletonVariant) {
   if (variant === "activity")
     return (
       <>
-        <div className="skeleton-viewers">
-          {Array.from({ length: 5 }, (_, index) => (
-            <div key={index}>
-              <span className="skeleton-circle" />
-              <span className="skeleton-line short" />
-            </div>
-          ))}
-        </div>
+        {showActivityViewers && (
+          <div className="skeleton-viewers">
+            {Array.from({ length: 5 }, (_, index) => (
+              <div key={index}>
+                <span className="skeleton-circle" />
+                <span className="skeleton-line short" />
+              </div>
+            ))}
+          </div>
+        )}
         <div className="skeleton-rows">
           {Array.from({ length: 5 }, (_, index) => (
             <div className="skeleton-row" key={index}>

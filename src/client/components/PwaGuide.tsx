@@ -385,7 +385,7 @@ function GuideIllustration({ kind }: { kind: GuideVisual }) {
         </div>
         <article>
           <span>
-            <Bell />
+            <img src="/icons/icon-light-192.png" alt="" />
           </span>
           <p>
             <strong>新しい思い出が届きました</strong>

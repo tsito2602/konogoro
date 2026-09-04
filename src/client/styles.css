@@ -2623,12 +2623,13 @@ textarea:focus {
   flex: 0 0 auto;
   display: grid;
   place-items: center;
-  border-radius: 50%;
-  color: #fff;
-  background: #06a943;
+  border-radius: 10px;
+  overflow: hidden;
 }
-.guide-line article svg {
-  width: 20px;
+.guide-line article img {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
 .guide-line article p {
   margin: 0;

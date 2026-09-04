@@ -40,12 +40,21 @@ import {
   type LineSecrets,
 } from "./auth";
 import { createPresignedDownloadUrl, createPresignedUploadUrl, hasUploadCredentials } from "./r2";
-import { countUnreadPosts, loadNextUnreadPost, loadPosts, postSelect, type PostRow } from "./db";
+import { countUnreadPosts, loadNextUnreadPost, loadPosts, postSelect, selectPosts, type PostRow } from "./db";
 import { matchesUploadFiles, type ExistingMedia } from "./upload-request";
 import { createInviteToken } from "./invite-token";
 import { processNotificationBatches, type NotificationCronEnv } from "./notification-cron";
 import { addPostToNotificationBatch } from "./notification-batch";
 import { lineFriendshipStatements, verifyLineWebhookSignature, type LineWebhookSecrets } from "./line-webhook";
+import {
+  parseTimelineCursor,
+  serializeTimelineCursor,
+  timelineBeforeCursor,
+  timelineCursorValues,
+  timelineOrderBy,
+  timelineOrderColumns,
+  type TimelineOrderRow,
+} from "./timeline-order";
 
 type Bindings = Cloudflare.Env & R2Secrets & LineSecrets & LineWebhookSecrets & { STAGING?: string };
 type EventRow = {
@@ -573,17 +582,16 @@ app.post("/family/invites", async (c) => {
 });
 
 app.get("/timeline", async (c) => {
-  const cursor = parseCursor(c.req.query("cursor"));
+  const cursor = parseTimelineCursor(c.req.query("cursor"));
   const limit = 20;
+  const select = selectPosts(timelineOrderColumns);
   const statement = cursor
     ? c.env.DB.prepare(
-        `${postSelect} WHERE p.status = 'published' AND (p.captured_at < ? OR (p.captured_at = ? AND p.id < ?)) ORDER BY p.captured_at DESC, p.id DESC LIMIT ?`,
-      ).bind(cursor.capturedAt, cursor.capturedAt, cursor.id, limit + 1)
-    : c.env.DB.prepare(
-        `${postSelect} WHERE p.status = 'published' ORDER BY p.captured_at DESC, p.id DESC LIMIT ?`,
-      ).bind(limit + 1);
+        `${select} WHERE p.status = 'published' AND ${timelineBeforeCursor} ORDER BY ${timelineOrderBy} LIMIT ?`,
+      ).bind(...timelineCursorValues(cursor), limit + 1)
+    : c.env.DB.prepare(`${select} WHERE p.status = 'published' ORDER BY ${timelineOrderBy} LIMIT ?`).bind(limit + 1);
   const [result, unreadCount] = await Promise.all([
-    statement.all<PostRow>(),
+    statement.all<PostRow & TimelineOrderRow>(),
     countUnreadPosts(c.env.DB, c.var.currentUser.id),
   ]);
   const hasMore = result.results.length > limit;
@@ -592,7 +600,7 @@ app.get("/timeline", async (c) => {
   const last = rows.at(-1);
   return c.json({
     posts,
-    nextCursor: hasMore && last?.captured_at ? `${last.captured_at}|${last.id}` : null,
+    nextCursor: hasMore && last ? serializeTimelineCursor(last) : null,
     unreadCount,
   });
 });
@@ -777,7 +785,7 @@ app.put("/events/:eventId/manage", async (c) => {
   const currentSceneIds = new Set(currentScenes.results.map((scene) => scene.id));
   const requestedSceneIds = new Set(input.scenes.flatMap((scene) => (scene.id ? [scene.id] : [])));
   if ([...requestedSceneIds].some((id) => !currentSceneIds.has(id)))
-    return c.json({ error: "シーンがイベントと一致しません" }, 400);
+    return c.json({ error: "見出しがイベントと一致しません" }, 400);
   const deletedSceneIds = [...currentSceneIds].filter((id) => !requestedSceneIds.has(id));
   if (deletedSceneIds.length > 0) {
     const placeholders = deletedSceneIds.map(() => "?").join(", ");
@@ -786,7 +794,7 @@ app.put("/events/:eventId/manage", async (c) => {
     )
       .bind(eventId, ...deletedSceneIds)
       .first();
-    if (used) return c.json({ error: "投稿があるシーンは削除できません" }, 409);
+    if (used) return c.json({ error: "投稿がある見出しは削除できません" }, 409);
   }
 
   const cover = input.coverMediaId
@@ -889,7 +897,7 @@ app.get("/events/:eventId", async (c) => {
 });
 
 app.post("/events/:eventId/scenes", async (c) => {
-  if (!canManageEvent(c.var.currentUser)) return c.json({ error: "シーンを作成する権限がありません" }, 403);
+  if (!canManageEvent(c.var.currentUser)) return c.json({ error: "見出しを作成する権限がありません" }, 403);
   const eventId = c.req.param("eventId");
   const input = sceneInputSchema.parse(await c.req.json());
   const event = await c.env.DB.prepare("SELECT id FROM events WHERE id = ?").bind(eventId).first();
@@ -910,27 +918,27 @@ app.post("/events/:eventId/scenes", async (c) => {
 });
 
 app.put("/events/:eventId/scenes/:sceneId", async (c) => {
-  if (!canManageEvent(c.var.currentUser)) return c.json({ error: "シーンを編集する権限がありません" }, 403);
+  if (!canManageEvent(c.var.currentUser)) return c.json({ error: "見出しを編集する権限がありません" }, 403);
   const input = sceneInputSchema.parse(await c.req.json());
   const result = await c.env.DB.prepare(
     "UPDATE event_scenes SET title = ?, updated_at = ? WHERE id = ? AND event_id = ?",
   )
     .bind(input.title, new Date().toISOString(), c.req.param("sceneId"), c.req.param("eventId"))
     .run();
-  if (!result.meta.changes) return c.json({ error: "シーンが見つかりません" }, 404);
+  if (!result.meta.changes) return c.json({ error: "見出しが見つかりません" }, 404);
   return c.json({ id: c.req.param("sceneId"), title: input.title });
 });
 
 app.delete("/events/:eventId/scenes/:sceneId", async (c) => {
-  if (!canManageEvent(c.var.currentUser)) return c.json({ error: "シーンを削除する権限がありません" }, 403);
+  if (!canManageEvent(c.var.currentUser)) return c.json({ error: "見出しを削除する権限がありません" }, 403);
   const used = await c.env.DB.prepare("SELECT id FROM posts WHERE scene_id = ? LIMIT 1")
     .bind(c.req.param("sceneId"))
     .first();
-  if (used) return c.json({ error: "投稿があるシーンは削除できません" }, 409);
+  if (used) return c.json({ error: "投稿がある見出しは削除できません" }, 409);
   const result = await c.env.DB.prepare("DELETE FROM event_scenes WHERE id = ? AND event_id = ?")
     .bind(c.req.param("sceneId"), c.req.param("eventId"))
     .run();
-  if (!result.meta.changes) return c.json({ error: "シーンが見つかりません" }, 404);
+  if (!result.meta.changes) return c.json({ error: "見出しが見つかりません" }, 404);
   return c.json({ id: c.req.param("sceneId") });
 });
 
@@ -990,7 +998,7 @@ app.put("/events/:eventId/cover", async (c) => {
 app.post("/posts", async (c) => {
   if (!canCreatePost(c.var.currentUser)) return c.json({ error: "投稿する権限がありません" }, 403);
   const input = postInputSchema.parse(await c.req.json());
-  if (input.sceneId && !input.eventId) return c.json({ error: "シーンにはイベントが必要です" }, 400);
+  if (input.sceneId && !input.eventId) return c.json({ error: "見出しにはイベントが必要です" }, 400);
   if (input.eventId) {
     const event = await c.env.DB.prepare("SELECT id FROM events WHERE id = ?").bind(input.eventId).first();
     if (!event) return c.json({ error: "イベントが見つかりません" }, 400);
@@ -999,7 +1007,7 @@ app.post("/posts", async (c) => {
     const scene = await c.env.DB.prepare("SELECT id FROM event_scenes WHERE id = ? AND event_id = ?")
       .bind(input.sceneId, input.eventId)
       .first();
-    if (!scene) return c.json({ error: "シーンがイベントと一致しません" }, 400);
+    if (!scene) return c.json({ error: "見出しがイベントと一致しません" }, 400);
   }
   const id = ulid();
   const now = new Date().toISOString();
@@ -1027,7 +1035,7 @@ app.put("/posts/:postId", async (c) => {
     .first<{ event_id: string | null }>();
   if (!post) return c.json({ error: "投稿が見つかりません" }, 404);
   const input = postInputSchema.parse(await c.req.json());
-  if (input.sceneId && !input.eventId) return c.json({ error: "シーンにはイベントが必要です" }, 400);
+  if (input.sceneId && !input.eventId) return c.json({ error: "見出しにはイベントが必要です" }, 400);
   if (input.eventId) {
     const event = await c.env.DB.prepare("SELECT id FROM events WHERE id = ?").bind(input.eventId).first();
     if (!event) return c.json({ error: "イベントが見つかりません" }, 400);
@@ -1036,7 +1044,7 @@ app.put("/posts/:postId", async (c) => {
     const scene = await c.env.DB.prepare("SELECT id FROM event_scenes WHERE id = ? AND event_id = ?")
       .bind(input.sceneId, input.eventId)
       .first();
-    if (!scene) return c.json({ error: "シーンがイベントと一致しません" }, 400);
+    if (!scene) return c.json({ error: "見出しがイベントと一致しません" }, 400);
   }
   let mediaPositionOffset = 0;
   if (input.mediaIds) {

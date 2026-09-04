@@ -6,6 +6,8 @@ type PostRow = {
   caption: string;
   event_id: string | null;
   event_title: string | null;
+  event_start_date: string | null;
+  event_end_date: string | null;
   scene_id: string | null;
   scene_title: string | null;
   captured_at: string | null;
@@ -135,6 +137,8 @@ export async function loadPosts(db: D1Database, rows: PostRow[], currentUser: Us
     caption: row.caption,
     eventId: row.event_id,
     eventTitle: row.event_title,
+    eventStartDate: row.event_start_date,
+    eventEndDate: row.event_end_date,
     sceneId: row.scene_id,
     sceneTitle: row.scene_title,
     capturedAt: row.captured_at,
@@ -150,14 +154,21 @@ export async function loadPosts(db: D1Database, rows: PostRow[], currentUser: Us
   }));
 }
 
-export const postSelect = `
-  SELECT p.id, p.caption, p.event_id, e.title AS event_title,
+const postColumns = `p.id, p.caption, p.event_id, e.title AS event_title,
+         e.start_date AS event_start_date, e.end_date AS event_end_date,
          p.scene_id, s.title AS scene_title, p.captured_at,
-         p.published_at, u.display_name AS author_name, u.avatar_url AS author_avatar_url
-    FROM posts p
+         p.published_at, u.display_name AS author_name, u.avatar_url AS author_avatar_url`;
+
+const postFrom = `FROM posts p
     JOIN users u ON u.id = p.created_by
     LEFT JOIN events e ON e.id = p.event_id
     LEFT JOIN event_scenes s ON s.id = p.scene_id`;
+
+export const postSelect = `SELECT ${postColumns} ${postFrom}`;
+
+export function selectPosts(extraColumns: string): string {
+  return `SELECT ${postColumns}, ${extraColumns} ${postFrom}`;
+}
 
 export async function countUnreadPosts(db: D1Database, userId: string): Promise<number> {
   const result = await db

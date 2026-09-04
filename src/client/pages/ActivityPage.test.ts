@@ -20,7 +20,7 @@ describe("activity feed", () => {
     expect(activityText(activity("2", "comment"))).toBe("翼さんが「お土産」にコメントしました");
   });
 
-  it("シーンもイベントもない投稿には汎用文を表示する", () => {
+  it("見出しもイベントもない投稿には汎用文を表示する", () => {
     expect(activityText({ ...activity("1", "post"), postLabel: "投稿" })).toBe("翼さんが写真・動画を投稿しました");
     expect(activityText({ ...activity("2", "comment"), postLabel: "投稿" })).toBe("翼さんが投稿にコメントしました");
   });

@@ -17,9 +17,14 @@ import { PostEditPage } from "./pages/PostEditPage";
 import { TimelinePage } from "./pages/TimelinePage";
 import { UnreadPostsPage } from "./pages/UnreadPostsPage";
 import { SettingsPage } from "./pages/SettingsPage";
+import { installPromptStore } from "./install-prompt";
 import { initializeTheme } from "./theme";
 import "./styles.css";
 import "./accessibility.css";
+
+const stopInstallPromptCapture = installPromptStore.start(window);
+const hotModule = (import.meta as ImportMeta & { hot?: { dispose: (callback: () => void) => void } }).hot;
+hotModule?.dispose(stopInstallPromptCapture);
 
 initializeTheme();
 

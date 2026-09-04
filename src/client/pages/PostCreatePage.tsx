@@ -1,5 +1,5 @@
 import { AlertCircle, ImagePlus, LoaderCircle, Plus, RotateCcw, Video, X } from "lucide-react";
-import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type DragEvent, type FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import type { EventDetail, EventScene, EventSummary, UploadTarget } from "../../shared/types";
 import { api } from "../api";
@@ -30,14 +30,33 @@ export function PostCreatePage() {
   const [error, setError] = useState("");
   const [newScene, setNewScene] = useState("");
   const [showSceneForm, setShowSceneForm] = useState(false);
+  const [draggingFiles, setDraggingFiles] = useState(false);
   const filesRef = useRef(files);
   const mountedRef = useRef(true);
 
   useEffect(() => {
-    void api<{ events: EventSummary[] }>("/events").then(({ events: result }) => setEvents(result));
+    void api<{ events: EventSummary[] }>("/events")
+      .then(({ events: result }) => {
+        setEvents(result);
+        if (eventId && !result.some((item) => item.id === eventId)) {
+          setEventId("");
+          setScenes([]);
+          setError("指定されたイベントが見つからなかったため、イベントなしで開きました。");
+        }
+      })
+      .catch((reason: Error) => setError(reason.message));
+    // URLで指定された初期イベントだけを検証し、以降の選択変更では一覧を再取得しない。
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   useEffect(() => {
-    if (eventId) void api<EventDetail>(`/events/${eventId}`).then((detail) => setScenes(detail.scenes));
+    if (!eventId) return;
+    void api<EventDetail>(`/events/${eventId}`)
+      .then((detail) => setScenes(detail.scenes))
+      .catch((reason: Error) => {
+        setEventId("");
+        setScenes([]);
+        setError(reason.message);
+      });
   }, [eventId]);
   useEffect(() => {
     filesRef.current = files;
@@ -70,9 +89,7 @@ export function PostCreatePage() {
     }
   };
 
-  const selectFiles = async (event: ChangeEvent<HTMLInputElement>) => {
-    const chosen = Array.from(event.target.files ?? []);
-    event.target.value = "";
+  const addFiles = async (chosen: File[]) => {
     const validationError = validateMediaFiles(chosen, files.length);
     if (validationError) {
       setError(validationError);
@@ -82,6 +99,19 @@ export function PostCreatePage() {
     const selected = chosen.map(createPendingMediaFile);
     setFiles((current) => [...current, ...selected]);
     await prepareMediaFiles(selected, applyPreparedFile);
+  };
+
+  const selectFiles = (event: ChangeEvent<HTMLInputElement>) => {
+    const chosen = Array.from(event.target.files ?? []);
+    event.target.value = "";
+    void addFiles(chosen);
+  };
+
+  const dropFiles = (event: DragEvent<HTMLLabelElement>) => {
+    event.preventDefault();
+    setDraggingFiles(false);
+    if (busy || preparing || draftPostId) return;
+    void addFiles(Array.from(event.dataTransfer.files));
   };
 
   const retryPreparation = async (id: string) => {
@@ -296,9 +326,9 @@ export function PostCreatePage() {
     <>
       <PageHeader title="写真・動画を追加" back />
       <main className="form-page page-content">
-        <form onSubmit={submit} className="form-stack">
+        <form onSubmit={submit} className="form-stack post-create-form">
           <MediaProcessingStatus files={files} uploading={busy} uploadProgress={progress} />
-          <section className="photo-picker">
+          <section className="photo-picker post-create-media">
             <div className="selected-photos">
               {files.map((item) => (
                 <div className={`selected-photo ${item.status}`} key={item.id}>
@@ -322,10 +352,14 @@ export function PostCreatePage() {
                     </button>
                   )}
                   {item.status === "failed" && (
-                    <span className="failed-badge">
+                    <span className="failed-badge" aria-label={`${item.file.name}のアップロードに失敗`}>
                       <AlertCircle />
+                      <small>アップロード失敗</small>
                     </span>
                   )}
+                  <span className="selected-file-info" title={item.file.name}>
+                    {item.file.name}
+                  </span>
                   {!draftPostId && (
                     <button
                       className="remove-selected-photo"
@@ -339,9 +373,21 @@ export function PostCreatePage() {
                 </div>
               ))}
               {!draftPostId && (
-                <label className="photo-add">
+                <label
+                  className={`photo-add media-drop-zone${draggingFiles ? " drag-active" : ""}`}
+                  onDragEnter={(event) => {
+                    event.preventDefault();
+                    if (!busy && !preparing) setDraggingFiles(true);
+                  }}
+                  onDragOver={(event) => event.preventDefault()}
+                  onDragLeave={(event) => {
+                    if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setDraggingFiles(false);
+                  }}
+                  onDrop={dropFiles}
+                >
                   <ImagePlus />
-                  <span>{files.length ? "さらに選択" : "写真・動画を選択"}</span>
+                  <strong>{draggingFiles ? "ここにドロップ" : files.length ? "さらに追加" : "写真・動画を追加"}</strong>
+                  <span className="drop-zone-help">ここにドラッグ＆ドロップ、またはクリックして選択</span>
                   <input
                     type="file"
                     accept={acceptedMediaTypes}
@@ -358,97 +404,102 @@ export function PostCreatePage() {
               </p>
             )}
           </section>
-          <label>
-            イベント
-            <select
-              value={eventId}
-              onChange={(event) => {
-                setEventId(event.target.value);
-                setSceneId("");
-                setScenes([]);
-              }}
-              disabled={busy || !!draftPostId}
-            >
-              <option value="">イベントなし</option>
-              {events.map((item) => (
-                <option value={item.id} key={item.id}>
-                  {item.title}
-                </option>
-              ))}
-            </select>
-          </label>
-          {eventId && (
+          <section className="post-create-details" aria-label="投稿内容">
             <label>
-              シーン
+              イベント
               <select
-                value={sceneId}
-                onChange={(event) => setSceneId(event.target.value)}
+                value={eventId}
+                onChange={(event) => {
+                  setEventId(event.target.value);
+                  setSceneId("");
+                  setScenes([]);
+                }}
                 disabled={busy || !!draftPostId}
               >
-                <option value="">シーンなし</option>
-                {scenes.map((item) => (
+                <option value="">イベントなし</option>
+                {events.map((item) => (
                   <option value={item.id} key={item.id}>
                     {item.title}
                   </option>
                 ))}
               </select>
             </label>
-          )}
-          {eventId &&
-            !draftPostId &&
-            (!showSceneForm ? (
-              <button className="text-button inline-action" type="button" onClick={() => setShowSceneForm(true)}>
-                <Plus />
-                新しいシーン
+            {eventId && (
+              <label>
+                見出し
+                <select
+                  value={sceneId}
+                  onChange={(event) => setSceneId(event.target.value)}
+                  disabled={busy || !!draftPostId}
+                >
+                  <option value="">見出しなし</option>
+                  {scenes.map((item) => (
+                    <option value={item.id} key={item.id}>
+                      {item.title}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            {eventId &&
+              !draftPostId &&
+              (!showSceneForm ? (
+                <button className="text-button inline-action" type="button" onClick={() => setShowSceneForm(true)}>
+                  <Plus />
+                  新しい見出し
+                </button>
+              ) : (
+                <div className="inline-form">
+                  <input
+                    value={newScene}
+                    onChange={(event) => setNewScene(event.target.value)}
+                    placeholder="例: 2日目・プレゼント"
+                    maxLength={100}
+                  />
+                  <button type="button" className="outline-button" onClick={createScene}>
+                    作成
+                  </button>
+                </div>
+              ))}
+            <label>
+              ひとこと（任意）
+              <textarea
+                name="caption"
+                rows={4}
+                maxLength={2000}
+                placeholder="思い出をひとこと"
+                disabled={busy || !!draftPostId}
+              />
+            </label>
+            {error && (
+              <p className="form-error" role="alert">
+                {error}
+              </p>
+            )}
+            {busy ? null : files.some((item) => item.status === "failed") ? (
+              <button className="outline-button wide" type="button" onClick={retryFailed}>
+                <RotateCcw />
+                失敗した項目を再試行
+              </button>
+            ) : draftPostId && files.every((item) => item.status === "uploaded") ? (
+              <button className="outline-button wide" type="button" onClick={retryPublish} disabled={busy}>
+                <RotateCcw />
+                投稿を完了
+              </button>
+            ) : draftPostId ? (
+              <button className="outline-button wide" type="button" onClick={retryUploadSetup} disabled={busy}>
+                <RotateCcw />
+                アップロードを再開
               </button>
             ) : (
-              <div className="inline-form">
-                <input
-                  value={newScene}
-                  onChange={(event) => setNewScene(event.target.value)}
-                  placeholder="例: 2日目・プレゼント"
-                  maxLength={100}
-                />
-                <button type="button" className="outline-button" onClick={createScene}>
-                  作成
-                </button>
-              </div>
-            ))}
-          <label>
-            ひとこと（任意）
-            <textarea
-              name="caption"
-              rows={4}
-              maxLength={2000}
-              placeholder="思い出をひとこと"
-              disabled={busy || !!draftPostId}
-            />
-          </label>
-          {error && (
-            <p className="form-error" role="alert">
-              {error}
-            </p>
-          )}
-          {busy ? null : files.some((item) => item.status === "failed") ? (
-            <button className="outline-button wide" type="button" onClick={retryFailed}>
-              <RotateCcw />
-              失敗した項目を再試行
-            </button>
-          ) : draftPostId && files.every((item) => item.status === "uploaded") ? (
-            <button className="outline-button wide" type="button" onClick={retryPublish} disabled={busy}>
-              <RotateCcw />
-              投稿を完了
-            </button>
-          ) : draftPostId ? (
-            <button className="outline-button wide" type="button" onClick={retryUploadSetup} disabled={busy}>
-              <RotateCcw />
-              アップロードを再開
-            </button>
-          ) : (
-            <button className="primary-button wide" disabled={preparing || hasPreparationFailure || files.length === 0}>
-              投稿
-            </button>
-          )}
+              <button
+                className="primary-button wide"
+                disabled={preparing || hasPreparationFailure || files.length === 0}
+              >
+                投稿
+              </button>
+            )}
+          </section>
         </form>
       </main>
     </>

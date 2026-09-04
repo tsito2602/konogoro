@@ -20,11 +20,19 @@ export const acceptedMediaTypes = "image/jpeg,image/png,image/webp,video/mp4,vid
 const allowedTypes = new Set(acceptedMediaTypes.split(","));
 
 export function validateMediaFiles(files: File[], currentCount: number): string | null {
-  const invalid = files.find(
-    (file) => !allowedTypes.has(file.type) || file.size > (file.type.startsWith("video/") ? 500 : 25) * 1024 * 1024,
-  );
-  if (invalid) return "JPEG・PNG・WebP・MP4・WebM・MOVを選択してください。写真25MB、動画500MBまでです。";
-  if (currentCount + files.length > 30) return "選べる写真・動画は合計30件までです。";
+  if (currentCount + files.length > 30) {
+    return `選べる写真・動画は合計30件までです（現在${currentCount}件、追加${files.length}件）。`;
+  }
+  const empty = files.find((file) => file.size === 0);
+  if (empty) return `${empty.name}: ファイルの容量が0バイトです。`;
+  const unsupported = files.find((file) => !allowedTypes.has(file.type));
+  if (unsupported) {
+    return `${unsupported.name}: 対応していない形式です。JPEG・PNG・WebP・MP4・WebM・MOVを選択してください。`;
+  }
+  const tooLarge = files.find((file) => file.size > (file.type.startsWith("video/") ? 500 : 25) * 1024 * 1024);
+  if (tooLarge) {
+    return `${tooLarge.name}: ファイルが大きすぎます。写真は25MB、動画は500MBまでです。`;
+  }
   return null;
 }
 

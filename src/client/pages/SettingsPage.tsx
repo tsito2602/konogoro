@@ -245,7 +245,9 @@ export function SettingsPage() {
                     </label>
                   ))}
                 </fieldset>
-                <p className="settings-hint">このブラウザだけの確認用設定です。切り替えるとホームへ移動します。</p>
+                <p className="settings-hint">
+                  このブラウザだけの確認用設定です。切り替えるとタイムラインへ移動します。
+                </p>
               </section>
             )}
 

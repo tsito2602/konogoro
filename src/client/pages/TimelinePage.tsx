@@ -53,7 +53,7 @@ export function TimelinePage() {
 
   return (
     <>
-      <PageHeader title="ホーム" />
+      <PageHeader title="タイムライン" />
       <main className="feed">
         {!posts && !error && <PageSkeleton variant="timeline" />}
         {error && <ErrorState message={error} retry={load} />}

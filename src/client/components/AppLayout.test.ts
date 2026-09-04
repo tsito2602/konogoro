@@ -39,9 +39,9 @@ describe("canAccessPath", () => {
 });
 
 describe("mainNavigationItems", () => {
-  it("ホームの未閲覧導線と投稿・コメントのお知らせを区別する", () => {
+  it("タイムラインの未閲覧導線と投稿・コメントのお知らせを区別する", () => {
     expect(mainNavigationItems.map(({ to, label }) => [to, label])).toEqual([
-      ["/", "ホーム"],
+      ["/", "タイムライン"],
       ["/activity", "お知らせ"],
       ["/events", "イベント"],
       ["/album", "アルバム"],

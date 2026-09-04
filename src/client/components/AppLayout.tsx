@@ -9,7 +9,7 @@ import { PwaGuide } from "./PwaGuide";
 import { ToastProvider } from "./Toast";
 
 export const mainNavigationItems = [
-  { to: "/", label: "ホーム", description: "未閲覧の思い出とタイムラインを見る", icon: Images, end: true },
+  { to: "/", label: "タイムライン", description: "未閲覧の思い出と全投稿を見る", icon: Images, end: true },
   { to: "/activity", label: "お知らせ", description: "新しい投稿やコメントの履歴を見る", icon: Bell },
   { to: "/events", label: "イベント", description: "旅行やお出かけごとに思い出を見る", icon: CalendarDays },
   { to: "/album", label: "アルバム", description: "写真と動画を撮影時期から探す", icon: GalleryVerticalEnd },
@@ -96,7 +96,7 @@ export function AppLayout() {
       <div className={hideNavigation ? "app-shell viewer-shell" : "app-shell"}>
         {showPostPage && backgroundContent ? backgroundContent : routedContent}
         {showPostPage && backgroundContent ? routedContent : null}
-        <PwaGuide user={currentUser} pathname={pathname} />
+        <PwaGuide user={currentUser} />
         {!hideNavigation && (
           <nav className="tab-bar" aria-label="メインナビゲーション">
             {mainNavigationItems.map(({ icon: Icon, ...item }) => (

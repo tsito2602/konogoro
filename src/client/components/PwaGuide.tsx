@@ -6,7 +6,6 @@ import { installPromptStore } from "../install-prompt";
 export const OPEN_ONBOARDING_GUIDE_EVENT = "konogoro:open-onboarding-guide";
 export const OPEN_INSTALL_GUIDE_EVENT = "konogoro:open-install-guide";
 const ONBOARDING_SEEN_KEY = "konogoro:onboarding-seen:v1";
-const INSTALL_GUIDE_DISMISSED_KEY = "konogoro:install-guide-dismissed:v1";
 
 export type PwaEnvironment = "installed" | "ios-line" | "ios-browser" | "android-line" | "android-browser" | "other";
 
@@ -47,7 +46,7 @@ function isStandalone(): boolean {
   return iosStandalone || window.matchMedia?.("(display-mode: standalone)").matches === true;
 }
 
-export function PwaGuide({ user, pathname }: { user: CurrentUser; pathname: string }) {
+export function PwaGuide({ user }: { user: CurrentUser }) {
   const [welcomeOpen, setWelcomeOpen] = useState(() => user.role === "viewer" && !stored(ONBOARDING_SEEN_KEY));
   const [installOpen, setInstallOpen] = useState(false);
   const installPrompt = useSyncExternalStore(installPromptStore.subscribe, installPromptStore.getSnapshot, () => null);
@@ -60,7 +59,6 @@ export function PwaGuide({ user, pathname }: { user: CurrentUser; pathname: stri
     const markInstalled = () => {
       setInstalled(true);
       setInstallOpen(false);
-      remember(INSTALL_GUIDE_DISMISSED_KEY);
     };
     window.addEventListener(OPEN_ONBOARDING_GUIDE_EVENT, showWelcome);
     window.addEventListener(OPEN_INSTALL_GUIDE_EVENT, showInstall);
@@ -72,27 +70,12 @@ export function PwaGuide({ user, pathname }: { user: CurrentUser; pathname: stri
     };
   }, []);
 
-  useEffect(() => {
-    if (
-      user.role !== "viewer" ||
-      welcomeOpen ||
-      installOpen ||
-      installed ||
-      stored(INSTALL_GUIDE_DISMISSED_KEY) ||
-      (pathname !== "/" && pathname !== "/unread")
-    )
-      return;
-    const timer = window.setTimeout(() => setInstallOpen(true), 12_000);
-    return () => window.clearTimeout(timer);
-  }, [installOpen, installed, pathname, user.role, welcomeOpen]);
-
   const closeWelcome = () => {
     remember(ONBOARDING_SEEN_KEY);
     setWelcomeOpen(false);
   };
 
   const closeInstall = () => {
-    remember(INSTALL_GUIDE_DISMISSED_KEY);
     setInstallOpen(false);
   };
 
@@ -100,8 +83,7 @@ export function PwaGuide({ user, pathname }: { user: CurrentUser; pathname: stri
     if (!installPrompt) return;
     try {
       await installPrompt.prompt();
-      const choice = await installPrompt.userChoice;
-      if (choice.outcome === "accepted") remember(INSTALL_GUIDE_DISMISSED_KEY);
+      await installPrompt.userChoice;
       setInstallOpen(false);
     } finally {
       installPromptStore.consume(installPrompt);
@@ -144,7 +126,7 @@ function WelcomeGuide({ close }: { close: () => void }) {
         <ul>
           <li>
             <Check aria-hidden />
-            ホームに未閲覧の件数が表示されます
+            タイムラインに未閲覧の件数が表示されます
           </li>
           <li>
             <Check aria-hidden />

@@ -54,55 +54,61 @@ export function TimelinePage() {
   return (
     <>
       <PageHeader title="ホーム" />
-      <main className="feed">
-        {!posts && !error && <PageSkeleton variant="timeline" />}
-        {error && <ErrorState message={error} retry={load} />}
-        {posts?.length === 0 && (
-          <EmptyState
-            title="まだ投稿がありません"
-            body={
-              currentUser.role === "viewer"
-                ? "新しい思い出が追加されると、ここに表示されます。"
-                : "写真をまとめて、最初の思い出を追加できます。"
-            }
-            action={
-              currentUser.role === "viewer" ? undefined : (
-                <Link className="primary-button" to="/posts/new">
-                  写真を追加
-                </Link>
-              )
-            }
-          />
+      <main className="timeline-layout page-content">
+        {posts && currentUser.role === "viewer" && unreadCount > 0 && (
+          <aside className="timeline-sidebar">
+            <UnreadSummary count={unreadCount} />
+          </aside>
         )}
-        {posts && currentUser.role === "viewer" && unreadCount > 0 && <UnreadSummary count={unreadCount} />}
-        {posts?.map((post, index) => {
-          const month = formatTimelineMonth(post.capturedAt ?? post.publishedAt);
-          const previous = posts[index - 1];
-          const previousMonth = previous ? formatTimelineMonth(previous.capturedAt ?? previous.publishedAt) : null;
-          return (
-            <Fragment key={post.id}>
-              {month !== previousMonth && <h2 className="timeline-month-heading">{month}</h2>}
-              <PostCard post={post} onViewed={() => setUnreadCount((count) => Math.max(0, count - 1))} />
-            </Fragment>
-          );
-        })}
-        {posts && nextCursor && (
-          <div className="form-page">
-            {moreError && (
-              <p className="form-error" role="alert">
-                {moreError}
-              </p>
-            )}
-            <button
-              className="outline-button wide"
-              type="button"
-              onClick={() => void loadMore()}
-              disabled={loadingMore}
-            >
-              {loadingMore ? "読み込み中…" : "さらに読み込む"}
-            </button>
-          </div>
-        )}
+        <section className="feed" aria-label="タイムライン">
+          {!posts && !error && <PageSkeleton variant="timeline" />}
+          {error && <ErrorState message={error} retry={load} />}
+          {posts?.length === 0 && (
+            <EmptyState
+              title="まだ投稿がありません"
+              body={
+                currentUser.role === "viewer"
+                  ? "新しい思い出が追加されると、ここに表示されます。"
+                  : "写真をまとめて、最初の思い出を追加できます。"
+              }
+              action={
+                currentUser.role === "viewer" ? undefined : (
+                  <Link className="primary-button" to="/posts/new">
+                    写真を追加
+                  </Link>
+                )
+              }
+            />
+          )}
+          {posts?.map((post, index) => {
+            const month = formatTimelineMonth(post.capturedAt ?? post.publishedAt);
+            const previous = posts[index - 1];
+            const previousMonth = previous ? formatTimelineMonth(previous.capturedAt ?? previous.publishedAt) : null;
+            return (
+              <Fragment key={post.id}>
+                {month !== previousMonth && <h2 className="timeline-month-heading">{month}</h2>}
+                <PostCard post={post} onViewed={() => setUnreadCount((count) => Math.max(0, count - 1))} />
+              </Fragment>
+            );
+          })}
+          {posts && nextCursor && (
+            <div className="form-page">
+              {moreError && (
+                <p className="form-error" role="alert">
+                  {moreError}
+                </p>
+              )}
+              <button
+                className="outline-button wide"
+                type="button"
+                onClick={() => void loadMore()}
+                disabled={loadingMore}
+              >
+                {loadingMore ? "読み込み中…" : "さらに読み込む"}
+              </button>
+            </div>
+          )}
+        </section>
       </main>
     </>
   );

@@ -15,15 +15,17 @@ export function PageHeader({
   const navigate = useNavigate();
   return (
     <header className={`page-header${inverse ? " inverse" : ""}`}>
-      <div className="header-side">
-        {back && (
-          <button className="icon-button" type="button" onClick={() => navigate(-1)} aria-label="戻る">
-            <ChevronLeft />
-          </button>
-        )}
+      <div className="page-header-inner">
+        <div className="header-side">
+          {back && (
+            <button className="icon-button" type="button" onClick={() => navigate(-1)} aria-label="戻る">
+              <ChevronLeft />
+            </button>
+          )}
+        </div>
+        {title ? <h1>{title}</h1> : <span aria-hidden />}
+        <div className="header-side header-action">{action}</div>
       </div>
-      {title ? <h1>{title}</h1> : <span aria-hidden />}
-      <div className="header-side header-action">{action}</div>
     </header>
   );
 }

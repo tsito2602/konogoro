@@ -377,7 +377,7 @@ export function PostEditPage() {
     <>
       <PageHeader title="投稿を編集" back />
       <main className="form-page page-content">
-        <form className="form-stack" onSubmit={submit}>
+        <form className="form-stack post-edit-form" onSubmit={submit}>
           <MediaProcessingStatus files={files} uploading={saving && files.length > 0} uploadProgress={progress} />
           <section className="photo-picker">
             <div

@@ -5,7 +5,16 @@ import type { CurrentUser } from "../../shared/types";
 import { canCreatePost, canInviteFamily, canManageEvent } from "../../shared/permissions";
 import { api } from "../api";
 import { ErrorState } from "./AsyncState";
+import { PwaGuide } from "./PwaGuide";
 import { ToastProvider } from "./Toast";
+
+export const mainNavigationItems = [
+  { to: "/", label: "タイムライン", description: "未閲覧の思い出と全投稿を見る", icon: Images, end: true },
+  { to: "/activity", label: "お知らせ", description: "新しい投稿やコメントの履歴を見る", icon: Bell },
+  { to: "/events", label: "イベント", description: "旅行やお出かけごとに思い出を見る", icon: CalendarDays },
+  { to: "/album", label: "アルバム", description: "写真と動画を撮影時期から探す", icon: GalleryVerticalEnd },
+  { to: "/settings", label: "設定", description: "表示や通知などを変更する", icon: Settings },
+] as const;
 
 const viewerPattern = /^\/posts\/[^/]+\/media\//;
 export function canAccessPath(user: CurrentUser, pathname: string): boolean {
@@ -13,6 +22,11 @@ export function canAccessPath(user: CurrentUser, pathname: string): boolean {
   if (/^\/events\/new$/.test(pathname) || /^\/events\/[^/]+\/edit$/.test(pathname)) return canManageEvent(user);
   if (pathname === "/settings/family") return canInviteFamily(user);
   return true;
+}
+
+export function postCreatePath(pathname: string): string {
+  const eventMatch = pathname.match(/^\/events\/([^/]+)$/);
+  return eventMatch ? `/posts/new?event=${encodeURIComponent(eventMatch[1])}` : "/posts/new";
 }
 
 export function useCurrentUser(): CurrentUser {
@@ -38,6 +52,8 @@ export function AppLayout() {
     setBackgroundSnapshot({ routeIdentity, content: routedContent });
   }
   const hideNavigation = viewerPattern.test(pathname);
+  const addPostPath = postCreatePath(pathname);
+  const addingToEvent = addPostPath !== "/posts/new";
   const hideAddButton =
     /^\/posts\/[^/]+$/.test(pathname) ||
     pathname === "/posts/new" ||
@@ -87,59 +103,88 @@ export function AppLayout() {
       <div className={hideNavigation ? "app-shell viewer-shell" : "app-shell"}>
         {showPostPage && backgroundContent ? backgroundContent : routedContent}
         {showPostPage && backgroundContent ? routedContent : null}
+        <PwaGuide user={currentUser} />
         {!hideNavigation && (
-          <nav className="tab-bar" aria-label="メインナビゲーション">
-            <NavItem to="/" label="ホーム" icon={<Images />} end />
-            <NavItem to="/activity" label="新着" icon={<Bell />} />
-            <NavItem to="/events" label="イベント" icon={<CalendarDays />} />
-            <NavItem to="/album" label="アルバム" icon={<GalleryVerticalEnd />} />
-            <NavItem to="/settings" label="設定" icon={<Settings />} />
+          <nav
+            className={`tab-bar${canCreatePost(currentUser) ? " has-desktop-add" : ""}`}
+            aria-label="メインナビゲーション"
+          >
+            {canCreatePost(currentUser) && (
+              <div className="desktop-add-slot">
+                {canManageEvent(currentUser) ? (
+                  <button
+                    className={`desktop-add-button${addMenuOpen ? " open" : ""}`}
+                    type="button"
+                    onClick={() => setAddMenuOpen((open) => !open)}
+                    aria-expanded={addMenuOpen}
+                    aria-label={addMenuOpen ? "追加メニューを閉じる" : "追加メニューを開く"}
+                  >
+                    <Plus />
+                    <span>
+                      <strong>追加</strong>
+                      <small>写真・動画・イベント</small>
+                    </span>
+                  </button>
+                ) : (
+                  <Link className="desktop-add-button" to={addPostPath} aria-label="写真・動画を追加">
+                    <Plus />
+                    <span>
+                      <strong>追加</strong>
+                      <small>写真・動画を投稿</small>
+                    </span>
+                  </Link>
+                )}
+              </div>
+            )}
+            {mainNavigationItems.map(({ icon: Icon, ...item }) => (
+              <NavItem {...item} icon={<Icon />} key={item.to} />
+            ))}
           </nav>
+        )}
+        {!hideNavigation && canCreatePost(currentUser) && canManageEvent(currentUser) && addMenuOpen && (
+          <>
+            <button
+              className="add-menu-backdrop"
+              type="button"
+              onClick={() => setAddMenuOpen(false)}
+              aria-label="追加メニューを閉じる"
+            />
+            <div className="add-menu" role="menu" aria-label="追加するものを選択">
+              <Link to={addPostPath} role="menuitem" onClick={() => setAddMenuOpen(false)}>
+                <ImagePlus />
+                <span>
+                  <strong>{addingToEvent ? "このイベントに写真・動画" : "写真・動画"}</strong>
+                  <small>{addingToEvent ? "表示中のイベントを選択して投稿" : "思い出を投稿する"}</small>
+                </span>
+              </Link>
+              <Link to="/events/new" role="menuitem" onClick={() => setAddMenuOpen(false)}>
+                <CalendarPlus />
+                <span>
+                  <strong>イベント</strong>
+                  <small>旅行やお出かけを作る</small>
+                </span>
+              </Link>
+            </div>
+          </>
         )}
         {!hideNavigation &&
           !hideAddButton &&
           canCreatePost(currentUser) &&
           (canManageEvent(currentUser) ? (
-            <>
-              {addMenuOpen && (
-                <>
-                  <button
-                    className="add-menu-backdrop"
-                    type="button"
-                    onClick={() => setAddMenuOpen(false)}
-                    aria-label="追加メニューを閉じる"
-                  />
-                  <div className="add-menu" role="menu" aria-label="追加するものを選択">
-                    <Link to="/posts/new" role="menuitem" onClick={() => setAddMenuOpen(false)}>
-                      <ImagePlus />
-                      <span>
-                        <strong>写真・動画</strong>
-                        <small>思い出を投稿する</small>
-                      </span>
-                    </Link>
-                    <Link to="/events/new" role="menuitem" onClick={() => setAddMenuOpen(false)}>
-                      <CalendarPlus />
-                      <span>
-                        <strong>イベント</strong>
-                        <small>旅行やお出かけを作る</small>
-                      </span>
-                    </Link>
-                  </div>
-                </>
-              )}
-              <button
-                className={`floating-add-button${addMenuOpen ? " open" : ""}`}
-                type="button"
-                onClick={() => setAddMenuOpen((open) => !open)}
-                aria-expanded={addMenuOpen}
-                aria-label={addMenuOpen ? "追加メニューを閉じる" : "追加メニューを開く"}
-              >
-                <Plus />
-              </button>
-            </>
-          ) : (
-            <Link className="floating-add-button" to="/posts/new" aria-label="写真・動画を追加">
+            <button
+              className={`floating-add-button mobile-add-button${addMenuOpen ? " open" : ""}`}
+              type="button"
+              onClick={() => setAddMenuOpen((open) => !open)}
+              aria-expanded={addMenuOpen}
+              aria-label={addMenuOpen ? "追加メニューを閉じる" : "追加メニューを開く"}
+            >
               <Plus />
+              <span className="floating-add-label">追加</span>
+            </button>
+          ) : (
+            <Link className="floating-add-button mobile-add-button" to={addPostPath} aria-label="写真・動画を追加">
+              <Plus />
+              <span className="floating-add-label">追加</span>
             </Link>
           ))}
       </div>
@@ -181,13 +226,26 @@ export function LoginScreen({ returnTo = "/" }: { returnTo?: string }) {
   );
 }
 
-function NavItem({ to, label, icon, end }: { to: string; label: string; icon: React.ReactNode; end?: boolean }) {
+function NavItem({
+  to,
+  label,
+  description,
+  icon,
+  end,
+}: {
+  to: string;
+  label: string;
+  description: string;
+  icon: React.ReactNode;
+  end?: boolean;
+}) {
   return (
     <NavLink
       to={to}
       end={end}
       onClick={() => window.scrollTo(0, 0)}
       className={({ isActive }) => `tab-item${isActive ? " active" : ""}`}
+      aria-label={`${label}：${description}`}
     >
       {icon}
       <span>{label}</span>

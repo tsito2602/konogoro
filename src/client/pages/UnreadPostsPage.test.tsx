@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { UnreadComplete } from "./UnreadPostsPage";
 
 describe("UnreadComplete", () => {
-  it("全件閲覧後の完了状態とホームへの導線を表示する", () => {
+  it("全件閲覧後の完了状態とタイムラインへの導線を表示する", () => {
     const html = renderToStaticMarkup(
       <MemoryRouter>
         <UnreadComplete />
@@ -12,6 +12,7 @@ describe("UnreadComplete", () => {
     );
 
     expect(html).toContain("新しい思い出はすべて見ました");
+    expect(html).toContain("タイムラインへ戻る");
     expect(html).toContain('href="/"');
   });
 });

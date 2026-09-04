@@ -27,4 +27,13 @@ describe("PageSkeleton", () => {
     expect(html).toContain("skeleton-comment-composer");
     expect(html).toContain('aria-busy="true"');
   });
+
+  it("お知らせの最終閲覧アイコン群を権限に合わせて切り替える", () => {
+    const ownerHtml = renderToStaticMarkup(<PageSkeleton variant="activity" showActivityViewers />);
+    const viewerHtml = renderToStaticMarkup(<PageSkeleton variant="activity" showActivityViewers={false} />);
+
+    expect(ownerHtml).toContain("skeleton-viewers");
+    expect(viewerHtml).not.toContain("skeleton-viewers");
+    expect(viewerHtml).toContain("skeleton-rows");
+  });
 });

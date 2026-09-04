@@ -93,9 +93,9 @@ export function UnreadComplete() {
         <Check />
       </span>
       <h2>新しい思い出はすべて見ました</h2>
-      <p>また新しい投稿が届いたら、ホームでお知らせします。</p>
+      <p>また新しい投稿が届いたら、タイムラインでお知らせします。</p>
       <Link className="primary-button" to="/">
-        ホームへ戻る
+        タイムラインへ戻る
       </Link>
     </section>
   );

@@ -2,11 +2,19 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const css = readFileSync(new URL("./accessibility.css", import.meta.url), "utf8");
+const appCss = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
 
 describe("viewer accessibility safeguards", () => {
   it("keeps keyboard focus visible", () => {
     expect(css).toContain(":focus-visible");
-    expect(css).toContain("outline: 3px solid var(--focus-ring)");
+    expect(css).toContain("outline: 2px solid var(--focus-ring)");
+    expect(css).toContain("outline-offset: 2px");
+  });
+
+  it("uses one restrained focus ring across native and custom controls", () => {
+    expect(appCss).not.toContain("box-shadow: 0 0 0 2px rgba(255, 209, 102, 0.5)");
+    expect(appCss).not.toContain(":focus-within");
+    expect(appCss).toContain(":has(input:focus-visible)");
   });
 
   it("keeps primary interactive targets at least 44px tall", () => {

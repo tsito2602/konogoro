@@ -23,7 +23,7 @@ describe("API validation", () => {
     expect(eventCoverInputSchema.safeParse({}).success).toBe(false);
   });
 
-  it("イベント編集内容をまとめて受け付け、重複シーンを拒否する", () => {
+  it("イベント編集内容をまとめて受け付け、重複する見出しを拒否する", () => {
     const event = { title: "旅行", description: "", startDate: null, endDate: null };
     expect(
       eventManagementInputSchema.safeParse({
@@ -32,16 +32,16 @@ describe("API validation", () => {
         coverMediaId: null,
       }).success,
     ).toBe(true);
-    expect(
-      eventManagementInputSchema.safeParse({
-        event,
-        scenes: [
-          { id: "scene-1", title: "1日目" },
-          { id: "scene-1", title: "重複" },
-        ],
-        coverMediaId: null,
-      }).success,
-    ).toBe(false);
+    const duplicateResult = eventManagementInputSchema.safeParse({
+      event,
+      scenes: [
+        { id: "scene-1", title: "1日目" },
+        { id: "scene-1", title: "重複" },
+      ],
+      coverMediaId: null,
+    });
+    expect(duplicateResult.success).toBe(false);
+    if (!duplicateResult.success) expect(duplicateResult.error.issues[0]?.message).toBe("同じ見出しが重複しています");
   });
 
   it("空コメントを拒否する", () => {
@@ -71,7 +71,7 @@ describe("API validation", () => {
     ).toBe(false);
   });
 
-  it("シーン名を受け付ける", () => {
+  it("見出し名を受け付ける", () => {
     expect(sceneInputSchema.safeParse({ title: "1日目" }).success).toBe(true);
     expect(sceneInputSchema.safeParse({ title: "   " }).success).toBe(false);
   });

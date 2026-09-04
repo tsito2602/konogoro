@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 const css = readFileSync(new URL("./styles.css", import.meta.url), "utf8");
+const appLayout = readFileSync(new URL("./components/AppLayout.tsx", import.meta.url), "utf8");
 
 describe("desktop layout contract", () => {
   it("switches the application shell and shared header at desktop width", () => {
@@ -9,6 +10,14 @@ describe("desktop layout contract", () => {
     expect(css).toContain(".app-shell:not(.viewer-shell)");
     expect(css).toContain(".page-header-inner");
     expect(css).toContain("max-width: 1280px");
+  });
+
+  it("places the add action in a dedicated desktop navigation slot", () => {
+    const desktopCss = css.slice(css.indexOf("@media (min-width: 1024px)"));
+    expect(appLayout).toContain('className="desktop-add-slot"');
+    expect(desktopCss).toContain(".desktop-add-slot");
+    expect(desktopCss).toContain(".desktop-add-button");
+    expect(desktopCss).toMatch(/\.mobile-add-button\s*{\s*display: none;/);
   });
 
   it.each([

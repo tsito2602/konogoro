@@ -96,6 +96,33 @@ export function AppLayout() {
         {showPostPage && backgroundContent ? routedContent : null}
         {!hideNavigation && (
           <nav className="tab-bar" aria-label="メインナビゲーション">
+            {canCreatePost(currentUser) && (
+              <div className="desktop-add-slot">
+                {canManageEvent(currentUser) ? (
+                  <button
+                    className={`desktop-add-button${addMenuOpen ? " open" : ""}`}
+                    type="button"
+                    onClick={() => setAddMenuOpen((open) => !open)}
+                    aria-expanded={addMenuOpen}
+                    aria-label={addMenuOpen ? "追加メニューを閉じる" : "追加メニューを開く"}
+                  >
+                    <Plus />
+                    <span>
+                      <strong>追加</strong>
+                      <small>写真・動画・イベント</small>
+                    </span>
+                  </button>
+                ) : (
+                  <Link className="desktop-add-button" to={addPostPath} aria-label="写真・動画を追加">
+                    <Plus />
+                    <span>
+                      <strong>追加</strong>
+                      <small>写真・動画を投稿</small>
+                    </span>
+                  </Link>
+                )}
+              </div>
+            )}
             <NavItem to="/" label="ホーム" icon={<Images />} end />
             <NavItem to="/activity" label="新着" icon={<Bell />} />
             <NavItem to="/events" label="イベント" icon={<CalendarDays />} />
@@ -103,50 +130,48 @@ export function AppLayout() {
             <NavItem to="/settings" label="設定" icon={<Settings />} />
           </nav>
         )}
+        {!hideNavigation && canCreatePost(currentUser) && canManageEvent(currentUser) && addMenuOpen && (
+          <>
+            <button
+              className="add-menu-backdrop"
+              type="button"
+              onClick={() => setAddMenuOpen(false)}
+              aria-label="追加メニューを閉じる"
+            />
+            <div className="add-menu" role="menu" aria-label="追加するものを選択">
+              <Link to={addPostPath} role="menuitem" onClick={() => setAddMenuOpen(false)}>
+                <ImagePlus />
+                <span>
+                  <strong>{addingToEvent ? "このイベントに写真・動画" : "写真・動画"}</strong>
+                  <small>{addingToEvent ? "表示中のイベントを選択して投稿" : "思い出を投稿する"}</small>
+                </span>
+              </Link>
+              <Link to="/events/new" role="menuitem" onClick={() => setAddMenuOpen(false)}>
+                <CalendarPlus />
+                <span>
+                  <strong>イベント</strong>
+                  <small>旅行やお出かけを作る</small>
+                </span>
+              </Link>
+            </div>
+          </>
+        )}
         {!hideNavigation &&
           !hideAddButton &&
           canCreatePost(currentUser) &&
           (canManageEvent(currentUser) ? (
-            <>
-              {addMenuOpen && (
-                <>
-                  <button
-                    className="add-menu-backdrop"
-                    type="button"
-                    onClick={() => setAddMenuOpen(false)}
-                    aria-label="追加メニューを閉じる"
-                  />
-                  <div className="add-menu" role="menu" aria-label="追加するものを選択">
-                    <Link to={addPostPath} role="menuitem" onClick={() => setAddMenuOpen(false)}>
-                      <ImagePlus />
-                      <span>
-                        <strong>{addingToEvent ? "このイベントに写真・動画" : "写真・動画"}</strong>
-                        <small>{addingToEvent ? "表示中のイベントを選択して投稿" : "思い出を投稿する"}</small>
-                      </span>
-                    </Link>
-                    <Link to="/events/new" role="menuitem" onClick={() => setAddMenuOpen(false)}>
-                      <CalendarPlus />
-                      <span>
-                        <strong>イベント</strong>
-                        <small>旅行やお出かけを作る</small>
-                      </span>
-                    </Link>
-                  </div>
-                </>
-              )}
-              <button
-                className={`floating-add-button${addMenuOpen ? " open" : ""}`}
-                type="button"
-                onClick={() => setAddMenuOpen((open) => !open)}
-                aria-expanded={addMenuOpen}
-                aria-label={addMenuOpen ? "追加メニューを閉じる" : "追加メニューを開く"}
-              >
-                <Plus />
-                <span className="floating-add-label">追加</span>
-              </button>
-            </>
+            <button
+              className={`floating-add-button mobile-add-button${addMenuOpen ? " open" : ""}`}
+              type="button"
+              onClick={() => setAddMenuOpen((open) => !open)}
+              aria-expanded={addMenuOpen}
+              aria-label={addMenuOpen ? "追加メニューを閉じる" : "追加メニューを開く"}
+            >
+              <Plus />
+              <span className="floating-add-label">追加</span>
+            </button>
           ) : (
-            <Link className="floating-add-button" to={addPostPath} aria-label="写真・動画を追加">
+            <Link className="floating-add-button mobile-add-button" to={addPostPath} aria-label="写真・動画を追加">
               <Plus />
               <span className="floating-add-label">追加</span>
             </Link>

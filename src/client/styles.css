@@ -323,6 +323,9 @@ a.icon-button {
 .tab-item.active svg {
   stroke-width: 2.3;
 }
+.desktop-add-slot {
+  display: none;
+}
 .floating-add-button {
   position: fixed;
   z-index: 34;
@@ -3410,13 +3413,66 @@ textarea:focus {
     inset: 0 auto 0 0;
     width: 216px;
     height: 100dvh;
-    padding: 28px 14px 112px;
+    padding: 28px 14px;
     grid-template-columns: 1fr;
-    grid-template-rows: repeat(5, 52px);
+    grid-template-rows: 94px repeat(5, 52px);
     align-content: start;
     gap: 4px;
     border-top: 0;
     border-right: 1px solid var(--separator);
+  }
+  .desktop-add-slot {
+    margin-bottom: 12px;
+    padding-bottom: 16px;
+    display: block;
+    border-bottom: 1px solid var(--separator);
+  }
+  .desktop-add-button {
+    width: 100%;
+    min-height: 62px;
+    padding: 10px 13px;
+    display: grid;
+    grid-template-columns: 28px minmax(0, 1fr);
+    gap: 10px;
+    align-items: center;
+    border: 0;
+    border-radius: var(--radius-card);
+    color: var(--accent-contrast);
+    background: var(--accent);
+    box-shadow: 0 7px 18px rgba(107, 75, 0, 0.18);
+    text-align: left;
+    cursor: pointer;
+  }
+  .desktop-add-button:hover {
+    filter: brightness(0.97);
+  }
+  .desktop-add-button:active {
+    transform: scale(0.98);
+  }
+  .desktop-add-button svg {
+    width: 25px;
+    height: 25px;
+  }
+  .desktop-add-button > span {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .desktop-add-button strong {
+    font-size: 15px;
+    line-height: 1.2;
+  }
+  .desktop-add-button small {
+    overflow: hidden;
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.3;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .desktop-add-button.open svg {
+    transform: rotate(45deg);
   }
   .tab-item {
     min-height: 52px;
@@ -3434,35 +3490,17 @@ textarea:focus {
     width: 22px;
     height: 22px;
   }
-  .floating-add-button {
-    right: auto;
-    bottom: 28px;
-    left: 24px;
-    width: 168px;
-    height: 48px;
-    display: flex;
-    gap: 8px;
-    border-radius: var(--pill);
+  .mobile-add-button {
+    display: none;
   }
-  .floating-add-button svg {
-    width: 22px;
-    height: 22px;
-  }
-  .floating-add-button.open {
-    transform: none;
-  }
-  .floating-add-button.open svg {
-    transform: rotate(45deg);
-  }
-  .floating-add-label {
-    display: inline;
-    font-size: 15px;
-    font-weight: 700;
+  .add-menu-backdrop {
+    left: 216px;
   }
   .add-menu {
     right: auto;
-    bottom: 86px;
-    left: 18px;
+    bottom: auto;
+    left: 224px;
+    top: 28px;
   }
   .timeline-layout {
     max-width: 920px;

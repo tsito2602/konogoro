@@ -2188,8 +2188,12 @@ textarea:focus {
 }
 .onboarding-guide-copy h2 {
   margin: 5px 0 0;
-  font-size: clamp(24px, 7vw, 36px);
+  font-size: clamp(21px, 6.5vw, 36px);
   line-height: 1.25;
+}
+.onboarding-guide-copy h2 span {
+  display: block;
+  white-space: nowrap;
 }
 .onboarding-guide-copy > p:last-child {
   margin: 13px auto 0;
@@ -2214,20 +2218,24 @@ textarea:focus {
   gap: 7px;
 }
 .onboarding-guide-dots button {
-  width: 8px;
-  height: 8px;
+  flex: 0 0 10px;
+  width: 10px;
+  min-width: 10px;
+  height: 10px;
+  min-height: 10px;
+  aspect-ratio: 1;
   padding: 0;
   border: 0;
-  border-radius: 999px;
+  border-radius: 50%;
   background: var(--border);
   cursor: pointer;
   transition:
-    width 0.2s ease,
+    transform 0.2s ease,
     background 0.2s ease;
 }
 .onboarding-guide-dots button.active {
-  width: 24px;
   background: var(--accent);
+  transform: scale(1.25);
 }
 .onboarding-guide-actions {
   width: min(100%, 560px);
@@ -2343,6 +2351,10 @@ textarea:focus {
 .guide-family span:nth-child(3) {
   background: #6d8f64;
 }
+.guide-family svg {
+  width: 20px;
+  height: 20px;
+}
 .guide-phone {
   padding: 20px;
   display: flex;
@@ -2440,36 +2452,91 @@ textarea:focus {
   color: rgba(255, 255, 255, 0.82);
 }
 .guide-album {
-  padding: 18px;
+  padding: 16px;
+}
+.guide-album-year {
+  display: grid;
+  grid-template-columns: 30px 1fr 30px;
+  align-items: center;
+  text-align: center;
+}
+.guide-album-year strong {
+  font-size: 19px;
+}
+.guide-album-year svg {
+  width: 18px;
+  height: 18px;
+  color: var(--ash);
 }
 .guide-months {
+  margin-top: 7px;
   display: flex;
+  justify-content: center;
   align-items: center;
-  gap: 8px;
-}
-.guide-months strong {
-  margin-right: auto;
-  font-size: 20px;
+  gap: 12px;
 }
 .guide-months span {
-  padding: 7px 9px;
-  border-radius: 99px;
+  position: relative;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
   color: var(--ash);
   font-size: 12px;
 }
+.guide-months span::after {
+  content: "";
+  position: absolute;
+  right: 7px;
+  bottom: 0;
+  left: 7px;
+  height: 2px;
+  border-radius: 2px;
+  background: transparent;
+}
 .guide-months span.active {
-  color: var(--accent-contrast);
-  background: var(--accent);
+  color: var(--carbon);
   font-weight: 700;
 }
+.guide-months span.active::after {
+  background: var(--accent);
+}
+.guide-months svg {
+  width: 16px;
+  height: 16px;
+}
+.guide-album-cover {
+  position: relative;
+  min-height: 112px;
+  margin-top: 8px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  overflow: hidden;
+  border-radius: 12px;
+  color: #fff;
+  background: linear-gradient(145deg, #7da7d9, #f0bd75 56%, #55795c);
+}
+.guide-album-cover::after {
+  content: "";
+  position: absolute;
+  inset: 45% 0 0;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.62));
+}
+.guide-album-cover strong,
+.guide-album-cover small {
+  position: relative;
+  z-index: 1;
+}
 .guide-album-grid {
-  margin-top: 15px;
+  margin-top: 4px;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 4px;
 }
 .guide-album-grid i {
-  aspect-ratio: 1;
+  aspect-ratio: 4 / 3;
   background: linear-gradient(145deg, #7db0c4, #e8c176);
 }
 .guide-album-grid i:nth-child(2n) {

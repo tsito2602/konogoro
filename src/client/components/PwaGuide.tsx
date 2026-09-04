@@ -1,14 +1,16 @@
 import {
   Bell,
   CalendarDays,
-  Check,
   ChevronLeft,
   ChevronRight,
-  ImagePlus,
+  Grid2X2,
+  Heart,
   Images,
   MessageCircle,
   ShieldCheck,
+  Smile,
   Smartphone,
+  UserRound,
   X,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type KeyboardEvent } from "react";
@@ -104,7 +106,7 @@ export function PwaGuide({ user }: { user: CurrentUser }) {
 
   return (
     <>
-      {welcomeOpen && <WelcomeGuide user={user} close={closeWelcome} />}
+      {welcomeOpen && <WelcomeGuide close={closeWelcome} />}
       {installOpen && (
         <InstallGuide
           environment={environment}
@@ -117,60 +119,47 @@ export function PwaGuide({ user }: { user: CurrentUser }) {
   );
 }
 
-type GuideVisual = "welcome" | "timeline" | "events" | "album" | "comments" | "add";
+type GuideVisual = "welcome" | "timeline" | "events" | "album" | "comments";
 
-type GuideSlide = { eyebrow: string; title: string; body: string; visual: GuideVisual };
+type GuideSlide = { eyebrow: string; titleLines: string[]; body: string; visual: GuideVisual };
 
-export function onboardingGuideSlides(canPost: boolean): GuideSlide[] {
+export function onboardingGuideSlides(): GuideSlide[] {
   return [
     {
       eyebrow: "このごろへようこそ",
-      title: "家族だけで、思い出を残す",
+      titleLines: ["家族だけで、", "思い出を残す"],
       body: "招待されたメンバーだけで写真や動画を共有できます。大切な記録を、安心して見返せる場所です。",
       visual: "welcome",
     },
     {
       eyebrow: "タイムライン",
-      title: "新しい思い出から、順番に",
+      titleLines: ["新しい思い出から、", "順番に見られる"],
       body: "未閲覧の件数がひと目で分かります。「新しい思い出を見る」を押すと、まだ見ていない投稿を続けて見られます。",
       visual: "timeline",
     },
     {
       eyebrow: "イベント",
-      title: "旅行やお出かけごとに整理",
-      body: "旅行、記念日、日々のお出かけをイベント単位でまとめます。写真と動画がひとつの物語として残ります。",
+      titleLines: ["旅行やお出かけごとに、", "思い出を見られる"],
+      body: "旅行や記念日などのまとまりから、写真と動画を見られます。家族の思い出を出来事ごとに振り返れます。",
       visual: "events",
     },
     {
       eyebrow: "アルバム",
-      title: "撮影した時期から、すぐ探せる",
+      titleLines: ["撮影した時期から、", "すぐ探せる"],
       body: "写真と動画は撮影年月ごとに自動で並びます。年と月を切り替えて、過去の思い出まで素早くたどれます。",
       visual: "album",
     },
     {
       eyebrow: "コメントとお知らせ",
-      title: "思い出に、家族の言葉を添える",
+      titleLines: ["思い出に、", "家族の言葉を添える"],
       body: "投稿にはコメントを残せます。新しい投稿やコメントは「お知らせ」にまとまり、見逃しません。",
       visual: "comments",
     },
-    canPost
-      ? {
-          eyebrow: "写真・動画を追加",
-          title: "追加ボタンから、かんたんに投稿",
-          body: "追加ボタンを押して写真や動画を選びます。イベントを指定すれば、あとから探すときも迷いません。",
-          visual: "add",
-        }
-      : {
-          eyebrow: "いつでも見返せます",
-          title: "分からなくなったら、設定へ",
-          body: "このガイドは「設定 → このごろの使い方」から何度でも開けます。右上の×で、どのページからでも閉じられます。",
-          visual: "welcome",
-        },
   ];
 }
 
-function WelcomeGuide({ user, close }: { user: CurrentUser; close: () => void }) {
-  const slides = useMemo(() => onboardingGuideSlides(user.role !== "viewer"), [user.role]);
+function WelcomeGuide({ close }: { close: () => void }) {
+  const slides = useMemo(() => onboardingGuideSlides(), []);
   const [page, setPage] = useState(0);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
   const lastPage = page === slides.length - 1;
@@ -226,7 +215,11 @@ function WelcomeGuide({ user, close }: { user: CurrentUser; close: () => void })
           <GuideIllustration kind={slide.visual} />
           <div className="onboarding-guide-copy" aria-live="polite">
             <p className="pwa-guide-eyebrow">{slide.eyebrow}</p>
-            <h2 id="welcome-title">{slide.title}</h2>
+            <h2 id="welcome-title">
+              {slide.titleLines.map((line) => (
+                <span key={line}>{line}</span>
+              ))}
+            </h2>
             <p>{slide.body}</p>
           </div>
         </div>
@@ -239,7 +232,7 @@ function WelcomeGuide({ user, close }: { user: CurrentUser; close: () => void })
                 onClick={() => move(index)}
                 aria-label={`${index + 1}ページ目へ移動`}
                 aria-current={index === page ? "step" : undefined}
-                key={item.title}
+                key={item.titleLines.join("")}
               />
             ))}
           </div>
@@ -275,9 +268,15 @@ function GuideIllustration({ kind }: { kind: GuideVisual }) {
           <ShieldCheck />
         </span>
         <div className="guide-family">
-          <span>つ</span>
-          <span>家</span>
-          <span>族</span>
+          <span>
+            <UserRound />
+          </span>
+          <span>
+            <Heart />
+          </span>
+          <span>
+            <Smile />
+          </span>
         </div>
       </div>
     );
@@ -307,15 +306,15 @@ function GuideIllustration({ kind }: { kind: GuideVisual }) {
         <article>
           <CalendarDays />
           <span>
-            <strong>福島旅行</strong>
-            <small>9月5日〜6日</small>
+            <strong>旅行</strong>
+            <small>2泊3日</small>
           </span>
         </article>
         <article>
           <CalendarDays />
           <span>
-            <strong>結婚記念日</strong>
-            <small>8月18日</small>
+            <strong>記念日</strong>
+            <small>8月</small>
           </span>
         </article>
       </div>
@@ -323,16 +322,24 @@ function GuideIllustration({ kind }: { kind: GuideVisual }) {
   if (kind === "album")
     return (
       <div className="guide-visual guide-album" role="img" aria-label="年月ごとに写真を探せるアルバムのイメージ">
-        <div className="guide-months">
+        <div className="guide-album-year">
+          <ChevronLeft />
           <strong>2026</strong>
-          <span>7月</span>
-          <span className="active">8月</span>
-          <span>9月</span>
+          <ChevronRight />
+        </div>
+        <div className="guide-months">
+          <span>
+            <Grid2X2 />
+          </span>
+          <span>7</span>
+          <span className="active">8</span>
+          <span>9</span>
+        </div>
+        <div className="guide-album-cover">
+          <strong>8月</strong>
+          <small>12件の思い出</small>
         </div>
         <div className="guide-album-grid">
-          <i />
-          <i />
-          <i />
           <i />
           <i />
           <i />
@@ -347,7 +354,7 @@ function GuideIllustration({ kind }: { kind: GuideVisual }) {
           <p>
             <strong>いい写真だね！</strong>
             <small>
-              <MessageCircle /> 福島旅行の投稿
+              <MessageCircle /> 旅行の思い出
             </small>
           </p>
         </div>
@@ -362,22 +369,7 @@ function GuideIllustration({ kind }: { kind: GuideVisual }) {
         </div>
       </div>
     );
-  return (
-    <div className="guide-visual guide-add" role="img" aria-label="写真や動画を追加する画面のイメージ">
-      <span className="guide-add-button">
-        <ImagePlus />
-        追加
-      </span>
-      <div className="guide-drop-area">
-        <Images />
-        <strong>写真・動画を選ぶ</strong>
-        <small>まとめて追加できます</small>
-      </div>
-      <div className="guide-event-chip">
-        <Check /> 福島旅行
-      </div>
-    </div>
-  );
+  return null;
 }
 
 function InstallGuide({

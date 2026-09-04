@@ -30,19 +30,8 @@ describe("installGuideContent", () => {
 
 describe("onboardingGuideSlides", () => {
   it("主要機能を画像付きページとして案内する", () => {
-    const slides = onboardingGuideSlides(false);
-    expect(slides.map(({ visual }) => visual)).toEqual([
-      "welcome",
-      "timeline",
-      "events",
-      "album",
-      "comments",
-      "welcome",
-    ]);
-    expect(slides.every(({ title, body }) => title.length > 0 && body.length > 0)).toBe(true);
-  });
-
-  it("投稿権限がある利用者には追加方法を案内する", () => {
-    expect(onboardingGuideSlides(true).at(-1)?.visual).toBe("add");
+    const slides = onboardingGuideSlides();
+    expect(slides.map(({ visual }) => visual)).toEqual(["welcome", "timeline", "events", "album", "comments"]);
+    expect(slides.every(({ titleLines, body }) => titleLines.length > 0 && body.length > 0)).toBe(true);
   });
 });

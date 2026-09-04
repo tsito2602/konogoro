@@ -7,13 +7,22 @@ export function Loading() {
   );
 }
 
-export function ErrorState({ message, retry }: { message: string; retry?: () => void }) {
+export function loginUrl(returnTo?: string): string {
+  const destination =
+    returnTo ??
+    (typeof window === "undefined"
+      ? "/"
+      : `${window.location.pathname}${window.location.search}${window.location.hash}`);
+  return destination === "/" ? "/api/auth/line" : `/api/auth/line?returnTo=${encodeURIComponent(destination)}`;
+}
+
+export function ErrorState({ message, retry, returnTo }: { message: string; retry?: () => void; returnTo?: string }) {
   const loginRequired = message === "ログインが必要です";
   return (
     <div className="state-message error-state">
       <p>{message}</p>
       {loginRequired ? (
-        <a className="line-login-button" href="/api/auth/line">
+        <a className="line-login-button" href={loginUrl(returnTo)}>
           LINEでログイン
         </a>
       ) : (

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { detectPwaEnvironment, installGuideContent } from "./PwaGuide";
+import { detectPwaEnvironment, installGuideContent, onboardingGuideSlides } from "./PwaGuide";
 
 describe("detectPwaEnvironment", () => {
   it("インストール済みPWAを端末より優先して判定する", () => {
@@ -25,5 +25,24 @@ describe("installGuideContent", () => {
 
   it("インストール済みの場合は追加手順を表示しない", () => {
     expect(installGuideContent("installed").steps).toEqual([]);
+  });
+});
+
+describe("onboardingGuideSlides", () => {
+  it("主要機能を画像付きページとして案内する", () => {
+    const slides = onboardingGuideSlides(false);
+    expect(slides.map(({ visual }) => visual)).toEqual([
+      "welcome",
+      "timeline",
+      "events",
+      "album",
+      "comments",
+      "welcome",
+    ]);
+    expect(slides.every(({ title, body }) => title.length > 0 && body.length > 0)).toBe(true);
+  });
+
+  it("投稿権限がある利用者には追加方法を案内する", () => {
+    expect(onboardingGuideSlides(true).at(-1)?.visual).toBe("add");
   });
 });

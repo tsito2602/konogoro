@@ -2586,6 +2586,82 @@ textarea:focus {
   width: 14px;
   height: 14px;
 }
+.guide-line {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: linear-gradient(160deg, #e9f8ec, var(--surface-subtle) 58%);
+}
+.guide-line-header {
+  display: grid;
+  grid-template-columns: 24px 1fr auto;
+  gap: 8px;
+  align-items: center;
+}
+.guide-line-header svg {
+  width: 22px;
+  color: #06a943;
+}
+.guide-line-header small {
+  color: var(--ash);
+}
+.guide-line article {
+  padding: 14px;
+  display: flex;
+  gap: 11px;
+  align-items: center;
+  border: 1px solid var(--separator);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+}
+.guide-line article > span {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: #fff;
+  background: #06a943;
+}
+.guide-line article svg {
+  width: 20px;
+}
+.guide-line article p {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+}
+.guide-line article small {
+  color: var(--ash);
+}
+.guide-line-preview {
+  min-height: 82px;
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 3px;
+  overflow: hidden;
+  border-radius: 13px;
+}
+.guide-line-preview div {
+  background: linear-gradient(145deg, #7db0c4, #e8c176);
+}
+.guide-line-preview div:nth-child(2) {
+  background: linear-gradient(145deg, #c78469, #55795c);
+}
+.guide-line-action {
+  padding: 10px;
+  border-radius: 11px;
+  color: #fff;
+  background: #06a943;
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+}
 .guide-add {
   padding: 20px;
   display: flex;

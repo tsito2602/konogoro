@@ -119,7 +119,7 @@ export function PwaGuide({ user }: { user: CurrentUser }) {
   );
 }
 
-type GuideVisual = "welcome" | "timeline" | "events" | "album" | "comments";
+type GuideVisual = "welcome" | "timeline" | "events" | "album" | "comments" | "line";
 
 type GuideSlide = { eyebrow: string; titleLines: string[]; body: string; visual: GuideVisual };
 
@@ -154,6 +154,12 @@ export function onboardingGuideSlides(): GuideSlide[] {
       titleLines: ["思い出に、", "家族の言葉を添える"],
       body: "投稿にはコメントを残せます。新しい投稿やコメントは「お知らせ」にまとまり、見逃しません。",
       visual: "comments",
+    },
+    {
+      eyebrow: "LINE通知",
+      titleLines: ["新しい思い出を、", "LINEでお知らせ"],
+      body: "新しい投稿が届くとLINEでお知らせします。通知から、そのまま新しい思い出を見られます。通知は設定画面でいつでも切り替えられます。",
+      visual: "line",
     },
   ];
 }
@@ -367,6 +373,31 @@ function GuideIllustration({ kind }: { kind: GuideVisual }) {
             <small>たった今</small>
           </p>
         </div>
+      </div>
+    );
+  if (kind === "line")
+    return (
+      <div className="guide-visual guide-line" role="img" aria-label="新しい思い出を知らせるLINE通知のイメージ">
+        <div className="guide-line-header">
+          <MessageCircle />
+          <strong>LINE通知</strong>
+          <small>たった今</small>
+        </div>
+        <article>
+          <span>
+            <Bell />
+          </span>
+          <p>
+            <strong>新しい思い出が届きました</strong>
+            <small>家族が写真を追加しました</small>
+          </p>
+        </article>
+        <div className="guide-line-preview">
+          <div />
+          <div />
+          <div />
+        </div>
+        <span className="guide-line-action">新しい思い出を見る</span>
       </div>
     );
   return null;

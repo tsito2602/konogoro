@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { CurrentUser } from "../../shared/types";
-import { BootScreen, canAccessPath, LoginScreen, mainNavigationItems } from "./AppLayout";
+import { BootScreen, canAccessPath, LoginScreen, mainNavigationItems, postCreatePath } from "./AppLayout";
 
 const viewer: CurrentUser = { id: "viewer", displayName: "Viewer", role: "viewer" };
 const uploader: CurrentUser = { id: "uploader", displayName: "Uploader", role: "uploader" };
@@ -35,6 +35,17 @@ describe("canAccessPath", () => {
     expect(canAccessPath(uploader, "/events/event-1/edit")).toBe(true);
     expect(canAccessPath(uploader, "/family")).toBe(true);
     expect(canAccessPath(uploader, "/settings/family")).toBe(false);
+  });
+});
+
+describe("投稿追加URL", () => {
+  it("イベント詳細ではイベントを引き継ぐ", () => {
+    expect(postCreatePath("/events/event-1")).toBe("/posts/new?event=event-1");
+  });
+
+  it("通常画面ではイベントを指定しない", () => {
+    expect(postCreatePath("/")).toBe("/posts/new");
+    expect(postCreatePath("/events")).toBe("/posts/new");
   });
 });
 

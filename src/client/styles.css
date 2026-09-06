@@ -241,9 +241,10 @@ img {
   min-width: 0;
   max-width: 100%;
   padding: 4px 8px;
-  overflow: visible;
+  overflow: hidden;
+  text-overflow: ellipsis;
   text-align: center;
-  white-space: normal;
+  white-space: nowrap;
   font-size: 1.5rem;
   line-height: 1.35;
   font-weight: 600;

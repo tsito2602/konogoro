@@ -32,6 +32,18 @@ export function PageSkeleton({ variant, currentUser }: SkeletonProps) {
 const line = (size = "wide") => <span className={`skeleton-line ${size}`} />;
 const tiles = (count: number) => Array.from({ length: count }, (_, i) => <span className="skeleton-tile" key={i} />);
 
+export function AlbumContentSkeleton({ allYear = false }: { allYear?: boolean }) {
+  return (
+    <div className="page-skeleton" role="status" aria-busy="true">
+      <span className="visually-hidden">写真・動画を読み込み中</span>
+      <section className="album-month" aria-hidden>
+        {!allYear && <div className="album-cover skeleton-tile" />}
+        <div className="album-grid skeleton-album-grid">{tiles(9)}</div>
+      </section>
+    </div>
+  );
+}
+
 export function CommentComposerSkeleton() {
   return (
     <div className="comment-composer skeleton-comment-composer" role="status" aria-busy="true">

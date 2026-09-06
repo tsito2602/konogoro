@@ -48,6 +48,83 @@ it("イベント期間で分類・ページングし、撮影日時と公開範�
     for (const id of ["end", "start", "undated", "none", "draft"])
       insert.run(id, id, "image", "uploaded", id, 0, user, "2026-08-31T16:00:00.000Z");
     insert.run("pending", "none", "image", "pending", "pending", 1, user, "2026-09-06");
+    // A full first page in the latest month must not hide older months from navigation.
+    for (let i = 0; i < 61; i++)
+      insert.run(`latest-${i}`, "none", "image", "uploaded", `latest-${i}`, i + 2, user, "2026-09-06T00:00:00.000Z");
+    const initial = await app.request("/api/album", undefined, env);
+    const initialBody = await initial.json<{ media: AlbumMedia[]; nextCursor: string | null }>();
+    expect(initialBody.media).toHaveLength(60);
+    expect(initialBody.media.every((m) => m.albumDate?.startsWith("2026-09"))).toBe(true);
+    expect(initialBody.nextCursor).toBeTruthy();
+    const months = await app.request("/api/album/months", undefined, env);
+    expect(months.status).toBe(200);
+    expect(await months.json()).toEqual({
+      months: [
+        { key: "2026-09", count: 63 },
+        { key: "2026-03", count: 1 },
+        { key: "2026-02", count: 1 },
+        { key: "2025-12", count: 65 },
+      ],
+    });
+    for (const filter of ["month=2025-12", "year=2025"]) {
+      const scoped: AlbumMedia[] = [];
+      let next: string | null = null;
+      let pages = 0;
+      do {
+        const response = await app.request(
+          `/api/album?${filter}${next ? `&cursor=${encodeURIComponent(next)}` : ""}`,
+          undefined,
+          env,
+        );
+        expect(response.status).toBe(200);
+        const body = await response.json<{ media: AlbumMedia[]; nextCursor: string | null }>();
+        scoped.push(...body.media);
+        next = body.nextCursor;
+        pages++;
+        expect(pages).toBeLessThanOrEqual(2);
+      } while (next);
+      expect(pages).toBe(2);
+      expect(scoped).toHaveLength(65);
+      expect(new Set(scoped.map((m) => m.id)).size).toBe(65);
+      expect(scoped.every((m) => m.albumDate === "2025-12-30")).toBe(true);
+    }
+    const empty = await app.request("/api/album?month=2024-01", undefined, env);
+    expect(await empty.json()).toEqual({ media: [], nextCursor: null });
+    const currentYear = await app.request("/api/album?year=2026", undefined, env);
+    const currentBody = await currentYear.json<{ media: AlbumMedia[]; nextCursor: string }>();
+    const remainingYear = await app.request(
+      `/api/album?year=2026&cursor=${encodeURIComponent(currentBody.nextCursor)}`,
+      undefined,
+      env,
+    );
+    const remainingBody = await remainingYear.json<{ media: AlbumMedia[]; nextCursor: string | null }>();
+    expect(currentBody.media.length + remainingBody.media.length).toBe(65);
+    expect(remainingBody.nextCursor).toBeNull();
+    expect(remainingBody.media.map((m) => m.albumDate)).toContain("2026-02-01");
+    for (const filter of [
+      "month=2026-00",
+      "month=2026-13",
+      "month=2026-1",
+      "month=",
+      "year=26",
+      "year=",
+      "year=2026&month=2026-09",
+      "month=2026-09%27",
+    ]) {
+      const response = await app.request(`/api/album?${filter}`, undefined, env);
+      expect(response.status).toBe(400);
+    }
+    const securedEnv = {
+      ...env,
+      APP_ORIGIN: "https://example.test",
+      LINE_CHANNEL_ID: "fixture",
+      LINE_CHANNEL_SECRET: "fixture",
+    };
+    for (const path of ["/api/album/months", "/api/album?month=2025-12"]) {
+      const response = await app.request(path, undefined, securedEnv);
+      expect(response.status).toBe(401);
+    }
+    sql.prepare("DELETE FROM media WHERE id LIKE 'latest-%'").run();
     const all: AlbumMedia[] = [];
     let cursor: string | null = null;
     do {

@@ -1,6 +1,6 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { CommentComposerSkeleton, PageSkeleton, type SkeletonVariant } from "./PageSkeleton";
+import { AlbumContentSkeleton, CommentComposerSkeleton, PageSkeleton, type SkeletonVariant } from "./PageSkeleton";
 import type { CurrentUser } from "../../shared/types";
 
 const user = (role: CurrentUser["role"], isStaging = false): CurrentUser => ({
@@ -58,4 +58,14 @@ describe("PageSkeleton", () => {
     expect(renderToStaticMarkup(<PageSkeleton variant="activity" />)).not.toContain("skeleton-viewers");
     expect(renderToStaticMarkup(<PageSkeleton variant="settings" />)).not.toContain("skeleton-family-section");
   });
+});
+
+it("アルバムの期間切替中は年月操作を重ねず、年一覧にはカバーを出さない", () => {
+  const month = renderToStaticMarkup(<AlbumContentSkeleton />);
+  const year = renderToStaticMarkup(<AlbumContentSkeleton allYear />);
+  expect(month).toContain("album-cover");
+  expect(year).not.toContain("album-cover");
+  expect(month).not.toContain("album-picker-header");
+  expect(year).toContain("album-grid");
+  expect(year).toContain('role="status"');
 });

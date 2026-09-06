@@ -4731,3 +4731,14 @@ textarea:focus {
     margin-left: 0;
   }
 }
+
+.album-load-more {
+  min-height: 1px;
+  padding: 16px;
+}
+.album-load-more:empty {
+  padding: 0;
+}
+.album-load-more .skeleton-album-grid {
+  margin-top: 12px;
+}

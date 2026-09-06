@@ -229,8 +229,16 @@ export function LoginScreen({ returnTo = "/" }: { returnTo?: string }) {
           <img className="login-icon login-icon-dark" src="/icons/icon-dark-transparent.png" alt="" />
         </span>
         <p className="login-eyebrow">このごろ</p>
-        <h1>ふたりの思い出を、家族へ。</h1>
-        <p>写真や動画でつづる日々を、招待された家族だけで見返せます。</p>
+        <h1>
+          日々のひとこまを、
+          <br />
+          おすそわけ。
+        </h1>
+        <p>
+          「この頃、何してるかな。」ふと気になる日々の様子が、
+          <br />
+          招待された家族にだけ、そっと届きます。
+        </p>
         <a className="line-login-button" href={loginUrl}>
           LINEでログイン
         </a>

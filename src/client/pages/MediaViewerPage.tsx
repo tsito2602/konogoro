@@ -4,7 +4,15 @@ import { VideoPlayer } from "../components/VideoPlayer";
 import { commentNavigationState } from "../comment-navigation";
 import { canReturnInApp, rememberAlbumMedia, updateReadingPost } from "../reading-context";
 import { ChevronLeft, ChevronRight, Download, MessageCircle, X } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import type { AlbumMedia, Media, Post } from "../../shared/types";
 import { api, formatDate } from "../api";
@@ -80,6 +88,7 @@ export function MediaViewerPage() {
   const [dragOffset, setDragOffset] = useState(0);
   const [dragging, setDragging] = useState(false);
   const stageRef = useRef<HTMLDivElement>(null);
+  const thumbnailStripRef = useRef<HTMLDivElement>(null);
   const swipeStart = useRef<{ x: number; y: number; pointerId: number } | null>(null);
   const swipeAnimation = useRef<number | null>(null);
   const load = () => {
@@ -117,6 +126,27 @@ export function MediaViewerPage() {
     [post, postId, viewerState?.albumMedia, mediaId],
   );
   const index = navigationItems.findIndex((item) => item.id === mediaId && item.postId === postId);
+  useLayoutEffect(() => {
+    const strip = thumbnailStripRef.current;
+    const selected = strip?.querySelector<HTMLElement>('[aria-current="true"]');
+    if (!strip || !selected) return;
+    const stripBounds = strip.getBoundingClientRect();
+    const selectedBounds = selected.getBoundingClientRect();
+    // Scroll this strip only; scrollIntoView could also move the page or viewer.
+    strip.scrollLeft = Math.max(
+      0,
+      Math.min(
+        strip.scrollWidth - strip.clientWidth,
+        strip.scrollLeft +
+          selectedBounds.left -
+          stripBounds.left -
+          strip.clientLeft +
+          selectedBounds.width / 2 -
+          strip.clientWidth / 2,
+      ),
+    );
+  }, [current?.id, postId, navigationItems.length]);
+
   useEffect(() => {
     const next = navigationItems[index + 1];
     if (!canPrepare || commentsOpen) {
@@ -350,7 +380,7 @@ export function MediaViewerPage() {
           この投稿にコメント {post.comments.length > 0 ? `· ${post.comments.length}件` : ""}
         </button>
       </div>
-      <div className="thumbnail-strip">
+      <div className="thumbnail-strip" ref={thumbnailStripRef}>
         {navigationItems.map((media, mediaIndex) => (
           <Link
             className={media.id === current.id ? "selected" : ""}

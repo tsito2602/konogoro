@@ -569,42 +569,44 @@ export function PostCreatePage() {
               </select>
             </label>
             {eventId && (
-              <label>
-                見出し
-                <select
-                  value={sceneId}
-                  onChange={(event) => setSceneId(event.target.value)}
-                  disabled={busy || !!draftPostId}
-                >
-                  <option value="">見出しなし</option>
-                  {scenes.map((item) => (
-                    <option value={item.id} key={item.id}>
-                      {item.title}
-                    </option>
+              <div className="post-create-scene-field">
+                <label>
+                  見出し
+                  <select
+                    value={sceneId}
+                    onChange={(event) => setSceneId(event.target.value)}
+                    disabled={busy || !!draftPostId}
+                  >
+                    <option value="">見出しなし</option>
+                    {scenes.map((item) => (
+                      <option value={item.id} key={item.id}>
+                        {item.title}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                {!draftPostId &&
+                  (!showSceneForm ? (
+                    <button className="text-button inline-action" type="button" onClick={() => setShowSceneForm(true)}>
+                      <Plus />
+                      新しい見出し
+                    </button>
+                  ) : (
+                    <div className="inline-form">
+                      <input
+                        value={newScene}
+                        onChange={(event) => setNewScene(event.target.value)}
+                        aria-label="新しい見出し名"
+                        placeholder="例: 2日目・プレゼント"
+                        maxLength={100}
+                      />
+                      <button type="button" className="outline-button" onClick={createScene}>
+                        作成
+                      </button>
+                    </div>
                   ))}
-                </select>
-              </label>
+              </div>
             )}
-            {eventId &&
-              !draftPostId &&
-              (!showSceneForm ? (
-                <button className="text-button inline-action" type="button" onClick={() => setShowSceneForm(true)}>
-                  <Plus />
-                  新しい見出し
-                </button>
-              ) : (
-                <div className="inline-form">
-                  <input
-                    value={newScene}
-                    onChange={(event) => setNewScene(event.target.value)}
-                    placeholder="例: 2日目・プレゼント"
-                    maxLength={100}
-                  />
-                  <button type="button" className="outline-button" onClick={createScene}>
-                    作成
-                  </button>
-                </div>
-              ))}
             <label>
               ひとこと（任意）
               <textarea

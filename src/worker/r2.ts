@@ -35,3 +35,33 @@ export async function createPresignedDownloadUrl(env: MediaEnv, objectKey: strin
   const signed = await aws.sign(new Request(url), { aws: { signQuery: true } });
   return signed.url.toString();
 }
+
+export async function createPresignedPartUrl(
+  env: MediaEnv,
+  objectKey: string,
+  uploadId: string,
+  partNumber: number,
+  contentType: string,
+  byteSize: number,
+): Promise<string> {
+  if (!hasUploadCredentials(env)) throw new Error("R2アップロード用secretが設定されていません");
+  const aws = new AwsClient({
+    accessKeyId: env.R2_ACCESS_KEY_ID,
+    secretAccessKey: env.R2_SECRET_ACCESS_KEY,
+    service: "s3",
+    region: "auto",
+  });
+  const url = new URL(`https://${env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com/${env.R2_BUCKET_NAME}/${objectKey}`);
+  url.searchParams.set("uploadId", uploadId);
+  url.searchParams.set("partNumber", String(partNumber));
+  url.searchParams.set("X-Amz-Expires", "900");
+  const signed = await aws.sign(
+    new Request(url, {
+      method: "PUT",
+      headers: { "Content-Type": contentType, "Content-Length": String(byteSize) },
+    }),
+    // Bind each URL to the server-selected size. XHR supplies Content-Length from its Blob.
+    { aws: { signQuery: true, allHeaders: true } },
+  );
+  return signed.url;
+}

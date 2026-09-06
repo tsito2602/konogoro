@@ -1,3 +1,6 @@
+import { PreparedVideoImport } from "../components/PreparedVideoImport";
+import { uploadPreparedPlayback, type PreparedPlayback } from "../video-playback";
+import { abortMultipartUpload } from "../multipart-upload";
 import { uploadMissingParts } from "../upload-parts";
 import { useUnsavedChanges } from "../hooks/useUnsavedChanges";
 import { VideoBadge } from "../components/VideoBadge";
@@ -20,7 +23,10 @@ import {
 
 // Bound network waits so an interrupted connection returns to the retry controls.
 const api = <T,>(path: string, init?: RequestInit) =>
-  request<T>(path, { ...init, signal: AbortSignal.timeout(60_000) });
+  request<T>(path, {
+    ...init,
+    signal: init?.signal ? AbortSignal.any([init.signal, AbortSignal.timeout(60_000)]) : AbortSignal.timeout(60_000),
+  });
 
 export function PostCreatePage() {
   const navigate = useNavigate();
@@ -34,6 +40,8 @@ export function PostCreatePage() {
   const [files, setFiles] = useState<SelectedMediaFile[]>([]);
   const [draftPostId, setDraftPostId] = useState<string | null>(null);
   const [progress, setProgress] = useState(0);
+  const [importingPlayback, setImportingPlayback] = useState(false);
+  const activeUploadRef = useRef<AbortController | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [newScene, setNewScene] = useState("");
@@ -83,6 +91,13 @@ export function PostCreatePage() {
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
+      activeUploadRef.current?.abort();
+      for (const file of filesRef.current) {
+        if (file.mediaId && file.status !== "uploaded") {
+          void abortMultipartUpload(file.mediaId).catch(() => undefined);
+          void abortMultipartUpload(file.mediaId, "playback").catch(() => undefined);
+        }
+      }
       filesRef.current.forEach(({ previewUrl }) => URL.revokeObjectURL(previewUrl));
     };
   }, []);
@@ -132,6 +147,18 @@ export function PostCreatePage() {
     void addFiles(Array.from(event.dataTransfer.files));
   };
 
+  const importPlayback = async (matches: Map<string, PreparedPlayback>) => {
+    const selected = files
+      .filter((item) => matches.has(item.id))
+      .map((item) => ({
+        ...item,
+        playback: matches.get(item.id),
+        status: "preparing" as const,
+      }));
+    setFiles((current) => current.map((item) => selected.find((selected) => selected.id === item.id) ?? item));
+    await prepareMediaFiles(selected, applyPreparedFile, 1);
+  };
+
   const retryPreparation = async (id: string) => {
     const item = files.find((file) => file.id === id);
     if (!item) return;
@@ -169,10 +196,14 @@ export function PostCreatePage() {
     postId: string,
     entries: Array<{ item: SelectedMediaFile; index: number; target: UploadTarget }>,
   ) => {
+    const controller = new AbortController();
+    activeUploadRef.current = controller;
+    const signal = controller.signal;
     const totalBytes = entries.reduce(
       (total, { item, target }) =>
         total +
         item.file.size +
+        (item.playback?.file.size ?? 0) +
         (item.thumbnail?.size ?? 0) +
         (target.previewUploadUrl && item.optimizedPreview ? item.optimizedPreview.size : 0),
       0,
@@ -191,6 +222,23 @@ export function PostCreatePage() {
       Array.from({ length: Math.min(2, entries.length) }, async () => {
         while (nextEntry < entries.length) {
           const { item, index, target } = entries[nextEntry++];
+          if (signal.aborted) {
+            failed = true;
+            updateFile(index, { status: "failed", mediaId: target.id });
+            await api(`/media/${target.id}/failed`, { method: "POST" }).catch(() => undefined);
+            continue;
+          }
+          if (target.alreadyUploaded) {
+            updateFile(index, { status: "uploaded", mediaId: target.id });
+            reportProgress(
+              `${index}:complete`,
+              item.file.size +
+                (item.thumbnail?.size ?? 0) +
+                (item.optimizedPreview?.size ?? 0) +
+                (item.playback?.file.size ?? 0),
+            );
+            continue;
+          }
           const thumbnail = item.thumbnail;
           if (!thumbnail) {
             failed = true;
@@ -213,15 +261,23 @@ export function PostCreatePage() {
                 {
                   key: "original",
                   send: () =>
-                    uploadFile(target.uploadUrl, item.file, item.file.type, (loaded) =>
-                      reportProgress(`${index}:original`, loaded),
+                    uploadFile(
+                      target.uploadUrl,
+                      item.file,
+                      item.file.type,
+                      (loaded) => reportProgress(`${index}:original`, loaded),
+                      { mediaId: target.id, variant: "original", signal },
                     ),
                 },
                 {
                   key: "thumbnail",
                   send: () =>
-                    uploadFile(target.thumbnailUploadUrl, thumbnail, "image/webp", (loaded) =>
-                      reportProgress(`${index}:thumbnail`, loaded),
+                    uploadFile(
+                      target.thumbnailUploadUrl,
+                      thumbnail,
+                      "image/webp",
+                      (loaded) => reportProgress(`${index}:thumbnail`, loaded),
+                      { signal },
                     ),
                 },
                 ...(target.previewUploadUrl && item.optimizedPreview
@@ -229,8 +285,12 @@ export function PostCreatePage() {
                       {
                         key: "preview",
                         send: () =>
-                          uploadFile(target.previewUploadUrl!, item.optimizedPreview!, "image/webp", (loaded) =>
-                            reportProgress(`${index}:preview`, loaded),
+                          uploadFile(
+                            target.previewUploadUrl!,
+                            item.optimizedPreview!,
+                            "image/webp",
+                            (loaded) => reportProgress(`${index}:preview`, loaded),
+                            { signal },
                           ),
                       },
                     ]
@@ -239,9 +299,18 @@ export function PostCreatePage() {
               item.completedParts ?? [],
               (completedParts) => updateFile(index, { completedParts }),
             );
+            if (item.playback)
+              await uploadPreparedPlayback(
+                target.id,
+                item.playback,
+                (loaded) => reportProgress(`${index}:playback`, loaded),
+                signal,
+              );
+            signal.throwIfAborted();
             await api(`/media/${target.id}/complete`, {
               method: "POST",
               body: JSON.stringify({ width: item.width, height: item.height }),
+              signal,
             });
             updateFile(index, { status: "uploaded", mediaId: target.id });
           } catch {
@@ -252,8 +321,13 @@ export function PostCreatePage() {
         }
       }),
     );
-    if (failed) {
-      setError("一部のアップロードに失敗しました。失敗した項目だけ再試行できます。");
+    activeUploadRef.current = null;
+    if (failed || signal.aborted) {
+      setError(
+        signal.aborted
+          ? "送信を中断しました。送信済みの項目を残して再試行できます。"
+          : "一部のアップロードに失敗しました。失敗した項目だけ再試行できます。",
+      );
       setBusy(false);
       return;
     }
@@ -272,6 +346,7 @@ export function PostCreatePage() {
           filename: item.file.name,
           mimeType: item.file.type,
           byteSize: item.file.size,
+          originalSha256: item.playback?.entry.original.sha256,
           capturedAt: item.capturedAt,
           durationSeconds: item.durationSeconds,
         })),
@@ -291,7 +366,10 @@ export function PostCreatePage() {
       setError("写真・動画を1件以上選択してください");
       return;
     }
-    if (files.some((item) => item.status === "preparing" || item.status === "preparation-failed")) {
+    if (
+      importingPlayback ||
+      files.some((item) => item.status === "preparing" || item.status === "preparation-failed")
+    ) {
       setError("すべての写真・動画の準備が完了してから投稿してください");
       return;
     }
@@ -370,7 +448,7 @@ export function PostCreatePage() {
 
   const photos = files.filter((item) => item.file.type.startsWith("image/")).length;
   const videos = files.length - photos;
-  const preparing = files.some((item) => item.status === "preparing");
+  const preparing = importingPlayback || files.some((item) => item.status === "preparing");
   const hasPreparationFailure = files.some((item) => item.status === "preparation-failed");
 
   return (
@@ -414,7 +492,7 @@ export function PostCreatePage() {
                   <span className="selected-file-info" title={item.file.name}>
                     {item.file.name}
                   </span>
-                  {!draftPostId && !busy && (
+                  {!draftPostId && !busy && !importingPlayback && (
                     <button
                       className="remove-selected-photo"
                       type="button"
@@ -458,6 +536,17 @@ export function PostCreatePage() {
               </p>
             )}
           </section>
+          <PreparedVideoImport
+            files={files}
+            disabled={busy || preparing || !!draftPostId}
+            onImport={importPlayback}
+            onBusy={setImportingPlayback}
+          />
+          {busy && files.some((item) => item.status === "uploading") && (
+            <button type="button" className="outline-button" onClick={() => activeUploadRef.current?.abort()}>
+              送信を中断
+            </button>
+          )}
           <section className="post-create-details" aria-label="投稿内容">
             <p className="selection-count">保存前に画面を閉じると、入力やファイルの再選択が必要です。</p>
             <label>

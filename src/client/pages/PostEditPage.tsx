@@ -1,3 +1,6 @@
+import { PreparedVideoImport } from "../components/PreparedVideoImport";
+import { uploadPreparedPlayback, type PreparedPlayback } from "../video-playback";
+import { abortMultipartUpload } from "../multipart-upload";
 import { removeMediaWithReconciliation } from "../remove-media";
 import { uploadMissingParts } from "../upload-parts";
 import { useUnsavedChanges } from "../hooks/useUnsavedChanges";
@@ -33,7 +36,10 @@ type OrderedMedia = { type: "existing"; media: Post["media"][number] } | { type:
 
 // Bound network waits so an interrupted connection returns to the retry controls.
 const api = <T,>(path: string, init?: RequestInit) =>
-  request<T>(path, { ...init, signal: AbortSignal.timeout(60_000) });
+  request<T>(path, {
+    ...init,
+    signal: init?.signal ? AbortSignal.any([init.signal, AbortSignal.timeout(60_000)]) : AbortSignal.timeout(60_000),
+  });
 
 export function PostEditPage() {
   const { postId = "" } = useParams();
@@ -54,6 +60,8 @@ export function PostEditPage() {
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [importingPlayback, setImportingPlayback] = useState(false);
+  const activeUploadRef = useRef<AbortController | null>(null);
   const [caption, setCaption] = useState<string | null>(null);
   const markSaved = useUnsavedChanges(
     !!post &&
@@ -109,6 +117,13 @@ export function PostEditPage() {
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
+      activeUploadRef.current?.abort();
+      for (const file of filesRef.current) {
+        if (file.mediaId && file.status !== "uploaded") {
+          void abortMultipartUpload(file.mediaId).catch(() => undefined);
+          void abortMultipartUpload(file.mediaId, "playback").catch(() => undefined);
+        }
+      }
       filesRef.current.forEach(({ previewUrl }) => URL.revokeObjectURL(previewUrl));
     };
   }, []);
@@ -165,6 +180,18 @@ export function PostEditPage() {
     await prepareMediaFiles(selected, applyPreparedFile);
   };
 
+  const importPlayback = async (matches: Map<string, PreparedPlayback>) => {
+    const selected = files
+      .filter((item) => matches.has(item.id))
+      .map((item) => ({
+        ...item,
+        playback: matches.get(item.id),
+        status: "preparing" as const,
+      }));
+    setFiles((current) => current.map((item) => selected.find((selected) => selected.id === item.id) ?? item));
+    await prepareMediaFiles(selected, applyPreparedFile, 1);
+  };
+
   const retryPreparation = async (id: string) => {
     const item = files.find((file) => file.id === id);
     if (!item) return;
@@ -179,6 +206,7 @@ export function PostEditPage() {
     if (!item) return;
     if (item.mediaId) {
       try {
+        await Promise.all([abortMultipartUpload(item.mediaId), abortMultipartUpload(item.mediaId, "playback")]);
         await removeMediaWithReconciliation(
           [item.mediaId],
           async () => (await api<Post>(`/posts/${post.id}`)).media.map((media) => media.id),
@@ -248,10 +276,14 @@ export function PostEditPage() {
   };
 
   const uploadEntries = async (entries: Array<{ item: SelectedMediaFile; index: number; target: UploadTarget }>) => {
+    const controller = new AbortController();
+    activeUploadRef.current = controller;
+    const signal = controller.signal;
     const totalBytes = entries.reduce(
       (total, { item, target }) =>
         total +
         item.file.size +
+        (item.playback?.file.size ?? 0) +
         (item.thumbnail?.size ?? 0) +
         (target.previewUploadUrl && item.optimizedPreview ? item.optimizedPreview.size : 0),
       0,
@@ -270,6 +302,23 @@ export function PostEditPage() {
       Array.from({ length: Math.min(2, entries.length) }, async () => {
         while (nextEntry < entries.length) {
           const { item, index, target } = entries[nextEntry++];
+          if (signal.aborted) {
+            failed = true;
+            updateFile(index, { status: "failed", mediaId: target.id });
+            await api(`/media/${target.id}/failed`, { method: "POST" }).catch(() => undefined);
+            continue;
+          }
+          if (target.alreadyUploaded) {
+            updateFile(index, { status: "uploaded", mediaId: target.id });
+            reportProgress(
+              `${index}:complete`,
+              item.file.size +
+                (item.thumbnail?.size ?? 0) +
+                (item.optimizedPreview?.size ?? 0) +
+                (item.playback?.file.size ?? 0),
+            );
+            continue;
+          }
           const thumbnail = item.thumbnail;
           if (!thumbnail) {
             failed = true;
@@ -292,15 +341,23 @@ export function PostEditPage() {
                 {
                   key: "original",
                   send: () =>
-                    uploadFile(target.uploadUrl, item.file, item.file.type, (loaded) =>
-                      reportProgress(`${index}:original`, loaded),
+                    uploadFile(
+                      target.uploadUrl,
+                      item.file,
+                      item.file.type,
+                      (loaded) => reportProgress(`${index}:original`, loaded),
+                      { mediaId: target.id, variant: "original", signal },
                     ),
                 },
                 {
                   key: "thumbnail",
                   send: () =>
-                    uploadFile(target.thumbnailUploadUrl, thumbnail, "image/webp", (loaded) =>
-                      reportProgress(`${index}:thumbnail`, loaded),
+                    uploadFile(
+                      target.thumbnailUploadUrl,
+                      thumbnail,
+                      "image/webp",
+                      (loaded) => reportProgress(`${index}:thumbnail`, loaded),
+                      { signal },
                     ),
                 },
                 ...(target.previewUploadUrl && item.optimizedPreview
@@ -308,8 +365,12 @@ export function PostEditPage() {
                       {
                         key: "preview",
                         send: () =>
-                          uploadFile(target.previewUploadUrl!, item.optimizedPreview!, "image/webp", (loaded) =>
-                            reportProgress(`${index}:preview`, loaded),
+                          uploadFile(
+                            target.previewUploadUrl!,
+                            item.optimizedPreview!,
+                            "image/webp",
+                            (loaded) => reportProgress(`${index}:preview`, loaded),
+                            { signal },
                           ),
                       },
                     ]
@@ -318,9 +379,18 @@ export function PostEditPage() {
               item.completedParts ?? [],
               (completedParts) => updateFile(index, { completedParts }),
             );
+            if (item.playback)
+              await uploadPreparedPlayback(
+                target.id,
+                item.playback,
+                (loaded) => reportProgress(`${index}:playback`, loaded),
+                signal,
+              );
+            signal.throwIfAborted();
             await api(`/media/${target.id}/complete`, {
               method: "POST",
               body: JSON.stringify({ width: item.width, height: item.height }),
+              signal,
             });
             updateFile(index, { status: "uploaded", mediaId: target.id });
           } catch {
@@ -331,7 +401,8 @@ export function PostEditPage() {
         }
       }),
     );
-    return !failed;
+    activeUploadRef.current = null;
+    return !failed && !signal.aborted;
   };
 
   const finishSave = async (caption: FormDataEntryValue | null, mediaIds: string[]) => {
@@ -356,7 +427,10 @@ export function PostEditPage() {
       setError("写真・動画を1件以上残してください");
       return;
     }
-    if (files.some((item) => item.status === "preparing" || item.status === "preparation-failed")) {
+    if (
+      importingPlayback ||
+      files.some((item) => item.status === "preparing" || item.status === "preparation-failed")
+    ) {
       setError("すべての写真・動画の準備が完了してから保存してください");
       return;
     }
@@ -380,6 +454,7 @@ export function PostEditPage() {
               filename: item.file.name,
               mimeType: item.file.type,
               byteSize: item.file.size,
+              originalSha256: item.playback?.entry.original.sha256,
               capturedAt: item.capturedAt,
               durationSeconds: item.durationSeconds,
             })),
@@ -423,7 +498,7 @@ export function PostEditPage() {
     remainingMedia.filter((media) => media.kind === "image").length +
     files.filter((item) => item.file.type.startsWith("image/")).length;
   const videoCount = totalCount - photoCount;
-  const preparing = files.some((item) => item.status === "preparing");
+  const preparing = importingPlayback || files.some((item) => item.status === "preparing");
   const hasPreparationFailure = files.some((item) => item.status === "preparation-failed");
   const orderedMedia = mediaOrder.flatMap<OrderedMedia>((id) => {
     const media = remainingMedia.find((item) => item.id === id);
@@ -438,6 +513,17 @@ export function PostEditPage() {
       <main className="form-page page-content">
         <form className="form-stack post-edit-form" onSubmit={submit}>
           <MediaProcessingStatus files={files} uploading={saving && files.length > 0} uploadProgress={progress} />
+          <PreparedVideoImport
+            files={files}
+            disabled={saving || preparing}
+            onImport={importPlayback}
+            onBusy={setImportingPlayback}
+          />
+          {saving && files.some((item) => item.status === "uploading") && (
+            <button type="button" className="outline-button" onClick={() => activeUploadRef.current?.abort()}>
+              送信を中断
+            </button>
+          )}
           <section className="photo-picker">
             <div
               className="selected-photos"
@@ -468,7 +554,7 @@ export function PostEditPage() {
                           type="button"
                           onClick={() => removeExistingMedia(entry.media.id)}
                           aria-label={`${filename}を削除`}
-                          disabled={saving}
+                          disabled={saving || importingPlayback}
                         >
                           <X />
                         </button>
@@ -516,7 +602,7 @@ export function PostEditPage() {
                           type="button"
                           onClick={() => void removeNewFile(entry.file.id)}
                           aria-label={`${filename}を外す`}
-                          disabled={saving}
+                          disabled={saving || importingPlayback}
                         >
                           <X />
                         </button>
@@ -529,7 +615,7 @@ export function PostEditPage() {
                       className="media-drag-handle"
                       type="button"
                       aria-label={`${filename}を並び替え`}
-                      disabled={saving}
+                      disabled={saving || importingPlayback}
                       draggable={false}
                       onPointerDown={(event) => {
                         event.preventDefault();
@@ -581,7 +667,7 @@ export function PostEditPage() {
                 setScenes([]);
                 setShowSceneForm(false);
               }}
-              disabled={saving}
+              disabled={saving || importingPlayback}
             >
               <option value="">イベントなし</option>
               {events.map((item) => (
@@ -594,7 +680,11 @@ export function PostEditPage() {
           {eventId && (
             <label>
               見出し
-              <select value={sceneId} onChange={(event) => setSceneId(event.target.value)} disabled={saving}>
+              <select
+                value={sceneId}
+                onChange={(event) => setSceneId(event.target.value)}
+                disabled={saving || importingPlayback}
+              >
                 <option value="">見出しなし</option>
                 {scenes.map((item) => (
                   <option value={item.id} key={item.id}>
@@ -631,7 +721,7 @@ export function PostEditPage() {
               maxLength={2000}
               value={caption ?? post.caption}
               onChange={(event) => setCaption(event.target.value)}
-              disabled={saving}
+              disabled={saving || importingPlayback}
             />
           </label>
           {error && (

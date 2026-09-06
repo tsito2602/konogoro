@@ -21,6 +21,7 @@ import { installPromptStore } from "./install-prompt";
 import { initializeTheme } from "./theme";
 import "./styles.css";
 import "./media-status.css";
+import "./video-experience.css";
 import "./accessibility.css";
 
 const stopInstallPromptCapture = installPromptStore.start(window);

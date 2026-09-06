@@ -1,5 +1,6 @@
 export type UploadFile = {
   filename: string;
+  originalSha256?: string;
   mimeType: string;
   byteSize: number;
   capturedAt: string | null;
@@ -8,6 +9,7 @@ export type UploadFile = {
 
 export type ExistingMedia = {
   original_filename: string;
+  original_sha256?: string | null;
   mime_type: string;
   byte_size: number;
   captured_at: string | null;
@@ -23,6 +25,7 @@ export function matchesUploadFiles(existing: ExistingMedia[], files: UploadFile[
         media.original_filename === file.filename &&
         media.mime_type === file.mimeType &&
         media.byte_size === file.byteSize &&
+        (media.original_sha256 ?? null) === (file.originalSha256 ?? null) &&
         media.captured_at === file.capturedAt &&
         media.duration_seconds === file.durationSeconds
       );

@@ -1,7 +1,9 @@
+import { ViewerComments } from "../components/ViewerComments";
+import { clearPreparedVideo, prepareNextVideo, useVideoPreparation } from "../video-experience";
 import { VideoPlayer } from "../components/VideoPlayer";
 import { commentNavigationState } from "../comment-navigation";
-import { canReturnInApp, rememberAlbumMedia } from "../reading-context";
-import { ChevronLeft, ChevronRight, Download, MessageCircle, X } from "lucide-react";
+import { canReturnInApp, rememberAlbumMedia, updateReadingPost } from "../reading-context";
+import { ChevronLeft, ChevronRight, Download, MessageCircle, Repeat2, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import type { AlbumMedia, Media, Post } from "../../shared/types";
@@ -58,6 +60,9 @@ export function MediaViewerPage() {
     returnToPrevious?: boolean;
     albumMedia?: AlbumMedia[];
     albumOrigin?: string;
+    playVideo?: boolean;
+    continuous?: boolean;
+    playRequestedAt?: number;
   } | null;
   useEffect(() => {
     rememberAlbumMedia(
@@ -68,6 +73,12 @@ export function MediaViewerPage() {
   }, [mediaId, viewerState?.albumOrigin, viewerState?.albumMedia]);
   const [loadedPost, setLoadedPost] = useState<{ postId: string; post: Post } | null>(null);
   const [error, setError] = useState("");
+  const [continuous, setContinuous] = useState(viewerState?.continuous === true);
+  const [commentsOpen, setCommentsOpen] = useState(false);
+  const [finishedMedia, setFinishedMedia] = useState<string | null>(null);
+  const [playingMedia, setPlayingMedia] = useState<string | null>(null);
+  const commentButtonRef = useRef<HTMLButtonElement>(null);
+  const canPrepare = useVideoPreparation();
   const [dragOffset, setDragOffset] = useState(0);
   const [dragging, setDragging] = useState(false);
   const stageRef = useRef<HTMLDivElement>(null);
@@ -108,7 +119,32 @@ export function MediaViewerPage() {
     [post, postId, viewerState?.albumMedia, mediaId],
   );
   const index = navigationItems.findIndex((item) => item.id === mediaId && item.postId === postId);
+  useEffect(() => {
+    const next = navigationItems[index + 1];
+    if (!canPrepare || commentsOpen) {
+      clearPreparedVideo();
+      return;
+    }
+    if (!continuous || playingMedia !== mediaId || next?.kind !== "video") return;
+    let cleanup: (() => void) | undefined;
+    const controller = new AbortController();
+    const prepare = (nextPost: Post) => {
+      if (controller.signal.aborted) return;
+      const media = nextPost.media.find((item) => item.id === next.id);
+      if (media) cleanup = prepareNextVideo(media);
+    };
+    if (next.postId === postId && post) prepare(post);
+    else
+      void api<Post>(`/posts/${next.postId}`, { signal: controller.signal })
+        .then(prepare)
+        .catch(() => {});
+    return () => {
+      controller.abort();
+      cleanup?.();
+    };
+  }, [canPrepare, continuous, commentsOpen, playingMedia, mediaId, navigationItems, index, postId, post]);
   const closeViewer = useCallback(() => {
+    clearPreparedVideo();
     if (viewerState?.returnToPrevious && canReturnInApp()) navigate(-1);
     else navigate(`/posts/${postId}`, { replace: true });
   }, [navigate, postId, viewerState?.returnToPrevious]);
@@ -116,13 +152,26 @@ export function MediaViewerPage() {
     (targetIndex: number) => {
       const target = navigationItems[targetIndex];
       if (!target) return;
-      navigate(`/posts/${target.postId}/media/${target.id}`, { replace: true, state: location.state });
+      setCommentsOpen(false);
+      navigate(`/posts/${target.postId}/media/${target.id}`, {
+        replace: true,
+        state: {
+          ...(location.state as object | null),
+          continuous,
+          playVideo: target.kind === "video",
+          playRequestedAt: performance.now(),
+        },
+      });
     },
-    [location.state, navigate, navigationItems],
+    [location.state, navigate, navigationItems, continuous],
   );
   const animateToMedia = useCallback(
     (targetIndex: number, direction: "previous" | "next") => {
       if (targetIndex < 0 || targetIndex >= navigationItems.length || swipeAnimation.current !== null) return;
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        showMedia(targetIndex);
+        return;
+      }
       setDragging(false);
       setDragOffset(mediaExitOffset(direction, stageRef.current?.clientWidth ?? window.innerWidth));
       swipeAnimation.current = window.setTimeout(() => {
@@ -135,18 +184,30 @@ export function MediaViewerPage() {
   );
   useEffect(() => {
     const keydown = (event: KeyboardEvent) => {
-      if (!post) return;
+      if (event.key === "Escape") {
+        if (commentsOpen) {
+          setCommentsOpen(false);
+          commentButtonRef.current?.focus();
+        } else closeViewer();
+        return;
+      }
+      if (
+        !post ||
+        commentsOpen ||
+        (event.target instanceof HTMLElement &&
+          event.target.closest("input, textarea, button, video, [contenteditable]"))
+      )
+        return;
       if (event.key === "ArrowLeft") animateToMedia(index - 1, "previous");
       if (event.key === "ArrowRight") animateToMedia(index + 1, "next");
-      if (event.key === "Escape") closeViewer();
     };
     window.addEventListener("keydown", keydown);
     return () => window.removeEventListener("keydown", keydown);
-  }, [animateToMedia, closeViewer, index, post]);
+  }, [animateToMedia, closeViewer, commentsOpen, index, post]);
   const startSwipe = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (swipeAnimation.current !== null) return;
     if (!event.isPrimary || (event.pointerType === "mouse" && event.button !== 0)) return;
-    if (current?.kind === "video" && event.target instanceof HTMLVideoElement) return;
+    if (event.target instanceof Element && event.target.closest("video, button, a")) return;
     swipeStart.current = { x: event.clientX, y: event.clientY, pointerId: event.pointerId };
   };
   const moveSwipe = (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -196,9 +257,8 @@ export function MediaViewerPage() {
         <ErrorState message={error || "写真が見つかりません"} retry={error ? load : undefined} />
       </div>
     );
-  const commentNavigation = viewerCommentNavigation(postId, location.state);
   return (
-    <main className="media-viewer">
+    <main className={`media-viewer video-viewer${commentsOpen ? " comments-open" : ""}`}>
       <header className="viewer-header">
         <button className="viewer-button" type="button" onClick={closeViewer} aria-label="閉じる">
           <X />
@@ -218,47 +278,34 @@ export function MediaViewerPage() {
         onPointerUp={finishSwipe}
         onPointerCancel={cancelSwipe}
       >
-        {index > 0 && (
-          <Link
-            className="viewer-arrow previous"
-            to={`/posts/${navigationItems[index - 1].postId}/media/${navigationItems[index - 1].id}`}
-            replace
-            state={location.state}
-            aria-label="前の写真"
-            onClick={(event) => {
-              event.preventDefault();
-              animateToMedia(index - 1, "previous");
-            }}
-          >
-            <ChevronLeft />
-          </Link>
-        )}
         <div
           key={current.id}
           className={`viewer-media-frame${dragging ? " dragging" : ""}`}
           style={{ transform: `translate3d(${dragOffset}px, 0, 0)` }}
         >
           {current.kind === "video" ? (
-            <VideoPlayer key={current.id} src={current.contentUrl} poster={current.thumbnailUrl} />
+            <VideoPlayer
+              key={current.id}
+              src={current.contentUrl}
+              poster={current.thumbnailUrl}
+              mediaId={current.id}
+              autoPlay={viewerState?.playVideo === true}
+              requestedAt={viewerState?.playRequestedAt}
+              paused={commentsOpen}
+              onPlaybackStarted={() => {
+                setFinishedMedia(null);
+              }}
+              onNearEnd={() => setPlayingMedia(current.id)}
+              onEnded={() => {
+                setFinishedMedia(current.id);
+                if (continuous && navigationItems[index + 1]?.kind === "video" && !document.hidden)
+                  showMedia(index + 1);
+              }}
+            />
           ) : (
             <img src={current.contentUrl} alt={`投稿の写真 ${index + 1}`} draggable={false} />
           )}
         </div>
-        {index < navigationItems.length - 1 && (
-          <Link
-            className="viewer-arrow next"
-            to={`/posts/${navigationItems[index + 1].postId}/media/${navigationItems[index + 1].id}`}
-            replace
-            state={location.state}
-            aria-label="次の写真"
-            onClick={(event) => {
-              event.preventDefault();
-              animateToMedia(index + 1, "next");
-            }}
-          >
-            <ChevronRight />
-          </Link>
-        )}
       </div>
       <div className="viewer-info">
         <strong>{post.caption || "写真・動画"}</strong>
@@ -268,32 +315,72 @@ export function MediaViewerPage() {
         {(post.eventTitle || post.sceneTitle) && (
           <span>{[post.eventTitle, post.sceneTitle].filter(Boolean).join(" · ")}</span>
         )}
-        <Link
-          className="outline-button"
-          to={commentNavigation.to}
-          state={commentNavigation.state}
-          style={{
-            alignSelf: "flex-start",
-            marginTop: 7,
-            gap: 7,
-            color: "white",
-            borderColor: "rgba(255, 255, 255, 0.62)",
-          }}
+        <div className="viewer-controls">
+          <button
+            type="button"
+            onClick={() => animateToMedia(index - 1, "previous")}
+            disabled={index <= 0}
+            aria-label="前の写真・動画"
+          >
+            <ChevronLeft aria-hidden />
+            前へ
+          </button>
+          <button
+            type="button"
+            className="viewer-continuous"
+            aria-pressed={continuous}
+            onClick={() => setContinuous((enabled) => !enabled)}
+          >
+            <Repeat2 aria-hidden />
+            連続再生 {continuous ? "オン" : "オフ"}
+          </button>
+          <button
+            type="button"
+            onClick={() => animateToMedia(index + 1, "next")}
+            disabled={index >= navigationItems.length - 1}
+            aria-label="次の写真・動画"
+          >
+            次へ
+            <ChevronRight aria-hidden />
+          </button>
+        </div>
+        {finishedMedia === current.id && (
+          <p className="viewer-playback-complete" role="status">
+            {index === navigationItems.length - 1
+              ? "最後の動画の再生が終わりました"
+              : continuous && navigationItems[index + 1]?.kind === "image"
+                ? "次は写真です。「次へ」でご覧ください"
+                : "再生が終わりました"}
+          </p>
+        )}
+        <button
+          ref={commentButtonRef}
+          className="viewer-comment-button"
+          type="button"
+          aria-expanded={commentsOpen}
+          onClick={() => setCommentsOpen((open) => !open)}
         >
           <MessageCircle aria-hidden />
-          この投稿にコメント
-        </Link>
+          この投稿にコメント {post.comments.length > 0 ? `· ${post.comments.length}件` : ""}
+        </button>
       </div>
       <div className="thumbnail-strip">
-        {navigationItems.map((media) => (
+        {navigationItems.map((media, mediaIndex) => (
           <Link
             className={media.id === current.id ? "selected" : ""}
             key={media.id}
             to={`/posts/${media.postId}/media/${media.id}`}
             replace
-            state={location.state}
+            state={{ ...(location.state as object | null), continuous, playVideo: media.kind === "video" }}
+            aria-label={`${media.kind === "video" ? "動画" : "写真"} ${mediaIndex + 1}を開く`}
+            aria-current={media.id === current.id ? "true" : undefined}
+            onClick={(event) => {
+              if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+              event.preventDefault();
+              showMedia(mediaIndex);
+            }}
           >
-            <img src={media.thumbnailUrl} alt="" />
+            <img src={media.thumbnailUrl} alt="" loading="lazy" />
             {media.kind === "video" && (
               <span className="thumbnail-video-mark" aria-hidden>
                 ▶
@@ -302,6 +389,21 @@ export function MediaViewerPage() {
           </Link>
         ))}
       </div>
+      {commentsOpen && (
+        <ViewerComments
+          key={post.id}
+          post={post}
+          onClose={() => {
+            setCommentsOpen(false);
+            commentButtonRef.current?.focus();
+          }}
+          onComment={(comment) => {
+            const nextPost = { ...post, comments: [...post.comments, comment], commentCount: post.comments.length + 1 };
+            setLoadedPost((loaded) => (loaded?.postId === post.id ? { postId: post.id, post: nextPost } : loaded));
+            updateReadingPost(nextPost);
+          }}
+        />
+      )}
     </main>
   );
 }

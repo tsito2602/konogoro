@@ -1,4 +1,8 @@
 import * as exifr from "exifr";
+import { MULTIPART_THRESHOLD } from "../shared/multipart";
+import { uploadMultipart, type UploadOptions } from "./multipart-upload";
+import { putBlob } from "./upload-transport";
+import type { PreparedPlayback } from "./video-playback";
 
 export type UploadStatus = "preparing" | "preparation-failed" | "ready" | "uploading" | "uploaded" | "failed";
 
@@ -9,6 +13,7 @@ export type SelectedMediaFile = {
   previewUrl: string;
   thumbnail: Blob | null;
   optimizedPreview?: Blob;
+  playback?: PreparedPlayback;
   capturedAt: string | null;
   width: number | null;
   height: number | null;
@@ -97,9 +102,15 @@ async function prepareMediaFile(item: SelectedMediaFile): Promise<SelectedMediaF
   const capturedAtPromise = captureDate(item.file);
   try {
     if (item.file.type.startsWith("video/")) {
-      const video = await loadVideoFirstFrame(item.previewUrl);
-      const width = video.videoWidth;
-      const height = video.videoHeight;
+      const playbackUrl = item.playback ? URL.createObjectURL(item.playback.file) : null;
+      let video: HTMLVideoElement;
+      try {
+        video = await loadVideoFirstFrame(playbackUrl ?? item.previewUrl);
+      } finally {
+        if (playbackUrl) URL.revokeObjectURL(playbackUrl);
+      }
+      const width = item.width ?? video.videoWidth;
+      const height = item.height ?? video.videoHeight;
       const durationSeconds = Number.isFinite(video.duration) ? video.duration : null;
       const thumbnail = await drawOptimizedImage(video, video.videoWidth, video.videoHeight, 480, 0.78);
       video.removeAttribute("src");
@@ -149,24 +160,18 @@ export function uploadFile(
   body: Blob,
   contentType = body.type,
   onProgress?: (loaded: number) => void,
+  options?: UploadOptions,
 ): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const request = new XMLHttpRequest();
-    request.open("PUT", url);
-    request.timeout = 10 * 60 * 1000;
-    request.addEventListener("timeout", () => reject(new Error("送信がタイムアウトしました。再試行してください")));
-    request.addEventListener("abort", () => reject(new Error("送信を中断しました")));
-    request.setRequestHeader("Content-Type", contentType);
-    request.upload.addEventListener("progress", (event) => onProgress?.(event.loaded));
-    request.addEventListener("load", () => {
-      if (request.status >= 200 && request.status < 300) {
-        onProgress?.(body.size);
-        resolve();
-      } else reject(new Error("アップロードに失敗しました"));
-    });
-    request.addEventListener("error", () => reject(new Error("アップロードに失敗しました")));
-    request.send(body);
-  });
+  if (body.size >= MULTIPART_THRESHOLD && options?.mediaId)
+    return uploadMultipart(
+      options.mediaId,
+      options.variant ?? "original",
+      body,
+      contentType,
+      onProgress,
+      options.signal,
+    );
+  return putBlob(url, body, contentType, onProgress, options?.signal).then(() => undefined);
 }
 
 async function captureDate(file: File): Promise<string | null> {
@@ -185,11 +190,25 @@ async function captureDate(file: File): Promise<string | null> {
 function loadVideoFirstFrame(url: string): Promise<HTMLVideoElement> {
   return new Promise((resolve, reject) => {
     const video = document.createElement("video");
+    const timer = setTimeout(() => fail(), 20_000);
+    const fail = () => {
+      clearTimeout(timer);
+      video.removeAttribute("src");
+      video.load();
+      reject(new Error("動画を読み込めません"));
+    };
     video.preload = "auto";
     video.muted = true;
     video.playsInline = true;
-    video.addEventListener("loadeddata", () => resolve(video), { once: true });
-    video.addEventListener("error", () => reject(new Error("動画を読み込めません")), { once: true });
+    video.addEventListener(
+      "loadeddata",
+      () => {
+        clearTimeout(timer);
+        resolve(video);
+      },
+      { once: true },
+    );
+    video.addEventListener("error", fail, { once: true });
     video.src = url;
     video.load();
   });

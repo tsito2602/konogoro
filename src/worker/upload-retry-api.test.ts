@@ -77,6 +77,35 @@ const photo = () => ({
 });
 
 describe("投稿・メディア確保APIの応答喪失からの再試行", () => {
+  it("再生用動画の元ファイルハッシュを保持し、確定応答の喪失後も書き込みURLなしで再試行できる", async () => {
+    const { sql, post, create } = await fixture();
+    try {
+      const postId = await create();
+      const file = { ...photo(), filename: "travel.mp4", mimeType: "video/mp4", originalSha256: "a".repeat(64) };
+      const path = `/posts/${postId}/media/upload-urls`;
+      const response = await post(path, { files: [file] });
+      expect(response.status).toBe(201);
+      const { media } = (await response.json()) as { media: UploadTarget[] };
+      expect(sql.prepare("SELECT original_sha256 FROM media WHERE id = ?").get(media[0].id)?.original_sha256).toBe(
+        file.originalSha256,
+      );
+      expect((await post(path, { files: [{ ...file, originalSha256: "b".repeat(64) }] })).status).toBe(409);
+      sql.prepare("UPDATE media SET status = 'uploaded' WHERE id = ?").run(media[0].id);
+      const retry = await post(`/media/${media[0].id}/upload-url`, {});
+      expect(retry.status).toBe(200);
+      expect(await retry.json()).toEqual({
+        id: media[0].id,
+        alreadyUploaded: true,
+        uploadUrl: "",
+        thumbnailUploadUrl: "",
+        contentType: "video/mp4",
+      });
+      expect(sql.prepare("SELECT status FROM media WHERE id = ?").get(media[0].id)?.status).toBe("uploaded");
+    } finally {
+      sql.close();
+    }
+  });
+
   it("投稿作成の応答を失っても下書きを重複せず、再試行時の入力を保持する", async () => {
     const { sql, post } = await fixture();
     try {

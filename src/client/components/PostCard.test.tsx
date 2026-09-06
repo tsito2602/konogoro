@@ -197,3 +197,32 @@ describe("PostCard", () => {
     expect(html).toContain("lucide-upload");
   });
 });
+
+it("uses summary totals and makes the representative video the hero without fetching raw video", () => {
+  const media = {
+    id: "video",
+    kind: "video" as const,
+    mimeType: "video/mp4",
+    originalFilename: "video.mp4",
+    byteSize: 900_000_000,
+    width: 1920,
+    height: 1080,
+    durationSeconds: 60,
+    capturedAt: null,
+    position: 5,
+    contentUrl: "/raw-video",
+    thumbnailUrl: "/thumbnail",
+    downloadUrl: "/download",
+  };
+  const html = renderToStaticMarkup(
+    <MemoryRouter>
+      <PostCard post={{ ...post, media: [media], mediaCount: 12, commentCount: 7 }} />
+    </MemoryRouter>,
+  );
+  expect(html).toContain('class="post-video-hero unseen"');
+  expect(html).toContain('aria-label="動画を音付きで見る"');
+  expect(html).toContain("写真・動画 12件");
+  expect(html).toContain("コメント7件");
+  expect(html).not.toContain("/raw-video");
+  expect(html).not.toContain("<video");
+});

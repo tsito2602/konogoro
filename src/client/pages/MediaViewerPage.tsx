@@ -3,7 +3,7 @@ import { clearPreparedVideo, prepareNextVideo, useVideoPreparation } from "../vi
 import { VideoPlayer } from "../components/VideoPlayer";
 import { commentNavigationState } from "../comment-navigation";
 import { canReturnInApp, rememberAlbumMedia, updateReadingPost } from "../reading-context";
-import { ChevronLeft, ChevronRight, Download, MessageCircle, Repeat2, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, MessageCircle, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import type { AlbumMedia, Media, Post } from "../../shared/types";
@@ -61,7 +61,6 @@ export function MediaViewerPage() {
     albumMedia?: AlbumMedia[];
     albumOrigin?: string;
     playVideo?: boolean;
-    continuous?: boolean;
     playRequestedAt?: number;
   } | null;
   useEffect(() => {
@@ -73,7 +72,6 @@ export function MediaViewerPage() {
   }, [mediaId, viewerState?.albumOrigin, viewerState?.albumMedia]);
   const [loadedPost, setLoadedPost] = useState<{ postId: string; post: Post } | null>(null);
   const [error, setError] = useState("");
-  const [continuous, setContinuous] = useState(viewerState?.continuous === true);
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [finishedMedia, setFinishedMedia] = useState<string | null>(null);
   const [playingMedia, setPlayingMedia] = useState<string | null>(null);
@@ -125,7 +123,7 @@ export function MediaViewerPage() {
       clearPreparedVideo();
       return;
     }
-    if (!continuous || playingMedia !== mediaId || next?.kind !== "video") return;
+    if (playingMedia !== mediaId || next?.kind !== "video") return;
     let cleanup: (() => void) | undefined;
     const controller = new AbortController();
     const prepare = (nextPost: Post) => {
@@ -142,7 +140,7 @@ export function MediaViewerPage() {
       controller.abort();
       cleanup?.();
     };
-  }, [canPrepare, continuous, commentsOpen, playingMedia, mediaId, navigationItems, index, postId, post]);
+  }, [canPrepare, commentsOpen, playingMedia, mediaId, navigationItems, index, postId, post]);
   const closeViewer = useCallback(() => {
     clearPreparedVideo();
     if (viewerState?.returnToPrevious && canReturnInApp()) navigate(-1);
@@ -157,13 +155,12 @@ export function MediaViewerPage() {
         replace: true,
         state: {
           ...(location.state as object | null),
-          continuous,
           playVideo: target.kind === "video",
           playRequestedAt: performance.now(),
         },
       });
     },
-    [location.state, navigate, navigationItems, continuous],
+    [location.state, navigate, navigationItems],
   );
   const animateToMedia = useCallback(
     (targetIndex: number, direction: "previous" | "next") => {
@@ -298,8 +295,6 @@ export function MediaViewerPage() {
               onNearEnd={() => setPlayingMedia(current.id)}
               onEnded={() => {
                 setFinishedMedia(current.id);
-                if (continuous && navigationItems[index + 1]?.kind === "video" && !document.hidden)
-                  showMedia(index + 1);
               }}
             />
           ) : (
@@ -327,15 +322,6 @@ export function MediaViewerPage() {
           </button>
           <button
             type="button"
-            className="viewer-continuous"
-            aria-pressed={continuous}
-            onClick={() => setContinuous((enabled) => !enabled)}
-          >
-            <Repeat2 aria-hidden />
-            連続再生 {continuous ? "オン" : "オフ"}
-          </button>
-          <button
-            type="button"
             onClick={() => animateToMedia(index + 1, "next")}
             disabled={index >= navigationItems.length - 1}
             aria-label="次の写真・動画"
@@ -346,11 +332,7 @@ export function MediaViewerPage() {
         </div>
         {finishedMedia === current.id && (
           <p className="viewer-playback-complete" role="status">
-            {index === navigationItems.length - 1
-              ? "最後の動画の再生が終わりました"
-              : continuous && navigationItems[index + 1]?.kind === "image"
-                ? "次は写真です。「次へ」でご覧ください"
-                : "再生が終わりました"}
+            {index === navigationItems.length - 1 ? "最後の動画の再生が終わりました" : "再生が終わりました"}
           </p>
         )}
         <button
@@ -371,7 +353,7 @@ export function MediaViewerPage() {
             key={media.id}
             to={`/posts/${media.postId}/media/${media.id}`}
             replace
-            state={{ ...(location.state as object | null), continuous, playVideo: media.kind === "video" }}
+            state={{ ...(location.state as object | null), playVideo: media.kind === "video" }}
             aria-label={`${media.kind === "video" ? "動画" : "写真"} ${mediaIndex + 1}を開く`}
             aria-current={media.id === current.id ? "true" : undefined}
             onClick={(event) => {

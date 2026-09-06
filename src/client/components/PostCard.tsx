@@ -1,8 +1,7 @@
-import { VideoPreview } from "./VideoPreview";
 import { VideoBadge } from "./VideoBadge";
 import { commentNavigationState } from "../comment-navigation";
-import { CalendarDays, Camera, MessageCircle, Play, Upload } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { CalendarDays, Camera, MessageCircle, Upload } from "lucide-react";
+import { Link } from "react-router-dom";
 import type { Post } from "../../shared/types";
 import { useSeenTracking } from "../hooks/useSeenTracking";
 import { SeenBy } from "./SeenBy";
@@ -20,7 +19,6 @@ export function PostCard({
   onViewed?: () => void;
   onViewError?: (message: string) => void;
 }) {
-  const navigate = useNavigate();
   const postPageState = { postPage: true };
   const mediaViewerState = { returnToPrevious: true };
   const { ref: seenRef, viewed } = useSeenTracking(
@@ -35,8 +33,6 @@ export function PostCard({
   const latestComment = post.comments.at(-1);
   const commentCount = post.commentCount ?? post.comments.length;
   const mediaCount = post.mediaCount ?? post.media.length;
-  const heroVideo = post.media.find((media) => media.kind === "video");
-  const otherMedia = heroVideo ? post.media.filter((media) => media.id !== heroVideo.id) : post.media;
   const commentLinkLabel = commentCount === 0 ? "コメントを書く" : `コメント${commentCount}件`;
   const date = post.capturedAt ?? post.publishedAt;
   const dateLabel = post.capturedAt ? "撮影日" : "投稿日";
@@ -67,34 +63,8 @@ export function PostCard({
           </span>
         )}
       </Link>
-      {heroVideo && (
-        <Link
-          className={`post-video-hero${viewed ? "" : " unseen"}`}
-          to={`/posts/${post.id}/media/${heroVideo.id}`}
-          state={{ ...mediaViewerState, playVideo: true }}
-          aria-label="動画を音付きで見る"
-          onClick={(event) => {
-            if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-            event.preventDefault();
-            navigate(`/posts/${post.id}/media/${heroVideo.id}`, {
-              state: { ...mediaViewerState, playVideo: true, playRequestedAt: performance.now() },
-            });
-          }}
-        >
-          <VideoPreview media={heroVideo} />
-          <span className="post-video-action">
-            <Play aria-hidden />
-            音付きで見る
-          </span>
-          <VideoBadge durationSeconds={heroVideo.durationSeconds} />
-          {mediaCount > 1 && <span className="post-media-total">写真・動画 {mediaCount}件</span>}
-        </Link>
-      )}
-      <div
-        className={`media-grid${heroVideo ? " video-companions" : ""}${viewed ? "" : " unseen"}`}
-        data-count={Math.min(otherMedia.length, heroVideo ? 3 : 4)}
-      >
-        {otherMedia.slice(0, heroVideo ? 3 : 4).map((media, index) => (
+      <div className={`media-grid${viewed ? "" : " unseen"}`} data-count={Math.min(post.media.length, 4)}>
+        {post.media.slice(0, 4).map((media, index) => (
           <Link
             className="media-cell"
             key={media.id}
@@ -104,7 +74,7 @@ export function PostCard({
           >
             <img src={media.thumbnailUrl} alt="" loading="lazy" />
             {media.kind === "video" && <VideoBadge durationSeconds={media.durationSeconds} />}
-            {index === (heroVideo ? 2 : 3) && mediaCount > 4 && <span className="more-count">+{mediaCount - 3}</span>}
+            {index === 3 && mediaCount > 4 && <span className="more-count">+{mediaCount - 3}</span>}
           </Link>
         ))}
       </div>

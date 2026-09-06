@@ -198,7 +198,7 @@ describe("PostCard", () => {
   });
 });
 
-it("uses summary totals and makes the representative video the hero without fetching raw video", () => {
+it("uses summary totals and shows a static video thumbnail in the common grid", () => {
   const media = {
     id: "video",
     kind: "video" as const,
@@ -219,9 +219,9 @@ it("uses summary totals and makes the representative video the hero without fetc
       <PostCard post={{ ...post, media: [media], mediaCount: 12, commentCount: 7 }} />
     </MemoryRouter>,
   );
-  expect(html).toContain('class="post-video-hero unseen"');
-  expect(html).toContain('aria-label="動画を音付きで見る"');
-  expect(html).toContain("写真・動画 12件");
+  expect(html).toContain('class="media-grid unseen"');
+  expect(html).toContain('aria-label="未閲覧の投稿の動画 1/12を開く"');
+  expect(html).not.toContain("post-video-hero");
   expect(html).toContain("コメント7件");
   expect(html).not.toContain("/raw-video");
   expect(html).not.toContain("<video");

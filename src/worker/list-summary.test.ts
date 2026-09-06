@@ -50,12 +50,12 @@ function fixture() {
 }
 
 describe("一覧と詳細の取得契約", () => {
-  it("代表4件に先頭動画を含み、最新コメントだけでも全件数と既読を維持する", async () => {
+  it("種類を優先せず登録順の先頭4件を返し、全件数と既読を維持する", async () => {
     const { sql, db, rows } = fixture();
     try {
       const posts = await loadPosts(db, rows, user, "summary");
       const summary = posts.find((p) => p.id === "post")!;
-      expect(summary.media.map((m) => m.id)).toEqual(["m-0", "m-1", "m-2", "m-20"]);
+      expect(summary.media.map((m) => m.id)).toEqual(["m-0", "m-1", "m-2", "m-3"]);
       expect([summary.mediaCount, summary.photoCount, summary.videoCount]).toEqual([30, 29, 1]);
       expect(summary.commentCount).toBe(80);
       expect(summary.comments.map((c) => c.id)).toEqual(["c-079"]);

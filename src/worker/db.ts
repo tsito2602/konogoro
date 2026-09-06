@@ -68,16 +68,12 @@ export async function loadPosts(
     mode === "summary"
       ? `WITH ranked AS (
         SELECT ${mediaColumns},
-          ROW_NUMBER() OVER (PARTITION BY post_id, kind ORDER BY position, id) AS kind_rank,
+          ROW_NUMBER() OVER (PARTITION BY post_id ORDER BY position, id) AS selection_rank,
           COUNT(*) OVER (PARTITION BY post_id) AS media_count,
           SUM(kind = 'image') OVER (PARTITION BY post_id) AS photo_count,
           SUM(kind = 'video') OVER (PARTITION BY post_id) AS video_count
         FROM media WHERE status = 'uploaded' AND post_id IN (${placeholders})
-      ), selected AS (
-        SELECT *, ROW_NUMBER() OVER (
-          PARTITION BY post_id ORDER BY CASE WHEN kind = 'video' AND kind_rank = 1 THEN 0 ELSE 1 END, position, id
-        ) AS selection_rank FROM ranked
-      ) SELECT * FROM selected WHERE selection_rank <= 4 ORDER BY post_id, position, id`
+      ) SELECT * FROM ranked WHERE selection_rank <= 4 ORDER BY post_id, position, id`
       : `SELECT ${mediaColumns} FROM media
         WHERE status = 'uploaded' AND post_id IN (${placeholders}) ORDER BY post_id, position, id`;
   const commentsQuery =

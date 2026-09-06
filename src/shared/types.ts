@@ -41,6 +41,8 @@ export type AlbumMedia = Pick<Media, "id" | "kind" | "thumbnailUrl"> & {
   durationSeconds?: number | null;
   postId: string;
   capturedAt: string;
+  /** Event start date, end date, or capture date in Japan for album grouping. */
+  albumDate?: string;
   previewUrl: string;
 };
 

@@ -20,6 +20,7 @@ import type { CurrentUser, FamilyMember, User } from "../../shared/types";
 import { api } from "../api";
 import { ErrorState } from "../components/AsyncState";
 import { PageHeader } from "../components/PageHeader";
+import { useCurrentUser } from "../components/AppLayout";
 import { PageSkeleton } from "../components/PageSkeleton";
 import { openInstallGuide, openOnboardingGuide } from "../components/PwaGuide";
 import { useToast } from "../components/Toast";
@@ -78,6 +79,7 @@ export function StagingRoleGuide({ currentRole, disabled, onChange }: StagingRol
 }
 
 export function SettingsPage() {
+  const currentUser = useCurrentUser();
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [members, setMembers] = useState<FamilyMember[] | null>(null);
   const [displayName, setDisplayName] = useState("");
@@ -179,7 +181,7 @@ export function SettingsPage() {
         {error && !user ? (
           <ErrorState message={error} retry={load} />
         ) : !user ? (
-          <PageSkeleton variant="settings" />
+          <PageSkeleton variant="settings" currentUser={currentUser} />
         ) : (
           <>
             <form id="settings-save-form" className="settings-form" onSubmit={save}>

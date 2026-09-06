@@ -53,7 +53,11 @@ export function EventDetailPage() {
   if (!detail && !error)
     return (
       <>
-        <PageHeader title="イベント" back />
+        <PageHeader
+          title="イベント"
+          back
+          action={canManageEvent(currentUser) ? <span className="skeleton-square" aria-hidden /> : undefined}
+        />
         <PageSkeleton variant="event-detail" />
       </>
     );

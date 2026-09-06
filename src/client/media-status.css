@@ -1,0 +1,51 @@
+.video-duration-badge {
+  position: absolute;
+  bottom: 8px;
+  left: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 6px;
+  border-radius: 5px;
+  background: rgba(0, 0, 0, 0.75);
+  color: white;
+  font-size: 12px;
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
+}
+.video-player {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.video-player-status {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  padding: 10px;
+  border-radius: 8px;
+  color: white;
+  background: rgba(0, 0, 0, 0.8);
+  font-size: 14px;
+  text-align: center;
+}
+.video-player-status .outline-button {
+  color: white;
+  border-color: currentColor;
+  margin: auto;
+}
+.selected-upload-status {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 3px 6px;
+  border-radius: 5px;
+  font-size: 12px;
+}

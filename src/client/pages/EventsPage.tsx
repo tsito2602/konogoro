@@ -1,3 +1,4 @@
+import { useReadingState } from "../reading-context";
 import { ListFilter, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
@@ -18,9 +19,9 @@ export type EventFilters = {
 const emptyFilters: EventFilters = { keyword: "", from: "", to: "", status: "all" };
 
 export function EventsPage() {
-  const [events, setEvents] = useState<EventSummary[] | null>(null);
+  const [events, setEvents] = useReadingState<EventSummary[] | null>("events", null);
   const [error, setError] = useState("");
-  const [filters, setFilters] = useState<EventFilters>(emptyFilters);
+  const [filters, setFilters] = useReadingState<EventFilters>("filters", emptyFilters);
   const [draftFilters, setDraftFilters] = useState<EventFilters>(emptyFilters);
   const [filterOpen, setFilterOpen] = useState(false);
   const [filterClosing, setFilterClosing] = useState(false);
@@ -34,7 +35,7 @@ export function EventsPage() {
     void api<{ events: EventSummary[] }>("/events")
       .then((data) => setEvents(data.events))
       .catch((reason: Error) => setError(reason.message));
-  }, []);
+  }, [setEvents]);
   const filteredEvents = events ? filterEvents(events, filters) : null;
   const activeFilterCount = [filters.keyword.trim(), filters.from || filters.to, filters.status !== "all"].filter(
     Boolean,
@@ -193,19 +194,23 @@ export function EventsPage() {
 export function EventCard({ event }: { event: EventSummary }) {
   const description = event.description.trim();
   return (
-    <Link
-      className={`event-card${event.coverUrl ? "" : " no-cover"}`}
-      to={`/events/${event.id}`}
-      style={event.coverUrl ? { backgroundImage: `url(${event.coverUrl})` } : undefined}
-    >
-      <div className="event-card-badges">
-        {eventStatusLabel(event.startDate, event.endDate)}
-        <span className="event-media-count">{mediaCounts(event.photoCount, event.videoCount)}</span>
+    <Link data-reading-item={`event-${event.id}`} className="event-card" to={`/events/${event.id}`}>
+      <div className={`event-card-image${event.coverUrl ? "" : " no-cover"}`}>
+        {event.coverUrl && (
+          <img
+            src={event.coverUrl}
+            alt=""
+            loading="lazy"
+            style={{ objectPosition: `${event.coverPosition?.x ?? 50}% ${event.coverPosition?.y ?? 50}%` }}
+          />
+        )}
+        <div className="event-card-badges">{eventStatusLabel(event.startDate, event.endDate)}</div>
       </div>
       <div className="event-card-copy">
         <h3>{event.title}</h3>
         <p>{eventDate(event.startDate, event.endDate)}</p>
         {description && <p className="event-card-description">{description}</p>}
+        <p className="event-media-count">{mediaCounts(event.photoCount, event.videoCount)}</p>
       </div>
     </Link>
   );

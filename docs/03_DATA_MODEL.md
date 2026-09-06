@@ -43,6 +43,8 @@ end_date
 cover_media_id
 cover_object_key
 cover_source: auto | manual
+cover_position_x: 0〜100（既定50）
+cover_position_y: 0〜100（既定50）
 created_by
 created_at
 updated_at

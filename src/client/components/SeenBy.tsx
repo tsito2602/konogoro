@@ -17,6 +17,7 @@ export function SeenBy({ users }: { users: SeenUser[] }) {
       </summary>
       <div className="seen-popover">
         <strong>見た人</strong>
+        <p>投稿が画面に表示された人です。</p>
         <ul>
           {users.map((user) => (
             <li key={user.id}>

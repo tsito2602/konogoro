@@ -80,7 +80,17 @@ describe("viewerCommentNavigation", () => {
   it("投稿詳細を開いてコメント入力へフォーカスする状態を付ける", () => {
     expect(viewerCommentNavigation("post-1", { returnToPrevious: true })).toEqual({
       to: "/posts/post-1",
-      state: { returnToPrevious: true, postPage: true, focusComment: true },
+      state: { returnToPrevious: true, postPage: true, commentIntent: "write" },
     });
   });
+});
+
+it("uses the post when a detail photo is outside the originating album month", () => {
+  const first = { id: "month-photo", kind: "image" as const, thumbnailUrl: "/1" };
+  const second = { id: "other-month", kind: "image" as const, thumbnailUrl: "/2" };
+  const album = [{ ...first, postId: "p", capturedAt: "2026-09-01", previewUrl: "/1" }];
+  expect(viewerNavigationItems("p", [first, second], album, "other-month")).toEqual([
+    { ...first, postId: "p" },
+    { ...second, postId: "p" },
+  ]);
 });

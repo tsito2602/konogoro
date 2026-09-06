@@ -1,3 +1,4 @@
+import { retryResourceId } from "./request-id";
 import { Hono, type Context } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { ulid } from "ulid";
@@ -65,11 +66,14 @@ type EventRow = {
   end_date: string | null;
   cover_media_id: string | null;
   cover_source: "auto" | "manual";
+  cover_position_x: number;
+  cover_position_y: number;
   post_count: number;
   photo_count: number;
   video_count: number;
 };
 type AlbumMediaRow = {
+  duration_seconds: number | null;
   id: string;
   post_id: string;
   kind: "image" | "video";
@@ -612,7 +616,7 @@ app.get("/album", async (c) => {
   const limit = 60;
   const capturedAt = "COALESCE(m.captured_at, p.captured_at, p.published_at)";
   const select = `
-    SELECT m.id, m.post_id, m.kind, ${capturedAt} AS captured_at
+    SELECT m.id, m.post_id, m.kind, m.duration_seconds, ${capturedAt} AS captured_at
       FROM media m
       JOIN posts p ON p.id = m.post_id
      WHERE m.status = 'uploaded' AND p.status = 'published'`;
@@ -629,6 +633,7 @@ app.get("/album", async (c) => {
     postId: item.post_id,
     kind: item.kind,
     capturedAt: item.captured_at,
+    durationSeconds: item.duration_seconds,
     thumbnailUrl: `/api/media/${item.id}/content?variant=thumbnail`,
     previewUrl: `/api/media/${item.id}/content?variant=${item.kind === "image" ? "preview" : "thumbnail"}`,
   }));
@@ -711,7 +716,7 @@ app.get("/events", async (c) => {
   const today = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
   const result = await c.env.DB.prepare(
     `
-    SELECT e.id, e.title, e.description, e.start_date, e.end_date, e.cover_media_id, e.cover_source,
+    SELECT e.id, e.title, e.description, e.start_date, e.end_date, e.cover_media_id, e.cover_source, e.cover_position_x, e.cover_position_y,
            COUNT(DISTINCT CASE WHEN p.status = 'published' THEN p.id END) AS post_count,
            COUNT(DISTINCT CASE WHEN p.status = 'published' AND m.status = 'uploaded' AND m.kind = 'image' THEN m.id END) AS photo_count,
            COUNT(DISTINCT CASE WHEN p.status = 'published' AND m.status = 'uploaded' AND m.kind = 'video' THEN m.id END) AS video_count
@@ -836,10 +841,15 @@ app.put("/events/:eventId/manage", async (c) => {
   if (cover) {
     statements.push(
       c.env.DB.prepare(
-        "UPDATE events SET cover_media_id = ?, cover_object_key = ?, cover_source = 'manual', updated_at = ? WHERE id = ?",
-      ).bind(cover.id, cover.original_object_key, now, eventId),
+        "UPDATE events SET cover_media_id = ?, cover_object_key = ?, cover_source = 'manual', cover_position_x = ?, cover_position_y = ?, updated_at = ? WHERE id = ?",
+      ).bind(cover.id, cover.original_object_key, input.coverPosition.x, input.coverPosition.y, now, eventId),
     );
   } else {
+    statements.push(
+      c.env.DB.prepare(
+        "UPDATE events SET cover_source = 'auto', cover_position_x = 50, cover_position_y = 50 WHERE id = ?",
+      ).bind(eventId),
+    );
     statements.push(autoEventCoverStatement(c.env.DB, eventId, now));
   }
   await c.env.DB.batch(statements);
@@ -863,7 +873,7 @@ app.get("/events/:eventId", async (c) => {
   const eventId = c.req.param("eventId");
   const event = await c.env.DB.prepare(
     `
-    SELECT e.id, e.title, e.description, e.start_date, e.end_date, e.cover_media_id, e.cover_source,
+    SELECT e.id, e.title, e.description, e.start_date, e.end_date, e.cover_media_id, e.cover_source, e.cover_position_x, e.cover_position_y,
            COUNT(DISTINCT CASE WHEN p.status = 'published' THEN p.id END) AS post_count,
            COUNT(DISTINCT CASE WHEN p.status = 'published' AND m.status = 'uploaded' AND m.kind = 'image' THEN m.id END) AS photo_count,
            COUNT(DISTINCT CASE WHEN p.status = 'published' AND m.status = 'uploaded' AND m.kind = 'video' THEN m.id END) AS video_count
@@ -950,7 +960,7 @@ app.get("/events/:eventId/cover-media", async (c) => {
     `
     SELECT m.id, m.kind FROM media m JOIN posts p ON p.id = m.post_id
      WHERE p.event_id = ? AND p.status = 'published' AND m.status = 'uploaded'
-     ORDER BY COALESCE(m.captured_at, p.captured_at, p.created_at), m.position, m.id
+     ORDER BY COALESCE(m.captured_at, p.captured_at, p.published_at, p.created_at), m.position, m.id
   `,
   )
     .bind(c.req.param("eventId"))
@@ -976,18 +986,18 @@ app.put("/events/:eventId/cover", async (c) => {
       .first<{ id: string; original_object_key: string }>();
     if (!media) return c.json({ error: "カバーに設定できるメディアが見つかりません" }, 400);
     await c.env.DB.prepare(
-      "UPDATE events SET cover_media_id = ?, cover_object_key = ?, cover_source = 'manual', updated_at = ? WHERE id = ?",
+      "UPDATE events SET cover_media_id = ?, cover_object_key = ?, cover_source = 'manual', cover_position_x = ?, cover_position_y = ?, updated_at = ? WHERE id = ?",
     )
-      .bind(media.id, media.original_object_key, now, eventId)
+      .bind(media.id, media.original_object_key, body.coverPosition.x, body.coverPosition.y, now, eventId)
       .run();
   } else {
     const event = await c.env.DB.prepare("SELECT id FROM events WHERE id = ?").bind(eventId).first();
     if (!event) return c.json({ error: "イベントが見つかりません" }, 404);
     await c.env.DB.prepare(
       `UPDATE events SET
-      cover_media_id = (SELECT m.id FROM media m JOIN posts p ON p.id = m.post_id WHERE p.event_id = events.id AND p.status = 'published' AND m.status = 'uploaded' ORDER BY CASE WHEN m.kind = 'image' THEN 0 ELSE 1 END, COALESCE(m.captured_at, p.captured_at, p.created_at), m.position, m.id LIMIT 1),
-      cover_object_key = (SELECT m.original_object_key FROM media m JOIN posts p ON p.id = m.post_id WHERE p.event_id = events.id AND p.status = 'published' AND m.status = 'uploaded' ORDER BY CASE WHEN m.kind = 'image' THEN 0 ELSE 1 END, COALESCE(m.captured_at, p.captured_at, p.created_at), m.position, m.id LIMIT 1),
-      cover_source = 'auto', updated_at = ? WHERE id = ?`,
+      cover_media_id = (SELECT m.id FROM media m JOIN posts p ON p.id = m.post_id WHERE p.event_id = events.id AND p.status = 'published' AND m.status = 'uploaded' ORDER BY CASE WHEN m.kind = 'image' THEN 0 ELSE 1 END, COALESCE(m.captured_at, p.captured_at, p.published_at, p.created_at), m.position, m.id LIMIT 1),
+      cover_object_key = (SELECT m.original_object_key FROM media m JOIN posts p ON p.id = m.post_id WHERE p.event_id = events.id AND p.status = 'published' AND m.status = 'uploaded' ORDER BY CASE WHEN m.kind = 'image' THEN 0 ELSE 1 END, COALESCE(m.captured_at, p.captured_at, p.published_at, p.created_at), m.position, m.id LIMIT 1),
+      cover_source = 'auto', cover_position_x = 50, cover_position_y = 50, updated_at = ? WHERE id = ?`,
     )
       .bind(now, eventId)
       .run();
@@ -1009,12 +1019,18 @@ app.post("/posts", async (c) => {
       .first();
     if (!scene) return c.json({ error: "見出しがイベントと一致しません" }, 400);
   }
-  const id = ulid();
+  const id = input.requestId ? await retryResourceId(["post", c.var.currentUser.id], input.requestId) : ulid();
   const now = new Date().toISOString();
   await c.env.DB.prepare(
-    `INSERT INTO posts (id, event_id, scene_id, caption, created_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO posts (id, event_id, scene_id, caption, created_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING`,
   )
     .bind(id, input.eventId, input.sceneId, input.caption, c.var.currentUser.id, now, now)
+    .run();
+  // A lost creation response can be retried with the same key, including edited text.
+  await c.env.DB.prepare(
+    "UPDATE posts SET event_id = ?, scene_id = ?, caption = ?, updated_at = ? WHERE id = ? AND created_by = ? AND status = 'draft'",
+  )
+    .bind(input.eventId, input.sceneId, input.caption, now, id, c.var.currentUser.id)
     .run();
   return c.json({ id }, 201);
 });
@@ -1154,7 +1170,7 @@ app.post("/posts/:postId/media/upload-urls", async (c) => {
         thumbnail_object_key: string;
       }
     >();
-  if (post.status === "draft" && existing.results.length > 0) {
+  if (post.status === "draft" && existing.results.length > 0 && !input.files.every((file) => file.requestId)) {
     if (!matchesUploadFiles(existing.results, input.files)) {
       return c.json({ error: "下書きの写真・動画が選択内容と一致しません" }, 409);
     }
@@ -1179,6 +1195,18 @@ app.post("/posts/:postId/media/upload-urls", async (c) => {
     return c.json({ media: targets });
   }
 
+  const requestIds = await Promise.all(
+    input.files.map((file) =>
+      file.requestId ? retryResourceId(["media", c.var.currentUser.id, postId], file.requestId) : ulid(),
+    ),
+  );
+  if (new Set(requestIds).size !== requestIds.length)
+    return c.json({ error: "写真・動画のリクエストが重複しています" }, 400);
+  for (const [index, id] of requestIds.entries()) {
+    const previous = existing.results.find((media) => media.id === id);
+    if (previous && !matchesUploadFiles([previous], [input.files[index]]))
+      return c.json({ error: "再試行する写真・動画が元の内容と一致しません" }, 409);
+  }
   if (post.status === "published") {
     const uploaded = existing.results.filter((media) => media.status === "uploaded");
     const replacing = new Set(editInput!.replacingMediaIds);
@@ -1188,7 +1216,10 @@ app.post("/posts/:postId/media/upload-urls", async (c) => {
     ) {
       return c.json({ error: "削除対象の写真・動画が投稿と一致しません" }, 400);
     }
-    if (uploaded.length - replacing.size + input.files.length > 30) {
+    if (
+      uploaded.length - replacing.size + requestIds.filter((id) => !uploaded.some((media) => media.id === id)).length >
+      30
+    ) {
       return c.json({ error: "写真・動画は合計30件までです" }, 400);
     }
   }
@@ -1217,7 +1248,7 @@ app.post("/posts/:postId/media/upload-urls", async (c) => {
   }> = [];
 
   for (const [index, file] of input.files.entries()) {
-    const id = ulid();
+    const id = requestIds[index];
     const extension = extensionForMime(file.mimeType);
     const key = `media/${id}/original/original.${extension}`;
     const previewKey = file.mimeType.startsWith("image/") ? `media/${id}/preview/preview.webp` : null;
@@ -1250,7 +1281,7 @@ app.post("/posts/:postId/media/upload-urls", async (c) => {
       c.env.DB.prepare(
         `
     INSERT INTO media (id, post_id, kind, original_filename, mime_type, original_object_key, preview_object_key, thumbnail_object_key, byte_size, captured_at, duration_seconds, position, created_by, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING
   `,
       ).bind(
         record.id,
@@ -1561,6 +1592,7 @@ function mapEvent(row: EventRow): EventSummary {
     endDate: row.end_date,
     coverUrl: row.cover_media_id ? `/api/media/${row.cover_media_id}/content?variant=thumbnail` : null,
     coverSource: row.cover_source,
+    coverPosition: { x: row.cover_position_x ?? 50, y: row.cover_position_y ?? 50 },
     postCount: Number(row.post_count),
     photoCount: Number(row.photo_count),
     videoCount: Number(row.video_count),

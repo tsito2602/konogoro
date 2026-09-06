@@ -16,6 +16,11 @@ export const sceneInputSchema = z.object({
   title: z.string().trim().min(1).max(100),
 });
 
+export const coverPositionSchema = z.object({
+  x: z.number().min(0).max(100),
+  y: z.number().min(0).max(100),
+});
+
 export const eventManagementInputSchema = z
   .object({
     event: eventInputSchema,
@@ -28,6 +33,7 @@ export const eventManagementInputSchema = z
       )
       .max(100),
     coverMediaId: z.string().min(1).nullable(),
+    coverPosition: coverPositionSchema.default({ x: 50, y: 50 }),
   })
   .refine(
     ({ scenes }) => {
@@ -39,9 +45,11 @@ export const eventManagementInputSchema = z
 
 export const eventCoverInputSchema = z.object({
   mediaId: z.string().min(1).nullable(),
+  coverPosition: coverPositionSchema.default({ x: 50, y: 50 }),
 });
 
 export const postInputSchema = z.object({
+  requestId: z.string().uuid().optional(),
   caption: z.string().trim().max(2000).default(""),
   eventId: z.string().min(1).nullable().default(null),
   sceneId: z.string().min(1).nullable().default(null),
@@ -57,6 +65,7 @@ export const uploadFilesSchema = z.object({
   files: z
     .array(
       z.object({
+        requestId: z.string().uuid().optional(),
         filename: z.string().min(1).max(255),
         mimeType: z.enum(["image/jpeg", "image/png", "image/webp", "video/mp4", "video/webm", "video/quicktime"]),
         byteSize: z

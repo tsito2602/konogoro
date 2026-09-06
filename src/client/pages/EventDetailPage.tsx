@@ -1,5 +1,6 @@
+import { useReadingState } from "../reading-context";
 import { Pencil } from "lucide-react";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import type { EventDetail } from "../../shared/types";
 import { api, eventDate } from "../api";
@@ -14,12 +15,9 @@ export function EventDetailPage() {
   const currentUser = useCurrentUser();
   const canAddPost = canCreatePost(currentUser);
   const { eventId = "" } = useParams();
-  const [detail, setDetail] = useState<EventDetail | null>(null);
+  const [detail, setDetail] = useReadingState<EventDetail | null>("detail", null);
   const [error, setError] = useState("");
   const coverImageRef = useRef<HTMLDivElement>(null);
-  useLayoutEffect(() => {
-    window.scrollTo(0, 0);
-  }, [eventId]);
   const load = () => {
     setError("");
     void api<EventDetail>(`/events/${eventId}`)
@@ -30,7 +28,7 @@ export function EventDetailPage() {
     void api<EventDetail>(`/events/${eventId}`)
       .then(setDetail)
       .catch((reason: Error) => setError(reason.message));
-  }, [eventId]);
+  }, [eventId, setDetail]);
   useEffect(() => {
     const coverImage = coverImageRef.current;
     if (!coverImage) return;
@@ -92,17 +90,20 @@ export function EventDetailPage() {
             <div
               ref={coverImageRef}
               className="event-cover-image"
-              style={{ backgroundImage: `url(${detail.coverUrl})` }}
+              style={{
+                backgroundImage: `url(${detail.coverUrl})`,
+                backgroundPosition: `${detail.coverPosition?.x ?? 50}% ${detail.coverPosition?.y ?? 50}%`,
+              }}
               aria-hidden
             />
           )}
           <div className="event-cover-copy">
             <p>{eventDate(detail.startDate, detail.endDate)}</p>
             <h2>{detail.title}</h2>
-            <span>{eventCounts(detail.postCount, detail.photoCount, detail.videoCount)}</span>
           </div>
         </section>
         <section className="event-post-feed" aria-label="イベントの投稿">
+          <p className="event-detail-counts">{eventCounts(detail.postCount, detail.photoCount, detail.videoCount)}</p>
           {description && (
             <section className="event-memo" aria-labelledby="event-memo-title">
               <h3 id="event-memo-title">メモ</h3>

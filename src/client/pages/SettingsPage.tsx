@@ -1,3 +1,4 @@
+import { setReadingIdentity } from "../reading-context";
 import {
   Bell,
   BellOff,
@@ -146,6 +147,7 @@ export function SettingsPage() {
     setError("");
     try {
       await api<void>("/auth/logout", { method: "POST" });
+      setReadingIdentity(null);
       navigator.serviceWorker?.controller?.postMessage({ type: "CLEAR_MEDIA_CACHE" });
       window.location.assign("/");
     } catch (reason) {

@@ -1,3 +1,6 @@
+import { VideoPlayer } from "../components/VideoPlayer";
+import { commentNavigationState } from "../comment-navigation";
+import { canReturnInApp, rememberAlbumMedia } from "../reading-context";
 import { ChevronLeft, ChevronRight, Download, MessageCircle, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
@@ -26,18 +29,24 @@ export function viewerNavigationItems(
   postId: string,
   postMedia: Array<Pick<Media, "id" | "kind" | "thumbnailUrl">>,
   albumMedia?: AlbumMedia[],
+  currentMediaId?: string,
 ): ViewerNavigationItem[] {
-  if (albumMedia?.some((item) => item.postId === postId && postMedia.some((media) => media.id === item.id))) {
+  if (
+    albumMedia?.some(
+      (item) =>
+        item.postId === postId &&
+        (currentMediaId ? item.id === currentMediaId : postMedia.some((media) => media.id === item.id)),
+    )
+  ) {
     return albumMedia;
   }
   return postMedia.map((media) => ({ ...media, postId }));
 }
 
 export function viewerCommentNavigation(postId: string, currentState: unknown) {
-  const state = currentState && typeof currentState === "object" ? currentState : {};
   return {
     to: `/posts/${postId}`,
-    state: { ...state, postPage: true, focusComment: true },
+    state: commentNavigationState("write", currentState),
   };
 }
 
@@ -45,7 +54,18 @@ export function MediaViewerPage() {
   const { postId = "", mediaId = "" } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const viewerState = location.state as { returnToPrevious?: boolean; albumMedia?: AlbumMedia[] } | null;
+  const viewerState = location.state as {
+    returnToPrevious?: boolean;
+    albumMedia?: AlbumMedia[];
+    albumOrigin?: string;
+  } | null;
+  useEffect(() => {
+    rememberAlbumMedia(
+      viewerState?.albumOrigin,
+      mediaId,
+      viewerState?.albumMedia?.findIndex((item) => item.id === mediaId),
+    );
+  }, [mediaId, viewerState?.albumOrigin, viewerState?.albumMedia]);
   const [loadedPost, setLoadedPost] = useState<{ postId: string; post: Post } | null>(null);
   const [error, setError] = useState("");
   const [dragOffset, setDragOffset] = useState(0);
@@ -60,9 +80,20 @@ export function MediaViewerPage() {
       .catch((reason: Error) => setError(reason.message));
   };
   useEffect(() => {
+    let active = true;
     void api<Post>(`/posts/${postId}`)
-      .then((post) => setLoadedPost({ postId, post }))
-      .catch((reason: Error) => setError(reason.message));
+      .then((post) => {
+        if (active) {
+          setError("");
+          setLoadedPost({ postId, post });
+        }
+      })
+      .catch((reason: Error) => {
+        if (active) setError(reason.message);
+      });
+    return () => {
+      active = false;
+    };
   }, [postId]);
   useEffect(
     () => () => {
@@ -73,12 +104,12 @@ export function MediaViewerPage() {
   const post = loadedPost?.postId === postId ? loadedPost.post : null;
   const current = post?.media.find((item) => item.id === mediaId);
   const navigationItems = useMemo(
-    () => (post ? viewerNavigationItems(postId, post.media, viewerState?.albumMedia) : []),
-    [post, postId, viewerState?.albumMedia],
+    () => (post ? viewerNavigationItems(postId, post.media, viewerState?.albumMedia, mediaId) : []),
+    [post, postId, viewerState?.albumMedia, mediaId],
   );
   const index = navigationItems.findIndex((item) => item.id === mediaId && item.postId === postId);
   const closeViewer = useCallback(() => {
-    if (viewerState?.returnToPrevious) navigate(-1);
+    if (viewerState?.returnToPrevious && canReturnInApp()) navigate(-1);
     else navigate(`/posts/${postId}`, { replace: true });
   }, [navigate, postId, viewerState?.returnToPrevious]);
   const showMedia = useCallback(
@@ -150,12 +181,18 @@ export function MediaViewerPage() {
   if (!post && !error)
     return (
       <div className="media-viewer">
+        <button className="viewer-button" type="button" onClick={closeViewer} aria-label="閉じる">
+          <X />
+        </button>
         <PageSkeleton variant="viewer" />
       </div>
     );
   if (error || !post || !current)
     return (
       <div className="media-viewer">
+        <button className="viewer-button" type="button" onClick={closeViewer} aria-label="閉じる">
+          <X />
+        </button>
         <ErrorState message={error || "写真が見つかりません"} retry={error ? load : undefined} />
       </div>
     );
@@ -202,7 +239,7 @@ export function MediaViewerPage() {
           style={{ transform: `translate3d(${dragOffset}px, 0, 0)` }}
         >
           {current.kind === "video" ? (
-            <video src={current.contentUrl} controls playsInline preload="metadata" draggable={false} />
+            <VideoPlayer key={current.id} src={current.contentUrl} poster={current.thumbnailUrl} />
           ) : (
             <img src={current.contentUrl} alt={`投稿の写真 ${index + 1}`} draggable={false} />
           )}

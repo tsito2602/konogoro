@@ -4,6 +4,7 @@ export type UploadStatus = "preparing" | "preparation-failed" | "ready" | "uploa
 
 export type SelectedMediaFile = {
   id: string;
+  requestId?: string;
   file: File;
   previewUrl: string;
   thumbnail: Blob | null;
@@ -13,6 +14,7 @@ export type SelectedMediaFile = {
   height: number | null;
   durationSeconds: number | null;
   mediaId?: string;
+  completedParts?: string[];
   status: UploadStatus;
 };
 
@@ -40,6 +42,7 @@ export function createPendingMediaFile(file: File): SelectedMediaFile {
   const previewUrl = URL.createObjectURL(file);
   return {
     id: previewUrl,
+    requestId: crypto.randomUUID(),
     file,
     previewUrl,
     thumbnail: null,
@@ -150,6 +153,9 @@ export function uploadFile(
   return new Promise((resolve, reject) => {
     const request = new XMLHttpRequest();
     request.open("PUT", url);
+    request.timeout = 10 * 60 * 1000;
+    request.addEventListener("timeout", () => reject(new Error("送信がタイムアウトしました。再試行してください")));
+    request.addEventListener("abort", () => reject(new Error("送信を中断しました")));
     request.setRequestHeader("Content-Type", contentType);
     request.upload.addEventListener("progress", (event) => onProgress?.(event.loaded));
     request.addEventListener("load", () => {

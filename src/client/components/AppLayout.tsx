@@ -1,8 +1,10 @@
+import { useMeasuredHeight } from "../hooks/useMeasuredHeight";
 import { Bell, CalendarDays, CalendarPlus, GalleryVerticalEnd, ImagePlus, Images, Plus, Settings } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useState } from "react";
 import { Link, Navigate, NavLink, useLocation, useOutlet, useOutletContext } from "react-router-dom";
 import type { CurrentUser } from "../../shared/types";
 import { canCreatePost, canInviteFamily, canManageEvent } from "../../shared/permissions";
+import { ReadingPosition, setReadingIdentity } from "../reading-context";
 import { api } from "../api";
 import { ErrorState } from "./AsyncState";
 import { PwaGuide } from "./PwaGuide";
@@ -34,6 +36,7 @@ export function useCurrentUser(): CurrentUser {
 }
 
 export function AppLayout() {
+  const navigationHeightRef = useMeasuredHeight("--bottom-nav-height");
   const location = useLocation();
   const { pathname } = location;
   const invite = pathname.startsWith("/invite/");
@@ -41,15 +44,21 @@ export function AppLayout() {
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [authError, setAuthError] = useState("");
   const [addMenuOpen, setAddMenuOpen] = useState(false);
-  const routedContent = useOutlet(currentUser);
+  const outlet = useOutlet(currentUser);
+  const routedContent = <Fragment key={`${location.key}:${currentUser?.id}:${currentUser?.role}`}>{outlet}</Fragment>;
   const postPageNavigation = Boolean((location.state as { postPage?: boolean } | null)?.postPage);
   const showPostPage = /^\/posts\/[^/]+$/.test(pathname) && postPageNavigation;
-  const routeIdentity = `${location.key}:${currentUser?.id ?? ""}`;
-  const [backgroundSnapshot, setBackgroundSnapshot] = useState(() => ({ routeIdentity, content: routedContent }));
-  let backgroundContent = backgroundSnapshot.content;
+  const sessionIdentity = `${currentUser?.id ?? ""}:${currentUser?.role ?? ""}`;
+  const routeIdentity = `${location.key}:${sessionIdentity}`;
+  const [backgroundSnapshot, setBackgroundSnapshot] = useState(() => ({
+    routeIdentity,
+    sessionIdentity,
+    content: routedContent,
+  }));
+  let backgroundContent = backgroundSnapshot.sessionIdentity === sessionIdentity ? backgroundSnapshot.content : null;
   if (!postPageNavigation && backgroundSnapshot.routeIdentity !== routeIdentity) {
     backgroundContent = routedContent;
-    setBackgroundSnapshot({ routeIdentity, content: routedContent });
+    setBackgroundSnapshot({ routeIdentity, sessionIdentity, content: routedContent });
   }
   const hideNavigation = viewerPattern.test(pathname);
   const addPostPath = postCreatePath(pathname);
@@ -64,6 +73,7 @@ export function AppLayout() {
   const loadAuth = useCallback(() => {
     void api<CurrentUser>("/me")
       .then((user) => {
+        setReadingIdentity(`${user.id}:${user.role}`);
         setAuthError("");
         setCurrentUser(user);
         setAuthenticated(true);
@@ -71,6 +81,7 @@ export function AppLayout() {
       .catch((reason: Error) => {
         if (reason.message === "ログインが必要です") {
           setAuthError("");
+          setReadingIdentity(null);
           setAuthenticated(false);
         } else setAuthError(reason.message);
       });
@@ -100,12 +111,14 @@ export function AppLayout() {
 
   return (
     <ToastProvider>
+      <ReadingPosition key={`${currentUser.id}:${currentUser.role}`} />
       <div className={hideNavigation ? "app-shell viewer-shell" : "app-shell"}>
         {showPostPage && backgroundContent ? backgroundContent : routedContent}
         {showPostPage && backgroundContent ? routedContent : null}
         <PwaGuide user={currentUser} />
         {!hideNavigation && (
           <nav
+            ref={navigationHeightRef}
             className={`tab-bar${canCreatePost(currentUser) ? " has-desktop-add" : ""}`}
             aria-label="メインナビゲーション"
           >

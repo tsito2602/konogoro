@@ -20,3 +20,41 @@ describe("seen tracking", () => {
     expect(storage.setItem).not.toHaveBeenCalled();
   });
 });
+
+it("保存領域が使えなくてもサーバーの記録成功を返す", async () => {
+  const request = vi.fn().mockResolvedValue(undefined);
+  await expect(
+    markPostSeen(
+      "no-storage",
+      {
+        setItem: () => {
+          throw new Error("unavailable");
+        },
+      },
+      request,
+    ),
+  ).resolves.toBeUndefined();
+});
+
+it("自動記録と次へが重なっても同じリクエストを共有し、失敗後は再試行できる", async () => {
+  let reject!: (reason: Error) => void;
+  const request = vi
+    .fn()
+    .mockImplementationOnce(
+      () =>
+        new Promise((_, fail) => {
+          reject = fail;
+        }),
+    )
+    .mockResolvedValue(undefined);
+  const storage = { setItem: vi.fn() };
+  const automatic = markPostSeen("overlap", storage, request);
+  const explicit = markPostSeen("overlap", storage, request);
+  expect(explicit).toBe(automatic);
+  expect(request).toHaveBeenCalledTimes(1);
+  reject(new Error("offline"));
+  await expect(automatic).rejects.toThrow("offline");
+  await markPostSeen("overlap", storage, request);
+  expect(request).toHaveBeenCalledTimes(2);
+  expect(storage.setItem).toHaveBeenCalledTimes(1);
+});

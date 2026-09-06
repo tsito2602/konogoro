@@ -1,3 +1,7 @@
+import { removeMediaWithReconciliation } from "../remove-media";
+import { uploadMissingParts } from "../upload-parts";
+import { useUnsavedChanges } from "../hooks/useUnsavedChanges";
+import { VideoBadge } from "../components/VideoBadge";
 import { AlertCircle, GripVertical, ImagePlus, LoaderCircle, Plus, RotateCcw, Video, X } from "lucide-react";
 import {
   useEffect,
@@ -9,7 +13,7 @@ import {
 } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import type { EventDetail, EventScene, EventSummary, Post, UploadTarget } from "../../shared/types";
-import { api } from "../api";
+import { api as request } from "../api";
 import { ErrorState } from "../components/AsyncState";
 import { MediaProcessingStatus } from "../components/MediaProcessingStatus";
 import { PageHeader } from "../components/PageHeader";
@@ -26,6 +30,10 @@ import {
 } from "../media-upload";
 
 type OrderedMedia = { type: "existing"; media: Post["media"][number] } | { type: "new"; file: SelectedMediaFile };
+
+// Bound network waits so an interrupted connection returns to the retry controls.
+const api = <T,>(path: string, init?: RequestInit) =>
+  request<T>(path, { ...init, signal: AbortSignal.timeout(60_000) });
 
 export function PostEditPage() {
   const { postId = "" } = useParams();
@@ -46,6 +54,19 @@ export function PostEditPage() {
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [caption, setCaption] = useState<string | null>(null);
+  const markSaved = useUnsavedChanges(
+    !!post &&
+      (files.length > 0 ||
+        removedMediaIds.length > 0 ||
+        !!newScene ||
+        (caption !== null && caption !== post.caption) ||
+        eventId !== (post.eventId ?? "") ||
+        sceneId !== (post.sceneId ?? "") ||
+        mediaOrder.join(",") !== post.media.map((item) => item.id).join(",")),
+    saving,
+    "未保存の入力は失われます。送信・削除・保存がすでに成功した変更は残ります。この画面を離れますか？",
+  );
   const filesRef = useRef(files);
   const draggedMediaIdRef = useRef<string | null>(null);
   const dragTargetMediaIdRef = useRef<string | null>(null);
@@ -158,7 +179,11 @@ export function PostEditPage() {
     if (!item) return;
     if (item.mediaId) {
       try {
-        await api(`/posts/${post.id}/media/${item.mediaId}`, { method: "DELETE" });
+        await removeMediaWithReconciliation(
+          [item.mediaId],
+          async () => (await api<Post>(`/posts/${post.id}`)).media.map((media) => media.id),
+          (mediaId) => api(`/posts/${post.id}/media/${mediaId}`, { method: "DELETE" }),
+        );
       } catch (reason) {
         setError((reason as Error).message);
         return;
@@ -253,21 +278,46 @@ export function PostEditPage() {
           }
           updateFile(index, { status: "uploading", mediaId: target.id });
           try {
-            await Promise.all([
-              uploadFile(target.uploadUrl, item.file, item.file.type, (loaded) =>
-                reportProgress(`${index}:original`, loaded),
-              ),
-              uploadFile(target.thumbnailUploadUrl, thumbnail, "image/webp", (loaded) =>
-                reportProgress(`${index}:thumbnail`, loaded),
-              ),
-              ...(target.previewUploadUrl && item.optimizedPreview
-                ? [
-                    uploadFile(target.previewUploadUrl, item.optimizedPreview, "image/webp", (loaded) =>
-                      reportProgress(`${index}:preview`, loaded),
+            for (const part of item.completedParts ?? []) {
+              const size =
+                part === "original"
+                  ? item.file.size
+                  : part === "thumbnail"
+                    ? thumbnail.size
+                    : (item.optimizedPreview?.size ?? 0);
+              reportProgress(`${index}:${part}`, size);
+            }
+            await uploadMissingParts(
+              [
+                {
+                  key: "original",
+                  send: () =>
+                    uploadFile(target.uploadUrl, item.file, item.file.type, (loaded) =>
+                      reportProgress(`${index}:original`, loaded),
                     ),
-                  ]
-                : []),
-            ]);
+                },
+                {
+                  key: "thumbnail",
+                  send: () =>
+                    uploadFile(target.thumbnailUploadUrl, thumbnail, "image/webp", (loaded) =>
+                      reportProgress(`${index}:thumbnail`, loaded),
+                    ),
+                },
+                ...(target.previewUploadUrl && item.optimizedPreview
+                  ? [
+                      {
+                        key: "preview",
+                        send: () =>
+                          uploadFile(target.previewUploadUrl!, item.optimizedPreview!, "image/webp", (loaded) =>
+                            reportProgress(`${index}:preview`, loaded),
+                          ),
+                      },
+                    ]
+                  : []),
+              ],
+              item.completedParts ?? [],
+              (completedParts) => updateFile(index, { completedParts }),
+            );
             await api(`/media/${target.id}/complete`, {
               method: "POST",
               body: JSON.stringify({ width: item.width, height: item.height }),
@@ -289,7 +339,12 @@ export function PostEditPage() {
       method: "PUT",
       body: JSON.stringify({ caption, eventId: eventId || null, sceneId: sceneId || null, mediaIds }),
     });
-    for (const mediaId of removedMediaIds) await api(`/posts/${post.id}/media/${mediaId}`, { method: "DELETE" });
+    await removeMediaWithReconciliation(
+      removedMediaIds,
+      async () => (await api<Post>(`/posts/${post.id}`)).media.map((media) => media.id),
+      (mediaId) => api(`/posts/${post.id}/media/${mediaId}`, { method: "DELETE" }),
+    );
+    markSaved();
     showToast("投稿を更新しました");
     if ((location.state as { returnToDetail?: boolean } | null)?.returnToDetail) navigate(-1);
     else navigate(`/posts/${post.id}`, { replace: true, state: location.state });
@@ -321,6 +376,7 @@ export function PostEditPage() {
           body: JSON.stringify({
             replacingMediaIds: removedMediaIds,
             files: ready.map(({ item }) => ({
+              requestId: item.requestId,
               filename: item.file.name,
               mimeType: item.file.type,
               byteSize: item.file.size,
@@ -333,6 +389,9 @@ export function PostEditPage() {
           ...ready.map(({ item, index }, targetIndex) => ({ item, index, target: response.media[targetIndex] })),
         );
       }
+      // Keep allocated IDs even if renewing a different failed item fails.
+      for (const { item, index, target } of entries)
+        updateFile(index, { mediaId: target.id, status: "failed", completedParts: item.completedParts });
       entries.push(
         ...(await Promise.all(
           failed.map(async ({ item, index }) => ({
@@ -403,7 +462,7 @@ export function PostEditPage() {
                     {entry.type === "existing" ? (
                       <>
                         <img src={entry.media.thumbnailUrl} alt="" draggable={false} />
-                        {entry.media.kind === "video" && <span className="video-badge">動画</span>}
+                        {entry.media.kind === "video" && <VideoBadge durationSeconds={entry.media.durationSeconds} />}
                         <button
                           className="remove-selected-photo"
                           type="button"
@@ -423,7 +482,9 @@ export function PostEditPage() {
                         ) : (
                           <img src={entry.file.previewUrl} alt="" loading="lazy" decoding="async" draggable={false} />
                         )}
-                        {entry.file.file.type.startsWith("video/") && <span className="video-badge">動画</span>}
+                        {entry.file.file.type.startsWith("video/") && (
+                          <VideoBadge durationSeconds={entry.file.durationSeconds} />
+                        )}
                         {entry.file.status === "preparing" && (
                           <span className="preparing-badge" aria-label="準備中">
                             <LoaderCircle />
@@ -440,10 +501,16 @@ export function PostEditPage() {
                           </button>
                         )}
                         {entry.file.status === "failed" && (
-                          <span className="failed-badge">
+                          <span className="failed-badge" aria-label={`${filename}の送信に失敗`}>
                             <AlertCircle />
+                            <small>送信失敗</small>
                           </span>
                         )}
+                        {entry.file.status === "ready" && (
+                          <span className="selected-upload-status">準備できました</span>
+                        )}
+                        {entry.file.status === "uploading" && <span className="selected-upload-status">送信中</span>}
+                        {entry.file.status === "uploaded" && <span className="selected-upload-status">送信済み</span>}
                         <button
                           className="remove-selected-photo"
                           type="button"
@@ -455,6 +522,9 @@ export function PostEditPage() {
                         </button>
                       </>
                     )}
+                    <span className="selected-file-info" title={filename}>
+                      {filename}
+                    </span>
                     <button
                       className="media-drag-handle"
                       type="button"
@@ -555,7 +625,14 @@ export function PostEditPage() {
             ))}
           <label>
             ひとこと（任意）
-            <textarea name="caption" rows={4} maxLength={2000} defaultValue={post.caption} disabled={saving} />
+            <textarea
+              name="caption"
+              rows={4}
+              maxLength={2000}
+              value={caption ?? post.caption}
+              onChange={(event) => setCaption(event.target.value)}
+              disabled={saving}
+            />
           </label>
           {error && (
             <p className="form-error" role="alert">

@@ -8,3 +8,9 @@ describe("shouldFocusComment", () => {
     expect(shouldFocusComment(null)).toBe(false);
   });
 });
+
+it("does not focus the composer when opening existing comments", () => {
+  expect(shouldFocusComment({ commentIntent: "read" })).toBe(false);
+  expect(shouldFocusComment({ commentIntent: "write" })).toBe(true);
+  expect(shouldFocusComment({ commentIntent: "unknown" })).toBe(false);
+});

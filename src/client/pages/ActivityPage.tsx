@@ -1,3 +1,5 @@
+import { commentNavigationState } from "../comment-navigation";
+import { readPages, useReadingState } from "../reading-context";
 import { MessageCircle, Send } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
@@ -14,15 +16,16 @@ type ActivityResponse = { activities: Activity[]; memberLastViewed: MemberLastVi
 export function ActivityPage() {
   const currentUser = useCurrentUser();
   const postPageState = { postPage: true };
-  const [activities, setActivities] = useState<Activity[] | null>(null);
-  const [memberLastViewed, setMemberLastViewed] = useState<MemberLastViewed[]>([]);
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [activities, setActivities] = useReadingState<Activity[] | null>("activities", null);
+  const [memberLastViewed, setMemberLastViewed] = useReadingState<MemberLastViewed[]>("memberLastViewed", []);
+  const [nextCursor, setNextCursor] = useReadingState<string | null>("nextCursor", null);
   const [error, setError] = useState("");
   const [moreError, setMoreError] = useState("");
   const [loadingMore, setLoadingMore] = useState(false);
   const loadingMoreRef = useRef(false);
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
+  const [restoreCount] = useState(() => activities?.length ?? 0);
   const load = () => {
     setError("");
     void api<ActivityResponse>("/activity")
@@ -35,14 +38,14 @@ export function ActivityPage() {
   };
 
   useEffect(() => {
-    void api<ActivityResponse>("/activity")
+    void readPages<ActivityResponse>("/activity", "activities", restoreCount)
       .then((data) => {
         setActivities(data.activities);
         setMemberLastViewed(data.memberLastViewed);
         setNextCursor(data.nextCursor);
       })
       .catch((reason: Error) => setError(reason.message));
-  }, []);
+  }, [restoreCount, setActivities, setNextCursor, setMemberLastViewed]);
 
   const loadMore = useCallback(async () => {
     if (!nextCursor || loadingMoreRef.current) return;
@@ -59,7 +62,7 @@ export function ActivityPage() {
       loadingMoreRef.current = false;
       setLoadingMore(false);
     }
-  }, [nextCursor]);
+  }, [nextCursor, setActivities, setNextCursor]);
 
   useEffect(() => {
     const target = loadMoreRef.current;
@@ -91,7 +94,13 @@ export function ActivityPage() {
         {activities && (
           <div className="activity-list">
             {activities.map((activity) => (
-              <Link className="activity-row" to={`/posts/${activity.postId}`} state={postPageState} key={activity.id}>
+              <Link
+                className="activity-row"
+                to={`/posts/${activity.postId}`}
+                data-reading-item={`activity-${activity.id}`}
+                state={activity.kind === "comment" ? commentNavigationState("read") : postPageState}
+                key={activity.id}
+              >
                 <span className={`activity-icon ${activity.kind}`} aria-hidden>
                   {activity.kind === "post" ? <Send /> : <MessageCircle />}
                 </span>

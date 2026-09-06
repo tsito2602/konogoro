@@ -4739,6 +4739,3 @@ textarea:focus {
 .album-load-more:empty {
   padding: 0;
 }
-.album-load-more .skeleton-album-grid {
-  margin-top: 12px;
-}

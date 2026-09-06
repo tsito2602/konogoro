@@ -226,12 +226,17 @@ function AlbumPeriod({ period, count }: { period: string; count: number }) {
             </AlbumMediaLink>
           )}
           {(allYear || media.length > 1) && (
-            <div className="album-grid">
+            <div className="album-grid skeleton-album-grid">
               {(allYear ? media : media.slice(1)).map((item) => (
                 <AlbumMediaLink item={item} viewerMedia={media} key={item.id}>
                   <img src={item.thumbnailUrl} alt="" loading="lazy" />
                 </AlbumMediaLink>
               ))}
+              {busy &&
+                nextCursor &&
+                Array.from({ length: 6 }, (_, i) => (
+                  <span className="skeleton-tile" key={`loading-${i}`} aria-hidden="true" />
+                ))}
             </div>
           )}
         </section>
@@ -248,14 +253,7 @@ function AlbumPeriod({ period, count }: { period: string; count: number }) {
               </button>
             </>
           ) : busy ? (
-            <div role="status">
-              写真・動画を読み込み中…
-              <div className="album-grid skeleton-album-grid" aria-hidden>
-                {Array.from({ length: 6 }, (_, i) => (
-                  <span className="skeleton-tile" key={i} />
-                ))}
-              </div>
-            </div>
+            <div role="status">写真・動画を読み込み中…</div>
           ) : !("IntersectionObserver" in window) ? (
             <button className="outline-button" type="button" onClick={() => void loadMore()}>
               さらに読み込む

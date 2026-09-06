@@ -70,7 +70,10 @@ describe("LoginScreen", () => {
     expect(html).toContain("/icons/icon-dark-transparent.png");
     expect(html).toContain('class="login-icon login-icon-dark"');
     expect(html).toContain("このごろ");
-    expect(html).toContain("ふたりの思い出を、<br/>家族へ。");
+    expect(html).toContain("日々のひとこまを、<br/>おすそわけ。");
+    expect(html).toContain(
+      "「この頃、何してるかな。」ふと気になる日々の様子が、<br/>招待された家族にだけ、そっと届きます。",
+    );
     expect(html).toContain('href="/api/auth/line"');
   });
 

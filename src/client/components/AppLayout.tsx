@@ -230,11 +230,15 @@ export function LoginScreen({ returnTo = "/" }: { returnTo?: string }) {
         </span>
         <p className="login-eyebrow">このごろ</p>
         <h1>
-          ふたりの思い出を、
+          日々のひとこまを、
           <br />
-          家族へ。
+          おすそわけ。
         </h1>
-        <p>写真や動画でつづる日々を、招待された家族だけで見返せます。</p>
+        <p>
+          「この頃、何してるかな。」ふと気になる日々の様子が、
+          <br />
+          招待された家族にだけ、そっと届きます。
+        </p>
         <a className="line-login-button" href={loginUrl}>
           LINEでログイン
         </a>

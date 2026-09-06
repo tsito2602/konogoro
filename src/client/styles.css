@@ -4731,3 +4731,11 @@ textarea:focus {
     margin-left: 0;
   }
 }
+
+.album-load-more {
+  min-height: 1px;
+  padding: 16px;
+}
+.album-load-more:empty {
+  padding: 0;
+}

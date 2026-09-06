@@ -624,26 +624,52 @@ app.get("/timeline", async (c) => {
 
 app.get("/unread-posts", async (c) => c.json(await loadNextUnreadPost(c.env.DB, c.var.currentUser)));
 
+// Keep navigation counts and media pages on the same event-based date and visibility rules.
+const albumCapturedAt = "COALESCE(m.captured_at, p.captured_at, p.published_at, p.created_at)";
+const albumDate = `COALESCE(e.start_date, e.end_date, DATE(${albumCapturedAt}, '+9 hours'))`;
+const albumSource = `FROM media m
+  JOIN posts p ON p.id = m.post_id
+  LEFT JOIN events e ON e.id = p.event_id
+  WHERE m.status = 'uploaded' AND p.status = 'published'`;
+
+app.get("/album/months", async (c) => {
+  const result = await c.env.DB.prepare(
+    `SELECT SUBSTR(${albumDate}, 1, 7) AS key, COUNT(*) AS count
+     ${albumSource} GROUP BY key ORDER BY key DESC`,
+  )
+    .bind()
+    .all<{ key: string; count: number }>();
+  return c.json({ months: result.results });
+});
+
 app.get("/album", async (c) => {
+  const month = c.req.query("month");
+  const year = c.req.query("year");
+  if (
+    (month !== undefined && year !== undefined) ||
+    (month !== undefined && !/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) ||
+    (year !== undefined && !/^\d{4}$/.test(year))
+  )
+    return c.json({ error: "月はYYYY-MM、年はYYYYで、どちらか一方を指定してください" }, 400);
   const cursor = c.req.query("cursor")?.split("|");
   const validCursor = cursor?.length === 3 && cursor.every(Boolean) ? cursor : null;
   const limit = 60;
-  const capturedAt = "COALESCE(m.captured_at, p.captured_at, p.published_at, p.created_at)";
-  const albumDate = `COALESCE(e.start_date, e.end_date, DATE(${capturedAt}, '+9 hours'))`;
-  const select = `
-    SELECT m.id, m.post_id, m.kind, m.duration_seconds, ${capturedAt} AS captured_at,
-           ${albumDate} AS album_date
-      FROM media m
-      JOIN posts p ON p.id = m.post_id
-      LEFT JOIN events e ON e.id = p.event_id
-     WHERE m.status = 'uploaded' AND p.status = 'published'`;
-  const order = "ORDER BY album_date DESC, captured_at DESC, m.id DESC LIMIT ?";
-  const statement = validCursor
-    ? c.env.DB.prepare(`${select} AND (${albumDate}, ${capturedAt}, m.id) < (?, ?, ?) ${order}`).bind(
-        ...validCursor,
-        limit + 1,
-      )
-    : c.env.DB.prepare(`${select} ${order}`).bind(limit + 1);
+  let select = `SELECT m.id, m.post_id, m.kind, m.duration_seconds, ${albumCapturedAt} AS captured_at,
+           ${albumDate} AS album_date ${albumSource}`;
+  const values: (string | number)[] = [];
+  const period = month ?? year;
+  if (period !== undefined) {
+    select += ` AND SUBSTR(${albumDate}, 1, ${month !== undefined ? 7 : 4}) = ?`;
+    values.push(period);
+  }
+  if (validCursor) {
+    select += ` AND (${albumDate}, ${albumCapturedAt}, m.id) < (?, ?, ?)`;
+    values.push(...validCursor);
+  }
+  const statement = c.env.DB.prepare(`${select} ORDER BY album_date DESC, captured_at DESC, m.id DESC LIMIT ?`).bind(
+    ...values,
+    limit + 1,
+  );
   const result = await statement.all<AlbumMediaRow>();
   const hasMore = result.results.length > limit;
   const rows = result.results.slice(0, limit);

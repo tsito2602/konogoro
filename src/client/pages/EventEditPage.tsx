@@ -61,7 +61,7 @@ export function EventEditPage() {
     return (
       <>
         <PageHeader title="イベントを編集" back />
-        <PageSkeleton variant="form" />
+        <PageSkeleton variant="event-edit" />
       </>
     );
   if (!detail)

@@ -18,8 +18,10 @@ import { Link } from "react-router-dom";
 import packageInfo from "../../../package.json";
 import type { CurrentUser, FamilyMember, User } from "../../shared/types";
 import { api } from "../api";
+import { canInviteFamily } from "../../shared/permissions";
 import { ErrorState } from "../components/AsyncState";
 import { PageHeader } from "../components/PageHeader";
+import { useCurrentUser } from "../components/AppLayout";
 import { PageSkeleton } from "../components/PageSkeleton";
 import { openInstallGuide, openOnboardingGuide } from "../components/PwaGuide";
 import { useToast } from "../components/Toast";
@@ -78,6 +80,7 @@ export function StagingRoleGuide({ currentRole, disabled, onChange }: StagingRol
 }
 
 export function SettingsPage() {
+  const currentUser = useCurrentUser();
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [members, setMembers] = useState<FamilyMember[] | null>(null);
   const [displayName, setDisplayName] = useState("");
@@ -104,7 +107,7 @@ export function SettingsPage() {
       setUser(result);
       setDisplayName(result.displayName);
       setNotificationEnabled(result.notificationEnabled ?? false);
-      if (result.role === "owner") loadFamily();
+      if (canInviteFamily(result)) loadFamily();
     },
     [loadFamily],
   );
@@ -179,7 +182,7 @@ export function SettingsPage() {
         {error && !user ? (
           <ErrorState message={error} retry={load} />
         ) : !user ? (
-          <PageSkeleton variant="settings" />
+          <PageSkeleton variant="settings" currentUser={currentUser} />
         ) : (
           <>
             <form id="settings-save-form" className="settings-form" onSubmit={save}>
@@ -335,7 +338,7 @@ export function SettingsPage() {
               </div>
             </section>
 
-            {user.role === "owner" && (
+            {canInviteFamily(user) && (
               <section className="settings-section">
                 <h2>メンバー</h2>
                 <div className="settings-card">

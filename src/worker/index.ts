@@ -81,6 +81,7 @@ type AlbumMediaRow = {
   post_id: string;
   kind: "image" | "video";
   captured_at: string;
+  album_date: string;
 };
 type ActivityRow = {
   activity_id: string;
@@ -624,19 +625,25 @@ app.get("/timeline", async (c) => {
 app.get("/unread-posts", async (c) => c.json(await loadNextUnreadPost(c.env.DB, c.var.currentUser)));
 
 app.get("/album", async (c) => {
-  const cursor = parseCursor(c.req.query("cursor"));
+  const cursor = c.req.query("cursor")?.split("|");
+  const validCursor = cursor?.length === 3 && cursor.every(Boolean) ? cursor : null;
   const limit = 60;
-  const capturedAt = "COALESCE(m.captured_at, p.captured_at, p.published_at)";
+  const capturedAt = "COALESCE(m.captured_at, p.captured_at, p.published_at, p.created_at)";
+  const albumDate = `COALESCE(e.start_date, e.end_date, DATE(${capturedAt}, '+9 hours'))`;
   const select = `
-    SELECT m.id, m.post_id, m.kind, m.duration_seconds, ${capturedAt} AS captured_at
+    SELECT m.id, m.post_id, m.kind, m.duration_seconds, ${capturedAt} AS captured_at,
+           ${albumDate} AS album_date
       FROM media m
       JOIN posts p ON p.id = m.post_id
+      LEFT JOIN events e ON e.id = p.event_id
      WHERE m.status = 'uploaded' AND p.status = 'published'`;
-  const statement = cursor
-    ? c.env.DB.prepare(
-        `${select} AND (${capturedAt} < ? OR (${capturedAt} = ? AND m.id < ?)) ORDER BY captured_at DESC, m.id DESC LIMIT ?`,
-      ).bind(cursor.capturedAt, cursor.capturedAt, cursor.id, limit + 1)
-    : c.env.DB.prepare(`${select} ORDER BY captured_at DESC, m.id DESC LIMIT ?`).bind(limit + 1);
+  const order = "ORDER BY album_date DESC, captured_at DESC, m.id DESC LIMIT ?";
+  const statement = validCursor
+    ? c.env.DB.prepare(`${select} AND (${albumDate}, ${capturedAt}, m.id) < (?, ?, ?) ${order}`).bind(
+        ...validCursor,
+        limit + 1,
+      )
+    : c.env.DB.prepare(`${select} ${order}`).bind(limit + 1);
   const result = await statement.all<AlbumMediaRow>();
   const hasMore = result.results.length > limit;
   const rows = result.results.slice(0, limit);
@@ -645,12 +652,13 @@ app.get("/album", async (c) => {
     postId: item.post_id,
     kind: item.kind,
     capturedAt: item.captured_at,
+    albumDate: item.album_date,
     durationSeconds: item.duration_seconds,
     thumbnailUrl: `/api/media/${item.id}/content?variant=thumbnail`,
     previewUrl: `/api/media/${item.id}/content?variant=${item.kind === "image" ? "preview" : "thumbnail"}`,
   }));
   const last = rows.at(-1);
-  return c.json({ media, nextCursor: hasMore && last ? `${last.captured_at}|${last.id}` : null });
+  return c.json({ media, nextCursor: hasMore && last ? `${last.album_date}|${last.captured_at}|${last.id}` : null });
 });
 
 app.get("/activity", async (c) => {

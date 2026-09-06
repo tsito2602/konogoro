@@ -12,6 +12,18 @@ const media = (id: string, capturedAt: string): AlbumMedia => ({
 });
 
 describe("album grouping", () => {
+  it("保存・撮影月ではなくイベントの分類月を使い、離れた同月も統合する", () => {
+    const groups = groupAlbumMedia([
+      { ...media("1", "2026-09-06T00:00:00Z"), albumDate: "2025-12-30" },
+      { ...media("2", "2026-08-01T00:00:00Z"), albumDate: "2026-03-31" },
+      { ...media("3", "2026-01-02T00:00:00Z"), kind: "video", albumDate: "2025-12-30" },
+    ]);
+    expect(groups.map((group) => [group.key, group.media.map((item) => item.id)])).toEqual([
+      ["2026-03", ["2"]],
+      ["2025-12", ["1", "3"]],
+    ]);
+  });
+
   it("撮影日時の年月ごとにまとめる", () => {
     const groups = groupAlbumMedia([
       media("1", "2026-09-15T00:00:00.000Z"),

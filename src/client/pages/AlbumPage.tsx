@@ -78,7 +78,10 @@ export function AlbumPage() {
       {!media && !error && <PageSkeleton variant="album" />}
       {error && <ErrorState message={error} retry={load} />}
       {media?.length === 0 && (
-        <EmptyState title="まだ写真がありません" body="投稿した写真や動画が、撮影した月ごとに表示されます。" />
+        <EmptyState
+          title="まだ写真がありません"
+          body="投稿した写真や動画が、イベントの期間に合わせて月ごとに表示されます。"
+        />
       )}
       {selectedYear && (
         <>
@@ -208,16 +211,16 @@ function AlbumMediaLink({
 export function groupAlbumMedia(media: AlbumMedia[]): AlbumMonth[] {
   const groups: AlbumMonth[] = [];
   for (const item of media) {
-    const date = new Date(item.capturedAt);
+    const date = new Date(item.albumDate ?? item.capturedAt);
     const parts = yearMonthFormatter.formatToParts(date);
     const year = Number(parts.find((part) => part.type === "year")?.value);
     const month = Number(parts.find((part) => part.type === "month")?.value);
     const key = `${year}-${String(month).padStart(2, "0")}`;
-    const current = groups.at(-1);
+    const current = groups.find((group) => group.key === key);
     if (current?.key === key) current.media.push(item);
     else groups.push({ key, label: monthFormatter.format(date), year, month, media: [item] });
   }
-  return groups;
+  return groups.sort((a, b) => b.key.localeCompare(a.key));
 }
 
 export function appendUniqueAlbumMedia(current: AlbumMedia[], incoming: AlbumMedia[]): AlbumMedia[] {

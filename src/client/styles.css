@@ -1784,11 +1784,24 @@ a.icon-button {
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  gap: 24px;
 }
-.post-create-details > .inline-form,
-.post-create-details > .inline-action {
+.post-create-details > .selection-count {
+  margin: 0;
+}
+.post-create-scene-field {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+.post-create-scene-field > .inline-form,
+.post-create-scene-field > .inline-action {
   margin-top: 0;
+}
+.post-create-scene-field > .inline-form {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
 }
 .form-stack label {
   display: flex;
@@ -4465,7 +4478,6 @@ textarea:focus {
   }
   .post-create-details {
     padding: 22px;
-    gap: 20px;
     border: 1px solid var(--separator);
     border-radius: var(--radius-card);
     background: var(--surface);

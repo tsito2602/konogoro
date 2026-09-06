@@ -238,12 +238,16 @@ export function MediaViewerPage() {
   };
   if (!post && !error)
     return (
-      <div className="media-viewer">
-        <button className="viewer-button" type="button" onClick={closeViewer} aria-label="閉じる">
-          <X />
-        </button>
+      <main className="media-viewer video-viewer">
+        <header className="viewer-header">
+          <button className="viewer-button" type="button" onClick={closeViewer} aria-label="閉じる">
+            <X />
+          </button>
+          <span className="skeleton-line short" aria-hidden />
+          <span className="skeleton-square" aria-hidden />
+        </header>
         <PageSkeleton variant="viewer" />
-      </div>
+      </main>
     );
   if (error || !post || !current)
     return (

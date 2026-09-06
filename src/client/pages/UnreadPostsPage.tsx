@@ -62,7 +62,7 @@ export function UnreadPostsPage() {
     <>
       <PageHeader title="新しい思い出" />
       <main className="unread-flow">
-        {!response && !error && <PageSkeleton variant="timeline" />}
+        {!response && !error && <PageSkeleton variant="unread" />}
         {!response && error && <ErrorState message={error} retry={() => void loadNext()} />}
         {response && !post && <UnreadComplete />}
         {response && post && (

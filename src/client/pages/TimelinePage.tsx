@@ -5,7 +5,7 @@ import type { Post } from "../../shared/types";
 import { api } from "../api";
 import { EmptyState, ErrorState } from "../components/AsyncState";
 import { PageHeader } from "../components/PageHeader";
-import { PageSkeleton } from "../components/PageSkeleton";
+import { PageSkeleton, UnreadSummarySkeleton } from "../components/PageSkeleton";
 import { PostCard } from "../components/PostCard";
 import { useCurrentUser } from "../components/AppLayout";
 
@@ -57,9 +57,9 @@ export function TimelinePage() {
     <>
       <PageHeader title="タイムライン" />
       <main className="timeline-layout page-content">
-        {posts && currentUser.role === "viewer" && unreadCount > 0 && (
+        {currentUser.role === "viewer" && ((!posts && !error) || (posts && unreadCount > 0)) && (
           <aside className="timeline-sidebar">
-            <UnreadSummary count={unreadCount} />
+            {posts ? <UnreadSummary count={unreadCount} /> : <UnreadSummarySkeleton />}
           </aside>
         )}
         <section className="feed" aria-label="タイムライン">

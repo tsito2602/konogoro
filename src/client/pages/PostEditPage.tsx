@@ -132,7 +132,7 @@ export function PostEditPage() {
     return (
       <>
         <PageHeader title="投稿を編集" back />
-        <PageSkeleton variant="form" />
+        <PageSkeleton variant="post-edit" />
       </>
     );
   if (!post)

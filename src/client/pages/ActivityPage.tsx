@@ -83,9 +83,7 @@ export function ActivityPage() {
     <>
       <PageHeader title="お知らせ" />
       <main className="activity-page page-content">
-        {!activities && !error && (
-          <PageSkeleton variant="activity" showActivityViewers={canViewMemberLastViewed(currentUser)} />
-        )}
+        {!activities && !error && <PageSkeleton variant="activity" currentUser={currentUser} />}
         {error && <ErrorState message={error} retry={load} />}
         {activities && canViewMemberLastViewed(currentUser) && <MemberLastViewedList members={memberLastViewed} />}
         {activities?.length === 0 && (

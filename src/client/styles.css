@@ -3137,7 +3137,7 @@ textarea:focus {
 }
 .settings-card {
   overflow: hidden;
-  border: 1px solid var(--border);
+  border: 0;
   border-radius: var(--radius-card);
   background: var(--surface);
 }

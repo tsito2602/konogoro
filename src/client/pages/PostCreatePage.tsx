@@ -1,8 +1,11 @@
+import { uploadMissingParts } from "../upload-parts";
+import { useUnsavedChanges } from "../hooks/useUnsavedChanges";
+import { VideoBadge } from "../components/VideoBadge";
 import { AlertCircle, ImagePlus, LoaderCircle, Plus, RotateCcw, Video, X } from "lucide-react";
 import { useEffect, useRef, useState, type ChangeEvent, type DragEvent, type FormEvent } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import type { EventDetail, EventScene, EventSummary, UploadTarget } from "../../shared/types";
-import { api } from "../api";
+import { api as request } from "../api";
 import { MediaProcessingStatus } from "../components/MediaProcessingStatus";
 import { PageHeader } from "../components/PageHeader";
 import { useToast } from "../components/Toast";
@@ -14,6 +17,10 @@ import {
   validateMediaFiles,
   type SelectedMediaFile,
 } from "../media-upload";
+
+// Bound network waits so an interrupted connection returns to the retry controls.
+const api = <T,>(path: string, init?: RequestInit) =>
+  request<T>(path, { ...init, signal: AbortSignal.timeout(60_000) });
 
 export function PostCreatePage() {
   const navigate = useNavigate();
@@ -31,6 +38,16 @@ export function PostCreatePage() {
   const [newScene, setNewScene] = useState("");
   const [showSceneForm, setShowSceneForm] = useState(false);
   const [draggingFiles, setDraggingFiles] = useState(false);
+  const [caption, setCaption] = useState("");
+  const markSaved = useUnsavedChanges(
+    files.length > 0 ||
+      !!caption ||
+      !!newScene ||
+      !!sceneId ||
+      eventId !== (searchParams.get("event") ?? "") ||
+      !!draftPostId,
+    busy,
+  );
   const filesRef = useRef(files);
   const mountedRef = useRef(true);
 
@@ -181,21 +198,46 @@ export function PostCreatePage() {
           }
           updateFile(index, { status: "uploading", mediaId: target.id });
           try {
-            await Promise.all([
-              uploadFile(target.uploadUrl, item.file, item.file.type, (loaded) =>
-                reportProgress(`${index}:original`, loaded),
-              ),
-              uploadFile(target.thumbnailUploadUrl, thumbnail, "image/webp", (loaded) =>
-                reportProgress(`${index}:thumbnail`, loaded),
-              ),
-              ...(target.previewUploadUrl && item.optimizedPreview
-                ? [
-                    uploadFile(target.previewUploadUrl, item.optimizedPreview, "image/webp", (loaded) =>
-                      reportProgress(`${index}:preview`, loaded),
+            for (const part of item.completedParts ?? []) {
+              const size =
+                part === "original"
+                  ? item.file.size
+                  : part === "thumbnail"
+                    ? thumbnail.size
+                    : (item.optimizedPreview?.size ?? 0);
+              reportProgress(`${index}:${part}`, size);
+            }
+            await uploadMissingParts(
+              [
+                {
+                  key: "original",
+                  send: () =>
+                    uploadFile(target.uploadUrl, item.file, item.file.type, (loaded) =>
+                      reportProgress(`${index}:original`, loaded),
                     ),
-                  ]
-                : []),
-            ]);
+                },
+                {
+                  key: "thumbnail",
+                  send: () =>
+                    uploadFile(target.thumbnailUploadUrl, thumbnail, "image/webp", (loaded) =>
+                      reportProgress(`${index}:thumbnail`, loaded),
+                    ),
+                },
+                ...(target.previewUploadUrl && item.optimizedPreview
+                  ? [
+                      {
+                        key: "preview",
+                        send: () =>
+                          uploadFile(target.previewUploadUrl!, item.optimizedPreview!, "image/webp", (loaded) =>
+                            reportProgress(`${index}:preview`, loaded),
+                          ),
+                      },
+                    ]
+                  : []),
+              ],
+              item.completedParts ?? [],
+              (completedParts) => updateFile(index, { completedParts }),
+            );
             await api(`/media/${target.id}/complete`, {
               method: "POST",
               body: JSON.stringify({ width: item.width, height: item.height }),
@@ -215,6 +257,7 @@ export function PostCreatePage() {
       return;
     }
     await api(`/posts/${postId}/publish`, { method: "POST" });
+    markSaved();
     showToast("投稿しました");
     navigate(`/posts/${postId}`, { replace: true });
   };
@@ -309,6 +352,7 @@ export function PostCreatePage() {
     setError("");
     try {
       await api(`/posts/${draftPostId}/publish`, { method: "POST" });
+      markSaved();
       showToast("投稿しました");
       navigate(`/posts/${draftPostId}`, { replace: true });
     } catch (reason) {
@@ -339,7 +383,7 @@ export function PostCreatePage() {
                   ) : (
                     <img src={item.previewUrl} alt="" loading="lazy" decoding="async" />
                   )}
-                  {item.file.type.startsWith("video/") && <span className="video-badge">動画</span>}
+                  {item.file.type.startsWith("video/") && <VideoBadge durationSeconds={item.durationSeconds} />}
                   {item.status === "preparing" && (
                     <span className="preparing-badge" aria-label="準備中">
                       <LoaderCircle />
@@ -357,10 +401,13 @@ export function PostCreatePage() {
                       <small>アップロード失敗</small>
                     </span>
                   )}
+                  {item.status === "ready" && <span className="selected-upload-status">準備できました</span>}
+                  {item.status === "uploading" && <span className="selected-upload-status">送信中</span>}
+                  {item.status === "uploaded" && <span className="selected-upload-status">送信済み</span>}
                   <span className="selected-file-info" title={item.file.name}>
                     {item.file.name}
                   </span>
-                  {!draftPostId && (
+                  {!draftPostId && !busy && (
                     <button
                       className="remove-selected-photo"
                       type="button"
@@ -405,6 +452,7 @@ export function PostCreatePage() {
             )}
           </section>
           <section className="post-create-details" aria-label="投稿内容">
+            <p className="selection-count">保存前に画面を閉じると、入力やファイルの再選択が必要です。</p>
             <label>
               イベント
               <select
@@ -464,6 +512,8 @@ export function PostCreatePage() {
             <label>
               ひとこと（任意）
               <textarea
+                value={caption}
+                onChange={(event) => setCaption(event.target.value)}
                 name="caption"
                 rows={4}
                 maxLength={2000}

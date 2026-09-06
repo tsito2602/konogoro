@@ -58,7 +58,7 @@
   }
 
   .tab-item {
-    font-size: clamp(10px, 2.8vw, 12px);
+    font-size: 0.75rem;
   }
 }
 

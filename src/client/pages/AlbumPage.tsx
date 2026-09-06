@@ -1,6 +1,8 @@
+import { VideoBadge } from "../components/VideoBadge";
+import { readPages, useReadingState } from "../reading-context";
 import { ChevronLeft, ChevronRight, Grid2X2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import type { AlbumMedia } from "../../shared/types";
 import { api } from "../api";
 import { EmptyState, ErrorState } from "../components/AsyncState";
@@ -14,13 +16,14 @@ const yearMonthFormatter = new Intl.DateTimeFormat("en", { year: "numeric", mont
 type AlbumMonth = { key: string; label: string; year: number; month: number; media: AlbumMedia[] };
 
 export function AlbumPage() {
-  const [media, setMedia] = useState<AlbumMedia[] | null>(null);
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [media, setMedia] = useReadingState<AlbumMedia[] | null>("media", null);
+  const [nextCursor, setNextCursor] = useReadingState<string | null>("nextCursor", null);
   const [error, setError] = useState("");
   const [moreError, setMoreError] = useState("");
   const [loadingMore, setLoadingMore] = useState(false);
-  const [selectedMonthKey, setSelectedMonthKey] = useState("");
+  const [selectedMonthKey, setSelectedMonthKey] = useReadingState("selectedMonthKey", "");
 
+  const [restoreCount] = useState(() => media?.length ?? 0);
   const load = () => {
     setError("");
     void api<AlbumResponse>("/album")
@@ -32,13 +35,13 @@ export function AlbumPage() {
   };
 
   useEffect(() => {
-    void api<AlbumResponse>("/album")
+    void readPages<AlbumResponse>("/album", "media", restoreCount)
       .then((data) => {
         setMedia(data.media);
         setNextCursor(data.nextCursor);
       })
       .catch((reason: Error) => setError(reason.message));
-  }, []);
+  }, [restoreCount, setMedia, setNextCursor]);
 
   const loadMore = async () => {
     if (!nextCursor || loadingMore) return;
@@ -122,6 +125,9 @@ export function AlbumPage() {
               ))}
             </div>
           </div>
+          {yearMedia.length === 0 && (
+            <EmptyState title="この期間の写真はありません" body="別の年を選んで思い出を探せます。" />
+          )}
           {allSelected ? (
             <section className="album-month" aria-label={`${selectedYear}年のすべて`}>
               <div className="album-grid">
@@ -184,19 +190,17 @@ function AlbumMediaLink({
   className?: string;
   children: React.ReactNode;
 }) {
+  const location = useLocation();
   return (
     <Link
       className={className}
       to={`/posts/${item.postId}/media/${item.id}`}
-      state={{ returnToPrevious: true, albumMedia: viewerMedia }}
+      state={{ returnToPrevious: true, albumMedia: viewerMedia, albumOrigin: location.key }}
+      data-reading-item={`media-${item.id}`}
       aria-label={`${new Intl.DateTimeFormat("ja-JP", { month: "long", day: "numeric" }).format(new Date(item.capturedAt))}の投稿の${item.kind === "video" ? "動画" : "写真"}`}
     >
       {children}
-      {item.kind === "video" && (
-        <span className="media-play-mark" aria-hidden>
-          ▶
-        </span>
-      )}
+      {item.kind === "video" && <VideoBadge durationSeconds={item.durationSeconds} />}
     </Link>
   );
 }

@@ -1,3 +1,4 @@
+import { readPages, useReadingState } from "../reading-context";
 import { Fragment, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import type { Post } from "../../shared/types";
@@ -10,12 +11,13 @@ import { useCurrentUser } from "../components/AppLayout";
 
 export function TimelinePage() {
   const currentUser = useCurrentUser();
-  const [posts, setPosts] = useState<Post[] | null>(null);
-  const [nextCursor, setNextCursor] = useState<string | null>(null);
+  const [posts, setPosts] = useReadingState<Post[] | null>("posts", null);
+  const [nextCursor, setNextCursor] = useReadingState<string | null>("nextCursor", null);
   const [error, setError] = useState("");
   const [moreError, setMoreError] = useState("");
   const [loadingMore, setLoadingMore] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
+  const [unreadCount, setUnreadCount] = useReadingState("unreadCount", 0);
+  const [restoreCount] = useState(() => posts?.length ?? 0);
   const load = () => {
     setError("");
     void api<TimelineResponse>("/timeline")
@@ -27,14 +29,14 @@ export function TimelinePage() {
       .catch((reason: Error) => setError(reason.message));
   };
   useEffect(() => {
-    void api<TimelineResponse>("/timeline")
+    void readPages<TimelineResponse>("/timeline", "posts", restoreCount)
       .then((data) => {
         setPosts(data.posts);
         setNextCursor(data.nextCursor);
         setUnreadCount(data.unreadCount);
       })
       .catch((reason: Error) => setError(reason.message));
-  }, []);
+  }, [restoreCount, setPosts, setNextCursor, setUnreadCount]);
 
   const loadMore = async () => {
     if (!nextCursor || loadingMore) return;

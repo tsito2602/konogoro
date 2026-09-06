@@ -36,6 +36,7 @@ export type Media = {
 };
 
 export type AlbumMedia = Pick<Media, "id" | "kind" | "thumbnailUrl"> & {
+  durationSeconds?: number | null;
   postId: string;
   capturedAt: string;
   previewUrl: string;
@@ -103,6 +104,7 @@ export type EventSummary = {
   endDate: string | null;
   coverUrl: string | null;
   coverSource: "auto" | "manual";
+  coverPosition?: { x: number; y: number };
   postCount: number;
   photoCount: number;
   videoCount: number;

@@ -1,8 +1,9 @@
 import { Bell, CalendarDays, CalendarPlus, GalleryVerticalEnd, ImagePlus, Images, Plus, Settings } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useState } from "react";
 import { Link, Navigate, NavLink, useLocation, useOutlet, useOutletContext } from "react-router-dom";
 import type { CurrentUser } from "../../shared/types";
 import { canCreatePost, canInviteFamily, canManageEvent } from "../../shared/permissions";
+import { ReadingPosition } from "../reading-context";
 import { api } from "../api";
 import { ErrorState } from "./AsyncState";
 import { PwaGuide } from "./PwaGuide";
@@ -41,7 +42,8 @@ export function AppLayout() {
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [authError, setAuthError] = useState("");
   const [addMenuOpen, setAddMenuOpen] = useState(false);
-  const routedContent = useOutlet(currentUser);
+  const outlet = useOutlet(currentUser);
+  const routedContent = <Fragment key={location.key}>{outlet}</Fragment>;
   const postPageNavigation = Boolean((location.state as { postPage?: boolean } | null)?.postPage);
   const showPostPage = /^\/posts\/[^/]+$/.test(pathname) && postPageNavigation;
   const routeIdentity = `${location.key}:${currentUser?.id ?? ""}`;
@@ -100,6 +102,7 @@ export function AppLayout() {
 
   return (
     <ToastProvider>
+      <ReadingPosition />
       <div className={hideNavigation ? "app-shell viewer-shell" : "app-shell"}>
         {showPostPage && backgroundContent ? backgroundContent : routedContent}
         {showPostPage && backgroundContent ? routedContent : null}

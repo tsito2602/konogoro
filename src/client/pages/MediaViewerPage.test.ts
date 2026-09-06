@@ -80,7 +80,7 @@ describe("viewerCommentNavigation", () => {
   it("投稿詳細を開いてコメント入力へフォーカスする状態を付ける", () => {
     expect(viewerCommentNavigation("post-1", { returnToPrevious: true })).toEqual({
       to: "/posts/post-1",
-      state: { returnToPrevious: true, postPage: true, focusComment: true },
+      state: { returnToPrevious: true, postPage: true, commentIntent: "write" },
     });
   });
 });

@@ -1,5 +1,6 @@
+import { canReturnInApp } from "../reading-context";
 import { ChevronLeft } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 export function PageHeader({
   title,
@@ -13,12 +14,19 @@ export function PageHeader({
   inverse?: boolean;
 }) {
   const navigate = useNavigate();
+  const location = useLocation();
+  const backPath = location.pathname.startsWith("/events/") ? "/events" : "/";
   return (
     <header className={`page-header${inverse ? " inverse" : ""}`}>
       <div className="page-header-inner">
         <div className="header-side">
           {back && (
-            <button className="icon-button" type="button" onClick={() => navigate(-1)} aria-label="戻る">
+            <button
+              className="icon-button"
+              type="button"
+              onClick={() => (canReturnInApp() ? navigate(-1) : navigate(backPath, { replace: true }))}
+              aria-label="戻る"
+            >
               <ChevronLeft />
             </button>
           )}

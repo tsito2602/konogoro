@@ -28,7 +28,7 @@ export function MediaProcessingStatus({ files, uploading, uploadProgress }: Medi
   return (
     <div className="media-processing-status" role="status" aria-live="polite">
       <div>
-        <span>{uploadProgress === 100 ? "投稿を仕上げています" : "アップロード中"}</span>
+        <span>{uploadedCount === files.length ? "投稿を仕上げています" : "写真・動画を送信中"}</span>
         <strong>
           {uploadedCount} / {files.length} · {uploadProgress}%
         </strong>

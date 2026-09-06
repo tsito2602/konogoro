@@ -1,3 +1,5 @@
+import { VideoBadge } from "./VideoBadge";
+import { commentNavigationState } from "../comment-navigation";
 import { CalendarDays, Camera, MessageCircle, Upload } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { Post } from "../../shared/types";
@@ -9,24 +11,31 @@ export function PostCard({
   showContext = true,
   onViewed,
   onViewError,
+  trackSeen = true,
 }: {
   post: Post;
   showContext?: boolean;
+  trackSeen?: boolean;
   onViewed?: () => void;
   onViewError?: (message: string) => void;
 }) {
   const postPageState = { postPage: true };
   const mediaViewerState = { returnToPrevious: true };
-  const { ref: seenRef, viewed } = useSeenTracking(post.id, post.viewedByCurrentUser, {
-    onViewed,
-    onError: onViewError,
-  });
+  const { ref: seenRef, viewed } = useSeenTracking(
+    post.id,
+    post.viewedByCurrentUser,
+    {
+      onViewed,
+      onError: onViewError,
+    },
+    trackSeen,
+  );
   const latestComment = post.comments.at(-1);
   const commentLinkLabel = post.comments.length === 0 ? "コメントを書く" : `コメント${post.comments.length}件`;
   const date = post.capturedAt ?? post.publishedAt;
   const dateLabel = post.capturedAt ? "撮影日" : "投稿日";
   return (
-    <article className="post-card" ref={seenRef}>
+    <article data-reading-item={`post-${post.id}`} className="post-card" ref={seenRef}>
       <Link
         className="post-head"
         to={`/posts/${post.id}`}
@@ -62,43 +71,39 @@ export function PostCard({
             aria-label={`${viewed ? "" : "未閲覧の"}投稿の${media.kind === "video" ? "動画" : "写真"} ${index + 1}/${post.media.length}を開く`}
           >
             <img src={media.thumbnailUrl} alt="" loading="lazy" />
-            {media.kind === "video" && (
-              <span className="media-play-mark" aria-hidden>
-                ▶
-              </span>
-            )}
+            {media.kind === "video" && <VideoBadge durationSeconds={media.durationSeconds} />}
             {index === 3 && post.media.length >= 4 && <span className="more-count">+{post.media.length - 3}</span>}
           </Link>
         ))}
       </div>
       <div className="post-copy">
-        <div className="post-engagement">
-          <SeenBy users={post.seenBy} />
-          <Link
-            className="comment-count-link"
-            to={`/posts/${post.id}`}
-            state={postPageState}
-            aria-label={post.comments.length === 0 ? commentLinkLabel : `${commentLinkLabel}を開く`}
-          >
-            <MessageCircle aria-hidden />
-            <span>{commentLinkLabel}</span>
-          </Link>
-          <time className="post-date" dateTime={date ?? undefined} aria-label={`${dateLabel} ${formatPostDate(date)}`}>
-            {post.capturedAt ? <Camera aria-hidden /> : <Upload aria-hidden />}
-            <span>{formatPostDate(date)}</span>
-          </time>
-        </div>
         {post.caption && (
           <Link className="post-caption" to={`/posts/${post.id}`} state={postPageState} aria-label="投稿の詳細を開く">
             {post.caption}
           </Link>
         )}
+        <div className="post-engagement">
+          <Link
+            className="comment-count-link"
+            to={`/posts/${post.id}`}
+            state={commentNavigationState(post.comments.length === 0 ? "write" : "read")}
+            aria-label={post.comments.length === 0 ? commentLinkLabel : `${commentLinkLabel}を開く`}
+          >
+            <MessageCircle aria-hidden />
+            <span>{commentLinkLabel}</span>
+          </Link>
+          <SeenBy users={post.seenBy} />
+          <time className="post-date" dateTime={date ?? undefined} aria-label={`${dateLabel} ${formatPostDate(date)}`}>
+            {post.capturedAt ? <Camera aria-hidden /> : <Upload aria-hidden />}
+            <span>{formatPostDate(date)}</span>
+          </time>
+        </div>
         {latestComment && (
           <div className="post-comment-section">
             <Link
               className="post-comment-preview"
               to={`/posts/${post.id}`}
-              state={postPageState}
+              state={commentNavigationState("read")}
               aria-label={`${latestComment.authorName}さんのコメントを開く`}
             >
               <span className="post-comment-avatar" aria-hidden>
@@ -114,7 +119,7 @@ export function PostCard({
               </span>
             </Link>
             {post.comments.length > 1 && (
-              <Link className="more-comments-link" to={`/posts/${post.id}`} state={postPageState}>
+              <Link className="more-comments-link" to={`/posts/${post.id}`} state={commentNavigationState("read")}>
                 ほかのコメントを見る
               </Link>
             )}

@@ -1,5 +1,5 @@
 import { Plus, Trash2, Video } from "lucide-react";
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, useRef, type FormEvent } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import type { EventCoverMedia, EventDetail } from "../../shared/types";
 import { api } from "../api";
@@ -24,6 +24,8 @@ export function EventEditPage() {
   const [scenes, setScenes] = useState<EditableScene[]>([]);
   const [newSceneTitle, setNewSceneTitle] = useState("");
   const [coverMediaId, setCoverMediaId] = useState<string | null>(null);
+  const coverDrag = useRef<{ x: number; y: number; position: { x: number; y: number } } | null>(null);
+  const [coverPosition, setCoverPosition] = useState({ x: 50, y: 50 });
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -36,6 +38,7 @@ export function EventEditPage() {
     setEndDate(event.endDate ?? "");
     setScenes(event.scenes.map((scene) => ({ key: scene.id, id: scene.id, title: scene.title })));
     setCoverMediaId(event.coverSource === "manual" ? event.coverMediaId : null);
+    setCoverPosition(event.coverPosition ?? { x: 50, y: 50 });
   };
   const load = useCallback(() => {
     setError("");
@@ -79,7 +82,11 @@ export function EventEditPage() {
     startDate !== (detail.startDate ?? "") ||
     endDate !== (detail.endDate ?? "") ||
     scenesChanged ||
-    coverMediaId !== originalCoverMediaId;
+    coverMediaId !== originalCoverMediaId ||
+    coverPosition.x !== (detail.coverPosition?.x ?? 50) ||
+    coverPosition.y !== (detail.coverPosition?.y ?? 50);
+  const automaticCover = media.find((item) => item.kind === "image") ?? media[0];
+  const selectedCover = media.find((item) => item.id === coverMediaId) ?? automaticCover;
 
   const saveEvent = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -92,6 +99,7 @@ export function EventEditPage() {
           event: { title, description, startDate: startDate || null, endDate: endDate || null },
           scenes: scenes.map((scene) => ({ id: scene.id, title: scene.title })),
           coverMediaId,
+          coverPosition,
         }),
       });
       showToast("イベントを更新しました");
@@ -226,7 +234,10 @@ export function EventEditPage() {
             <button
               className={`text-button${coverMediaId === null ? " selected" : ""}`}
               type="button"
-              onClick={() => setCoverMediaId(null)}
+              onClick={() => {
+                setCoverMediaId(null);
+                setCoverPosition({ x: 50, y: 50 });
+              }}
               disabled={saving}
             >
               自動選択
@@ -241,7 +252,11 @@ export function EventEditPage() {
                   className={coverMediaId === item.id ? "selected" : ""}
                   type="button"
                   key={item.id}
-                  onClick={() => setCoverMediaId(item.id)}
+                  onClick={() => {
+                    setCoverMediaId(item.id);
+                    setCoverPosition({ x: 50, y: 50 });
+                  }}
+                  aria-label={`${item.kind === "video" ? "動画" : "写真"} ${media.indexOf(item) + 1}をカバーに選択`}
                   aria-pressed={coverMediaId === item.id}
                   disabled={saving}
                 >
@@ -256,6 +271,95 @@ export function EventEditPage() {
             </div>
           )}
           <p className="muted">選択中: {coverMediaId ? "手動選択" : "自動選択"}</p>
+          {selectedCover && (
+            <fieldset className="cover-position-editor" disabled={saving}>
+              <legend>表示位置</legend>
+              <p className="muted">
+                一覧の写真をドラッグするか、左右・上下のつまみで表示位置を調整できます。つまみは矢印キーでも操作できます。
+              </p>
+              <div className="cover-previews">
+                <figure>
+                  <figcaption>一覧</figcaption>
+                  <img
+                    className="cover-preview-list"
+                    draggable={false}
+                    onPointerDown={(event) => {
+                      if (saving) return;
+                      event.currentTarget.setPointerCapture(event.pointerId);
+                      coverDrag.current = { x: event.clientX, y: event.clientY, position: coverPosition };
+                    }}
+                    onPointerMove={(event) => {
+                      const drag = coverDrag.current;
+                      if (!drag || saving) return;
+                      const bounds = event.currentTarget.getBoundingClientRect();
+                      setCoverMediaId(selectedCover.id);
+                      setCoverPosition({
+                        x: Math.round(
+                          Math.max(0, Math.min(100, drag.position.x - ((event.clientX - drag.x) / bounds.width) * 100)),
+                        ),
+                        y: Math.round(
+                          Math.max(
+                            0,
+                            Math.min(100, drag.position.y - ((event.clientY - drag.y) / bounds.height) * 100),
+                          ),
+                        ),
+                      });
+                    }}
+                    onPointerUp={() => {
+                      coverDrag.current = null;
+                    }}
+                    onPointerCancel={() => {
+                      coverDrag.current = null;
+                    }}
+                    onLostPointerCapture={() => {
+                      coverDrag.current = null;
+                    }}
+                    src={selectedCover.thumbnailUrl}
+                    alt="一覧のカバープレビュー"
+                    style={{ objectPosition: `${coverPosition.x}% ${coverPosition.y}%` }}
+                  />
+                </figure>
+                <figure>
+                  <figcaption>詳細（スマートフォン）</figcaption>
+                  <img
+                    className="cover-preview-detail"
+                    src={selectedCover.thumbnailUrl}
+                    alt="スマートフォンの詳細カバープレビュー"
+                    style={{ objectPosition: `${coverPosition.x}% ${coverPosition.y}%` }}
+                  />
+                </figure>
+                <figure>
+                  <figcaption>詳細（PC）</figcaption>
+                  <img
+                    className="cover-preview-desktop"
+                    src={selectedCover.thumbnailUrl}
+                    alt="PCの詳細カバープレビュー"
+                    style={{ objectPosition: `${coverPosition.x}% ${coverPosition.y}%` }}
+                  />
+                </figure>
+              </div>
+              {(["x", "y"] as const).map((axis) => (
+                <label key={axis}>
+                  {axis === "x" ? "左右" : "上下"}：{coverPosition[axis]}%
+                  <input
+                    type="range"
+                    min="0"
+                    max="100"
+                    step="1"
+                    value={coverPosition[axis]}
+                    onChange={(event) => {
+                      setCoverMediaId(selectedCover.id);
+                      setCoverPosition((current) => ({ ...current, [axis]: Number(event.target.value) }));
+                    }}
+                  />
+                </label>
+              ))}
+              <button type="button" className="text-button" onClick={() => setCoverPosition({ x: 50, y: 50 })}>
+                中央に戻す
+              </button>
+              <p className="muted">変更を保存すると一覧と詳細へ反映されます。画面幅により切り抜く範囲は変わります。</p>
+            </fieldset>
+          )}
         </section>
 
         {error && (

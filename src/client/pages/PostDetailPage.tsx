@@ -1,3 +1,6 @@
+import { VideoBadge } from "../components/VideoBadge";
+import { commentIntent } from "../comment-navigation";
+import { canReturnInApp, removeReadingPost, restorePanelPosition, updateReadingPost } from "../reading-context";
 import { CalendarDays, Camera, ChevronLeft, Ellipsis, MessageCircle, Pencil, Send, Trash2, Upload } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
@@ -10,7 +13,7 @@ import { SeenBy } from "../components/SeenBy";
 import { useToast } from "../components/Toast";
 
 export function shouldFocusComment(state: unknown): boolean {
-  return Boolean(state && typeof state === "object" && "focusComment" in state && state.focusComment);
+  return commentIntent(state) === "write";
 }
 
 export function PostDetailPage() {
@@ -28,9 +31,10 @@ export function PostDetailPage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const commentInputRef = useRef<HTMLInputElement>(null);
+  const conversationRef = useRef<HTMLElement>(null);
   const fallbackPath = post?.eventId ? `/events/${post.eventId}` : "/";
   const closePage = useCallback(() => {
-    if ((location.state as { postPage?: boolean } | null)?.postPage) navigate(-1);
+    if ((location.state as { postPage?: boolean } | null)?.postPage && canReturnInApp()) navigate(-1);
     else navigate(fallbackPath, { replace: true });
   }, [fallbackPath, location.state, navigate]);
   const load = () => {
@@ -45,10 +49,23 @@ export function PostDetailPage() {
       .catch((reason: Error) => setError(reason.message));
   }, [postId]);
   useEffect(() => {
-    if (!post || !shouldFocusComment(location.state)) return;
-    const frame = window.requestAnimationFrame(() => commentInputRef.current?.focus());
-    return () => window.cancelAnimationFrame(frame);
-  }, [location.state, post]);
+    if (post) updateReadingPost(post);
+  }, [post]);
+  useEffect(() => {
+    const panel = conversationRef.current?.closest<HTMLElement>(".post-page-scroll");
+    if (!post || !panel) return;
+    return restorePanelPosition(location.key, panel, () => {
+      const intent = commentIntent(location.state);
+      if (intent === "read") {
+        const conversation = conversationRef.current!;
+        panel.scrollTop =
+          conversation.getBoundingClientRect().top - panel.getBoundingClientRect().top + panel.scrollTop;
+        conversation.focus({ preventScroll: true });
+      } else if (intent === "write") {
+        commentInputRef.current?.focus({ preventScroll: true });
+      }
+    });
+  }, [location.key, location.state, post]);
   if (!post && !error)
     return (
       <PostPage onClose={closePage} footer={<CommentComposerSkeleton />}>
@@ -67,8 +84,9 @@ export function PostDetailPage() {
     setDeleteError("");
     try {
       await api(`/posts/${post.id}`, { method: "DELETE" });
+      removeReadingPost(post.id);
       showToast("投稿を削除しました");
-      navigate(post.eventId ? `/events/${post.eventId}` : "/", { replace: true });
+      closePage();
     } catch (reason) {
       setDeleteError((reason as Error).message);
       setDeleting(false);
@@ -195,7 +213,6 @@ export function PostDetailPage() {
                 });
                 setPost((current) => (current ? { ...current, comments: [...current.comments, comment] } : current));
                 form.reset();
-                showToast("コメントを送信しました");
               } catch (reason) {
                 setCommentError((reason as Error).message);
               } finally {
@@ -256,11 +273,7 @@ export function PostDetailPage() {
               state={{ ...(location.state as object | null), returnToPrevious: true }}
             >
               <img src={media.thumbnailUrl} alt={`投稿の${media.kind === "video" ? "動画" : "写真"}`} />
-              {media.kind === "video" && (
-                <span className="media-play-mark" aria-hidden>
-                  ▶
-                </span>
-              )}
+              {media.kind === "video" && <VideoBadge durationSeconds={media.durationSeconds} />}
               {index === 3 && post.media.length >= 4 && <span className="more-count">+{post.media.length - 3}</span>}
             </Link>
           ))}
@@ -283,7 +296,7 @@ export function PostDetailPage() {
           </div>
           {post.caption && <p className="detail-caption">{post.caption}</p>}
         </div>
-        <section className="conversation">
+        <section className="conversation" ref={conversationRef} tabIndex={-1} aria-label="コメント">
           <h2>コメント</h2>
           {post.comments.length === 0 && <p className="no-comments">まだコメントはありません</p>}
           <div className="comment-list">

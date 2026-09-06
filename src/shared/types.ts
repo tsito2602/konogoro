@@ -33,6 +33,8 @@ export type Media = {
   contentUrl: string;
   thumbnailUrl: string;
   downloadUrl: string;
+  playbackReady?: boolean;
+  playbackByteSize?: number | null;
 };
 
 export type AlbumMedia = Pick<Media, "id" | "kind" | "thumbnailUrl"> & {
@@ -94,6 +96,11 @@ export type Post = {
   media: Media[];
   comments: Comment[];
   seenBy: SeenUser[];
+  /** Total counts remain accurate when a list contains representative media / latest comment only. */
+  mediaCount?: number;
+  photoCount?: number;
+  videoCount?: number;
+  commentCount?: number;
 };
 
 export type EventSummary = {
@@ -126,6 +133,7 @@ export type EventDetail = EventSummary & {
 
 export type UploadTarget = {
   id: string;
+  alreadyUploaded?: boolean;
   uploadUrl: string;
   thumbnailUploadUrl: string;
   previewUploadUrl?: string;

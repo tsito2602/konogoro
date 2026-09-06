@@ -1,3 +1,4 @@
+import { setVideoIdentity } from "./video-experience";
 import type { Post } from "../shared/types";
 import { api } from "./api";
 import { useCallback, useEffect, useLayoutEffect, useState, type Dispatch, type SetStateAction } from "react";
@@ -12,6 +13,7 @@ let readingGeneration = 0;
 let lastRoute: { key: string; pathname: string } | null = null;
 let unreadExcursion: string | null = null;
 export function setReadingIdentity(identity: string | null) {
+  setVideoIdentity(identity);
   if (identity === readingIdentity) return;
   entries.clear();
   readingGeneration += 1;

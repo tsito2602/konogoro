@@ -197,3 +197,32 @@ describe("PostCard", () => {
     expect(html).toContain("lucide-upload");
   });
 });
+
+it("uses summary totals and shows a static video thumbnail in the common grid", () => {
+  const media = {
+    id: "video",
+    kind: "video" as const,
+    mimeType: "video/mp4",
+    originalFilename: "video.mp4",
+    byteSize: 900_000_000,
+    width: 1920,
+    height: 1080,
+    durationSeconds: 60,
+    capturedAt: null,
+    position: 5,
+    contentUrl: "/raw-video",
+    thumbnailUrl: "/thumbnail",
+    downloadUrl: "/download",
+  };
+  const html = renderToStaticMarkup(
+    <MemoryRouter>
+      <PostCard post={{ ...post, media: [media], mediaCount: 12, commentCount: 7 }} />
+    </MemoryRouter>,
+  );
+  expect(html).toContain('class="media-grid unseen"');
+  expect(html).toContain('aria-label="未閲覧の投稿の動画 1/12を開く"');
+  expect(html).not.toContain("post-video-hero");
+  expect(html).toContain("コメント7件");
+  expect(html).not.toContain("/raw-video");
+  expect(html).not.toContain("<video");
+});

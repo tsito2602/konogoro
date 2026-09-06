@@ -28,6 +28,11 @@ type MediaRow = {
   duration_seconds: number | null;
   captured_at: string | null;
   position: number;
+  playback_status?: string | null;
+  playback_byte_size?: number | null;
+  media_count?: number;
+  photo_count?: number;
+  video_count?: number;
 };
 
 type CommentRow = {
@@ -38,6 +43,7 @@ type CommentRow = {
   created_at: string;
   author_name: string;
   avatar_url: string | null;
+  comment_count?: number;
 };
 
 type SeenRow = {
@@ -47,29 +53,48 @@ type SeenRow = {
   avatar_url: string | null;
 };
 
-export async function loadPosts(db: D1Database, rows: PostRow[], currentUser: User): Promise<Post[]> {
+export async function loadPosts(
+  db: D1Database,
+  rows: PostRow[],
+  currentUser: User,
+  mode: "detail" | "summary" = "detail",
+): Promise<Post[]> {
   if (rows.length === 0) return [];
 
   const placeholders = rows.map(() => "?").join(",");
+  const mediaColumns = `id, post_id, kind, mime_type, original_filename, byte_size,
+    width, height, duration_seconds, captured_at, position, playback_status, playback_byte_size`;
+  const mediaQuery =
+    mode === "summary"
+      ? `WITH ranked AS (
+        SELECT ${mediaColumns},
+          ROW_NUMBER() OVER (PARTITION BY post_id ORDER BY position, id) AS selection_rank,
+          COUNT(*) OVER (PARTITION BY post_id) AS media_count,
+          SUM(kind = 'image') OVER (PARTITION BY post_id) AS photo_count,
+          SUM(kind = 'video') OVER (PARTITION BY post_id) AS video_count
+        FROM media WHERE status = 'uploaded' AND post_id IN (${placeholders})
+      ) SELECT * FROM ranked WHERE selection_rank <= 4 ORDER BY post_id, position, id`
+      : `SELECT ${mediaColumns} FROM media
+        WHERE status = 'uploaded' AND post_id IN (${placeholders}) ORDER BY post_id, position, id`;
+  const commentsQuery =
+    mode === "summary"
+      ? `WITH ranked AS (
+        SELECT c.id, c.post_id, c.user_id, c.body, c.created_at,
+          COUNT(*) OVER (PARTITION BY c.post_id) AS comment_count,
+          ROW_NUMBER() OVER (PARTITION BY c.post_id ORDER BY c.created_at DESC, c.id DESC) AS comment_rank
+        FROM comments c WHERE c.post_id IN (${placeholders})
+      ) SELECT c.*, u.display_name AS author_name, u.avatar_url
+        FROM ranked c JOIN users u ON u.id = c.user_id WHERE comment_rank = 1`
+      : `SELECT c.id, c.post_id, c.user_id, c.body, c.created_at, u.display_name AS author_name, u.avatar_url
+        FROM comments c JOIN users u ON u.id = c.user_id
+        WHERE c.post_id IN (${placeholders}) ORDER BY c.created_at, c.id`;
   const [mediaResult, commentsResult, seenResult] = await Promise.all([
     db
-      .prepare(
-        `SELECT id, post_id, kind, mime_type, original_filename, byte_size,
-            width, height, duration_seconds, captured_at, position
-       FROM media
-      WHERE status = 'uploaded' AND post_id IN (${placeholders})
-      ORDER BY post_id, position`,
-      )
+      .prepare(mediaQuery)
       .bind(...rows.map(({ id }) => id))
       .all<MediaRow>(),
     db
-      .prepare(
-        `
-    SELECT c.id, c.post_id, c.user_id, c.body, c.created_at, u.display_name AS author_name, u.avatar_url
-      FROM comments c JOIN users u ON u.id = c.user_id
-     WHERE c.post_id IN (${placeholders}) ORDER BY c.created_at, c.id
-  `,
-      )
+      .prepare(commentsQuery)
       .bind(...rows.map(({ id }) => id))
       .all<CommentRow>(),
     db
@@ -103,6 +128,8 @@ export async function loadPosts(db: D1Database, rows: PostRow[], currentUser: Us
           : `/api/media/${item.id}/content?variant=preview`,
       thumbnailUrl: `/api/media/${item.id}/content?variant=thumbnail`,
       downloadUrl: `/api/media/${item.id}/download`,
+      playbackReady: item.playback_status === "ready",
+      playbackByteSize: item.playback_status === "ready" ? (item.playback_byte_size ?? null) : null,
     };
     const list = mediaByPost.get(item.post_id) ?? [];
     list.push(media);
@@ -132,6 +159,8 @@ export async function loadPosts(db: D1Database, rows: PostRow[], currentUser: Us
     seenByPost.set(item.post_id, list);
   }
 
+  const mediaTotals = new Map(mediaResult.results.map((item) => [item.post_id, item]));
+  const commentTotals = new Map(commentsResult.results.map((item) => [item.post_id, item.comment_count]));
   return rows.map((row) => ({
     id: row.id,
     caption: row.caption,
@@ -151,6 +180,12 @@ export async function loadPosts(db: D1Database, rows: PostRow[], currentUser: Us
     media: mediaByPost.get(row.id) ?? [],
     comments: commentsByPost.get(row.id) ?? [],
     seenBy: seenByPost.get(row.id) ?? [],
+    mediaCount: mediaTotals.get(row.id)?.media_count ?? mediaByPost.get(row.id)?.length ?? 0,
+    photoCount:
+      mediaTotals.get(row.id)?.photo_count ?? mediaByPost.get(row.id)?.filter((m) => m.kind === "image").length ?? 0,
+    videoCount:
+      mediaTotals.get(row.id)?.video_count ?? mediaByPost.get(row.id)?.filter((m) => m.kind === "video").length ?? 0,
+    commentCount: commentTotals.get(row.id) ?? commentsByPost.get(row.id)?.length ?? 0,
   }));
 }
 

@@ -1,4 +1,6 @@
+import { videoPlaybackRoutes } from "./video-playback";
 import { retryResourceId } from "./request-id";
+import { multipartRoutes } from "./multipart";
 import { Hono, type Context } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { ulid } from "ulid";
@@ -41,6 +43,7 @@ import {
   type LineSecrets,
 } from "./auth";
 import { createPresignedDownloadUrl, createPresignedUploadUrl, hasUploadCredentials } from "./r2";
+import { missingMediaPreview, serveStoredMedia } from "./media-delivery";
 import { countUnreadPosts, loadNextUnreadPost, loadPosts, postSelect, selectPosts, type PostRow } from "./db";
 import { matchesUploadFiles, type ExistingMedia } from "./upload-request";
 import { createInviteToken } from "./invite-token";
@@ -99,6 +102,13 @@ type MemberLastViewedRow = {
 
 type AppEnv = { Bindings: Bindings; Variables: { currentUser: User } };
 export const app = new Hono<AppEnv>().basePath("/api");
+
+// Includes authentication and handler work, but never buffers response bodies.
+app.use("*", async (c, next) => {
+  const startedAt = performance.now();
+  await next();
+  c.header("Server-Timing", `app;dur=${(performance.now() - startedAt).toFixed(1)}`);
+});
 
 function setSessionCookie(c: Context<AppEnv>, session: string): void {
   setCookie(c, "family_session", session, {
@@ -175,6 +185,8 @@ app.onError((error, c) => {
 });
 
 app.notFound((c) => c.json({ error: "見つかりませんでした" }, 404));
+
+app.route("/", multipartRoutes);
 
 app.post("/webhooks/line", async (c) => {
   const channelSecret = c.env.LINE_MESSAGING_CHANNEL_SECRET;
@@ -600,7 +612,7 @@ app.get("/timeline", async (c) => {
   ]);
   const hasMore = result.results.length > limit;
   const rows = result.results.slice(0, limit);
-  const posts = await loadPosts(c.env.DB, rows, c.var.currentUser);
+  const posts = await loadPosts(c.env.DB, rows, c.var.currentUser, "summary");
   const last = rows.at(-1);
   return c.json({
     posts,
@@ -901,7 +913,7 @@ app.get("/events/:eventId", async (c) => {
     ...mapEvent(event),
     coverMediaId: event.cover_media_id,
     scenes: scenesResult.results.map((scene) => ({ id: scene.id, title: scene.title, sortOrder: scene.sort_order })),
-    posts: await loadPosts(c.env.DB, postsResult.results, c.var.currentUser),
+    posts: await loadPosts(c.env.DB, postsResult.results, c.var.currentUser, "summary"),
   };
   return c.json(detail);
 });
@@ -1108,10 +1120,15 @@ app.delete("/posts/:postId", async (c) => {
   if (!canDeletePost(c.var.currentUser)) return c.json({ error: "投稿を削除する権限がありません" }, 403);
 
   const media = await c.env.DB.prepare(
-    "SELECT original_object_key, preview_object_key, thumbnail_object_key FROM media WHERE post_id = ?",
+    "SELECT original_object_key, preview_object_key, thumbnail_object_key, playback_object_key FROM media WHERE post_id = ?",
   )
     .bind(postId)
-    .all<{ original_object_key: string; preview_object_key: string | null; thumbnail_object_key: string | null }>();
+    .all<{
+      original_object_key: string;
+      preview_object_key: string | null;
+      thumbnail_object_key: string | null;
+      playback_object_key: string | null;
+    }>();
   const statements = [c.env.DB.prepare("DELETE FROM posts WHERE id = ?").bind(postId)];
   if (post.event_id) {
     statements.push(autoEventCoverStatement(c.env.DB, post.event_id, new Date().toISOString()));
@@ -1119,7 +1136,12 @@ app.delete("/posts/:postId", async (c) => {
   await c.env.DB.batch(statements);
 
   const keys = media.results
-    .flatMap((item) => [item.original_object_key, item.preview_object_key, item.thumbnail_object_key])
+    .flatMap((item) => [
+      item.original_object_key,
+      item.preview_object_key,
+      item.thumbnail_object_key,
+      item.playback_object_key,
+    ])
     .filter((key): key is string => Boolean(key));
   if (keys.length > 0) {
     try {
@@ -1135,6 +1157,8 @@ app.delete("/posts/:postId", async (c) => {
   }
   return c.body(null, 204);
 });
+
+app.route("/", videoPlaybackRoutes);
 
 app.post("/posts/:postId/media/upload-urls", async (c) => {
   if (!canCreatePost(c.var.currentUser)) return c.json({ error: "投稿する権限がありません" }, 403);
@@ -1153,7 +1177,7 @@ app.post("/posts/:postId/media/upload-urls", async (c) => {
 
   const existing = await c.env.DB.prepare(
     `
-    SELECT id, status, original_filename, mime_type, original_object_key, preview_object_key, thumbnail_object_key,
+    SELECT id, status, original_filename, original_sha256, mime_type, original_object_key, preview_object_key, thumbnail_object_key,
            byte_size, captured_at, duration_seconds
       FROM media
      WHERE post_id = ?
@@ -1239,6 +1263,7 @@ app.post("/posts/:postId/media/upload-urls", async (c) => {
     filename: string;
     mimeType: string;
     byteSize: number;
+    originalSha256: string | null;
     capturedAt: string | null;
     durationSeconds: number | null;
     position: number;
@@ -1267,6 +1292,7 @@ app.post("/posts/:postId/media/upload-urls", async (c) => {
       filename: file.filename,
       mimeType: file.mimeType,
       byteSize: file.byteSize,
+      originalSha256: file.originalSha256 ?? null,
       capturedAt: file.capturedAt,
       durationSeconds: file.durationSeconds,
       position: (lastPosition?.value ?? -1) + index + 1,
@@ -1280,8 +1306,8 @@ app.post("/posts/:postId/media/upload-urls", async (c) => {
     records.map((record) =>
       c.env.DB.prepare(
         `
-    INSERT INTO media (id, post_id, kind, original_filename, mime_type, original_object_key, preview_object_key, thumbnail_object_key, byte_size, captured_at, duration_seconds, position, created_by, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING
+    INSERT INTO media (id, post_id, kind, original_filename, mime_type, original_object_key, preview_object_key, thumbnail_object_key, byte_size, captured_at, duration_seconds, position, created_by, created_at, original_sha256)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING
   `,
       ).bind(
         record.id,
@@ -1298,6 +1324,7 @@ app.post("/posts/:postId/media/upload-urls", async (c) => {
         record.position,
         c.var.currentUser.id,
         now,
+        record.originalSha256,
       ),
     ),
   );
@@ -1315,20 +1342,29 @@ app.post("/media/:mediaId/upload-url", async (c) => {
   if (!canCreatePost(c.var.currentUser)) return c.json({ error: "投稿する権限がありません" }, 403);
   const media = await c.env.DB.prepare(
     `
-    SELECT m.id, m.original_object_key, m.preview_object_key, m.thumbnail_object_key, m.mime_type
+    SELECT m.id, m.status, m.original_object_key, m.preview_object_key, m.thumbnail_object_key, m.mime_type
       FROM media m JOIN posts p ON p.id = m.post_id
-     WHERE m.id = ? AND m.created_by = ? AND p.status IN ('draft', 'published') AND m.status IN ('pending', 'failed')
+     WHERE m.id = ? AND m.created_by = ? AND p.status IN ('draft', 'published') AND m.status IN ('pending', 'failed', 'uploaded')
   `,
   )
     .bind(c.req.param("mediaId"), c.var.currentUser.id)
     .first<{
       id: string;
+      status: string;
       original_object_key: string;
       preview_object_key: string | null;
       thumbnail_object_key: string;
       mime_type: string;
     }>();
   if (!media) return c.json({ error: "再試行できるメディアが見つかりません" }, 404);
+  if (media.status === "uploaded")
+    return c.json({
+      id: media.id,
+      alreadyUploaded: true,
+      uploadUrl: "",
+      thumbnailUploadUrl: "",
+      contentType: media.mime_type,
+    } satisfies UploadTarget);
   const [uploadUrl, thumbnailUploadUrl, previewUploadUrl] = await Promise.all([
     createPresignedUploadUrl(c.env, media.original_object_key, media.mime_type),
     createPresignedUploadUrl(c.env, media.thumbnail_object_key, "image/webp"),
@@ -1416,7 +1452,7 @@ app.delete("/posts/:postId/media/:mediaId", async (c) => {
   const mediaId = c.req.param("mediaId");
   const media = await c.env.DB.prepare(
     `
-    SELECT m.original_object_key, m.preview_object_key, m.thumbnail_object_key, m.status, p.event_id
+    SELECT m.original_object_key, m.preview_object_key, m.thumbnail_object_key, m.playback_object_key, m.status, p.event_id
       FROM media m JOIN posts p ON p.id = m.post_id
      WHERE m.id = ? AND m.post_id = ? AND p.status = 'published'
   `,
@@ -1426,6 +1462,7 @@ app.delete("/posts/:postId/media/:mediaId", async (c) => {
       original_object_key: string;
       preview_object_key: string | null;
       thumbnail_object_key: string | null;
+      playback_object_key: string | null;
       status: string;
       event_id: string | null;
     }>();
@@ -1451,9 +1488,12 @@ app.delete("/posts/:postId/media/:mediaId", async (c) => {
   if (media.event_id) statements.push(autoEventCoverStatement(c.env.DB, media.event_id, now));
   await c.env.DB.batch(statements);
 
-  const keys = [media.original_object_key, media.preview_object_key, media.thumbnail_object_key].filter(
-    (key): key is string => Boolean(key),
-  );
+  const keys = [
+    media.original_object_key,
+    media.preview_object_key,
+    media.thumbnail_object_key,
+    media.playback_object_key,
+  ].filter((key): key is string => Boolean(key));
   try {
     await c.env.MEDIA.delete(keys);
   } catch (error) {
@@ -1641,55 +1681,58 @@ function parseCursor(value: string | undefined): { capturedAt: string; id: strin
 
 async function serveMedia(c: Context<AppEnv>, download: boolean): Promise<Response> {
   const media = await c.env.DB.prepare(
-    "SELECT original_object_key, preview_object_key, thumbnail_object_key, mime_type, original_filename FROM media WHERE id = ? AND status = 'uploaded'",
+    `SELECT m.original_object_key, m.preview_object_key, m.thumbnail_object_key,
+            m.playback_object_key, m.playback_status, m.mime_type, m.original_filename
+       FROM media m JOIN posts p ON p.id = m.post_id
+      WHERE m.id = ? AND m.status = 'uploaded'
+        AND (p.status = 'published' OR (p.status = 'draft' AND p.created_by = ? AND ? = 1))`,
   )
-    .bind(c.req.param("mediaId"))
+    .bind(c.req.param("mediaId"), c.var.currentUser.id, Number(canCreatePost(c.var.currentUser)))
     .first<{
       original_object_key: string;
       preview_object_key: string | null;
       thumbnail_object_key: string | null;
+      playback_object_key: string | null;
+      playback_status: "pending" | "ready" | null;
       mime_type: string;
       original_filename: string;
     }>();
   if (!media) return c.json({ error: "メディアが見つかりません" }, 404);
-  if (!download && media.mime_type.startsWith("video/")) {
+  const video = media.mime_type.startsWith("video/");
+  const variant = download ? undefined : c.req.query("variant");
+  const imageVariant = variant === "thumbnail" || variant === "preview";
+  // Resolve image variants first: an <img> request must never receive a video URL.
+  if (imageVariant) {
+    const imageKey =
+      variant === "preview" ? media.preview_object_key || media.thumbnail_object_key : media.thumbnail_object_key;
+    if (!imageKey && video) return missingMediaPreview(c.req.raw);
+    if (video && (imageKey === media.original_object_key || imageKey === media.playback_object_key))
+      return missingMediaPreview(c.req.raw);
+    return (
+      (await serveStoredMedia(c.req.raw, c.env.MEDIA, imageKey || media.original_object_key, {
+        contentType: imageKey ? "image/webp" : media.mime_type,
+        imageOnly: true,
+      })) || missingMediaPreview(c.req.raw)
+    );
+  }
+  const playbackReady = video && media.playback_status === "ready" && media.playback_object_key;
+  const objectKey = !download && playbackReady ? media.playback_object_key! : media.original_object_key;
+  if (!download && video && c.req.method !== "HEAD") {
     if (!hasUploadCredentials(c.env)) return c.json({ error: "動画再生用secretが設定されていません" }, 503);
     return new Response(null, {
       status: 307,
       headers: {
-        Location: await createPresignedDownloadUrl(c.env, media.original_object_key),
+        Location: await createPresignedDownloadUrl(c.env, objectKey),
         "Cache-Control": "private, no-store",
       },
     });
   }
-  const thumbnail = !download && c.req.query("variant") === "thumbnail" && media.thumbnail_object_key;
-  const preview = !download && c.req.query("variant") === "preview" && media.preview_object_key;
-  const range =
-    !thumbnail && !preview && !download && media.mime_type.startsWith("video/") ? c.req.header("Range") : undefined;
-  const object = await c.env.MEDIA.get(
-    thumbnail ? media.thumbnail_object_key! : preview ? media.preview_object_key! : media.original_object_key,
-    range ? { range: c.req.raw.headers } : undefined,
+  return (
+    (await serveStoredMedia(c.req.raw, c.env.MEDIA, objectKey, {
+      contentType: !download && playbackReady ? "video/mp4" : media.mime_type,
+      downloadFilename: download ? media.original_filename : undefined,
+    })) || c.json({ error: "ファイルが見つかりません" }, 404)
   );
-  if (!object) return c.json({ error: "ファイルが見つかりません" }, 404);
-  const headers = new Headers();
-  object.writeHttpMetadata(headers);
-  headers.set("Content-Type", thumbnail || preview ? "image/webp" : media.mime_type);
-  headers.set("Cache-Control", "private, max-age=3600");
-  headers.set("ETag", object.httpEtag);
-  headers.set("Accept-Ranges", "bytes");
-  if (download)
-    headers.set("Content-Disposition", `attachment; filename*=UTF-8''${encodeURIComponent(media.original_filename)}`);
-  if (range && object.range) {
-    const offset =
-      "suffix" in object.range ? Math.max(object.size - object.range.suffix, 0) : (object.range.offset ?? 0);
-    const requestedLength =
-      "suffix" in object.range ? object.range.suffix : (object.range.length ?? object.size - offset);
-    const length = Math.min(requestedLength, object.size - offset);
-    headers.set("Content-Range", `bytes ${offset}-${offset + length - 1}/${object.size}`);
-    headers.set("Content-Length", String(length));
-    return new Response(object.body, { status: 206, headers });
-  }
-  return new Response(object.body, { headers });
 }
 
 export default {

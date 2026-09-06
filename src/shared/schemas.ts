@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { sha256Schema } from "./video-playback";
 
 export const eventInputSchema = z
   .object({
@@ -67,6 +68,7 @@ export const uploadFilesSchema = z.object({
       z.object({
         requestId: z.string().uuid().optional(),
         filename: z.string().min(1).max(255),
+        originalSha256: sha256Schema.optional(),
         mimeType: z.enum(["image/jpeg", "image/png", "image/webp", "video/mp4", "video/webm", "video/quicktime"]),
         byteSize: z
           .number()

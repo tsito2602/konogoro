@@ -31,7 +31,9 @@ export function PostCard({
     trackSeen,
   );
   const latestComment = post.comments.at(-1);
-  const commentLinkLabel = post.comments.length === 0 ? "コメントを書く" : `コメント${post.comments.length}件`;
+  const commentCount = post.commentCount ?? post.comments.length;
+  const mediaCount = post.mediaCount ?? post.media.length;
+  const commentLinkLabel = commentCount === 0 ? "コメントを書く" : `コメント${commentCount}件`;
   const date = post.capturedAt ?? post.publishedAt;
   const dateLabel = post.capturedAt ? "撮影日" : "投稿日";
   return (
@@ -67,12 +69,12 @@ export function PostCard({
             className="media-cell"
             key={media.id}
             to={`/posts/${post.id}/media/${media.id}`}
-            state={mediaViewerState}
-            aria-label={`${viewed ? "" : "未閲覧の"}投稿の${media.kind === "video" ? "動画" : "写真"} ${index + 1}/${post.media.length}を開く`}
+            state={{ ...mediaViewerState, playVideo: media.kind === "video" }}
+            aria-label={`${viewed ? "" : "未閲覧の"}投稿の${media.kind === "video" ? "動画" : "写真"} ${index + 1}/${mediaCount}を開く`}
           >
             <img src={media.thumbnailUrl} alt="" loading="lazy" />
             {media.kind === "video" && <VideoBadge durationSeconds={media.durationSeconds} />}
-            {index === 3 && post.media.length >= 4 && <span className="more-count">+{post.media.length - 3}</span>}
+            {index === 3 && mediaCount > 4 && <span className="more-count">+{mediaCount - 3}</span>}
           </Link>
         ))}
       </div>
@@ -86,8 +88,8 @@ export function PostCard({
           <Link
             className="comment-count-link"
             to={`/posts/${post.id}`}
-            state={commentNavigationState(post.comments.length === 0 ? "write" : "read")}
-            aria-label={post.comments.length === 0 ? commentLinkLabel : `${commentLinkLabel}を開く`}
+            state={commentNavigationState(commentCount === 0 ? "write" : "read")}
+            aria-label={commentCount === 0 ? commentLinkLabel : `${commentLinkLabel}を開く`}
           >
             <MessageCircle aria-hidden />
             <span>{commentLinkLabel}</span>
@@ -118,7 +120,7 @@ export function PostCard({
                 <span>{latestComment.body}</span>
               </span>
             </Link>
-            {post.comments.length > 1 && (
+            {commentCount > 1 && (
               <Link className="more-comments-link" to={`/posts/${post.id}`} state={commentNavigationState("read")}>
                 ほかのコメントを見る
               </Link>

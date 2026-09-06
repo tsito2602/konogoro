@@ -34,6 +34,8 @@ describe("viewer API authorization", () => {
     ["POST", "/api/media/media-1/upload-url", undefined],
     ["POST", "/api/media/media-1/failed", undefined],
     ["POST", "/api/media/media-1/complete", { width: 100, height: 100 }],
+    ["POST", "/api/media/media-1/playback/upload-url", {}],
+    ["POST", "/api/media/media-1/playback/complete", {}],
     ["POST", "/api/posts/post-1/publish", undefined],
   ])("%s %sを拒否する", async (method, path, body) => {
     const response = await app.request(

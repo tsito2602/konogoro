@@ -99,3 +99,20 @@ R2無料枠を超えても、数十GB程度で月100円前後なら許容。
 - API input validationを行う
 - error response形式を統一
 - 過剰な抽象化はしない
+
+
+## 動画配信の拡張（#56〜#61）
+
+R2 private bucketを維持する。元動画は保存用、任意の再生用MP4は閲覧用、WebP thumbnailは一覧用。署名付きGETは動画本体を選択した後だけ発行する。thumbnail要求は動画本体へ転送しない。従来データは元動画へフォールバックする。
+
+再生用MP4はPCのffmpegでH.264/AAC、1080p上限、faststartで事前生成する。元動画を上書きせず、対応情報を持って取り込む。通常のWorkerリクエスト内で動画変換は行わず、Streamの契約は追加しない。全ファイルの確定前に配信先を切り替えない。
+
+元ファイル保存のWorkerは全体をメモリに載せずstreamを返す。HEAD、Content-Length、Range、条件付きリクエストを整合させる。大容量アップロードは署名付きUploadPartを使い、R2へ直接送信する。開始・完了・中止はWorkerで投稿権限を検証する。
+
+一覧と詳細の取得契約を分け、一覧では最新コメントと代表メディアを返す。署名URLをD1や永続的なフロントキャッシュへ保存しない。
+
+### CDNの判断
+
+現状のworkers.devとS3署名URLを維持し、今回CDNは追加しない。署名URLはR2 S3 endpoint用で、独自ドメインへ置換できない。caches.defaultによるCache APIはworkers.devでは効果がない。将来必要なら独自ドメインと認可後の共有オブジェクトキャッシュを一体で設計し、認証を省略した公開bucket化は行わない。
+
+参考: https://developers.cloudflare.com/r2/api/s3/presigned-urls/ 、https://developers.cloudflare.com/r2/examples/cache-api/

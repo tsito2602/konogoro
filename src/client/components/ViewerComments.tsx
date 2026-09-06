@@ -45,7 +45,7 @@ export function ViewerComments({
         <h2>
           この投稿のコメント <span>{post.comments.length}件</span>
         </h2>
-        <button className="viewer-button" type="button" onClick={onClose} aria-label="コメントを閉じて動画に戻る">
+        <button className="viewer-button" type="button" onClick={onClose} aria-label="コメントを閉じて写真・動画に戻る">
           <X />
         </button>
       </header>

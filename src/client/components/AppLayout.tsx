@@ -229,7 +229,11 @@ export function LoginScreen({ returnTo = "/" }: { returnTo?: string }) {
           <img className="login-icon login-icon-dark" src="/icons/icon-dark-transparent.png" alt="" />
         </span>
         <p className="login-eyebrow">このごろ</p>
-        <h1>ふたりの思い出を、家族へ。</h1>
+        <h1>
+          ふたりの思い出を、
+          <br />
+          家族へ。
+        </h1>
         <p>写真や動画でつづる日々を、招待された家族だけで見返せます。</p>
         <a className="line-login-button" href={loginUrl}>
           LINEでログイン

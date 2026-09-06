@@ -1,3 +1,5 @@
+> 保存資料: 初期のApple販促サイト参考。実装基準ではない。青・字間・列構成・形状の指定を現在のアプリへ適用しない。正本は [05_DESIGN_GUIDE.md](05_DESIGN_GUIDE.md)。
+
 # Apple — Style Reference
 > white room with a single blue switch.
 

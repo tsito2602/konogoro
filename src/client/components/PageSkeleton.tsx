@@ -300,9 +300,13 @@ function skeletonContent(variant: SkeletonVariant, currentUser?: CurrentUser): R
             {settingsSection(field())}
             {settingsSection(
               <>
-                <div className="notification-toggle skeleton-copy">
-                  {line("medium")}
-                  {line()}
+                <div className="notification-toggle">
+                  <span className="notification-toggle-icon skeleton-tile" />
+                  <div className="notification-toggle-copy skeleton-copy">
+                    {line("medium")}
+                    {line()}
+                  </div>
+                  <span className="notification-switch skeleton-tile" />
                 </div>
                 <div className="setting-status">{line("medium")}</div>
                 <div className="setting-status">{line("medium")}</div>
@@ -322,9 +326,10 @@ function skeletonContent(variant: SkeletonVariant, currentUser?: CurrentUser): R
               "skeleton-family-section",
             )}
           {settingsSection(menuRows(1))}
-          <div className="settings-app-info skeleton-copy">
-            {line("short")}
-            {line("short")}
+          <div className="settings-app-info">
+            <span className="skeleton-tile" />
+            <strong>{line("short")}</strong>
+            <small>{line("short")}</small>
           </div>
         </div>
       );

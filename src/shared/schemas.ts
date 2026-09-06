@@ -49,6 +49,7 @@ export const eventCoverInputSchema = z.object({
 });
 
 export const postInputSchema = z.object({
+  requestId: z.string().uuid().optional(),
   caption: z.string().trim().max(2000).default(""),
   eventId: z.string().min(1).nullable().default(null),
   sceneId: z.string().min(1).nullable().default(null),
@@ -64,6 +65,7 @@ export const uploadFilesSchema = z.object({
   files: z
     .array(
       z.object({
+        requestId: z.string().uuid().optional(),
         filename: z.string().min(1).max(255),
         mimeType: z.enum(["image/jpeg", "image/png", "image/webp", "video/mp4", "video/webm", "video/quicktime"]),
         byteSize: z

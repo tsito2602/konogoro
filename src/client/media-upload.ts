@@ -4,6 +4,7 @@ export type UploadStatus = "preparing" | "preparation-failed" | "ready" | "uploa
 
 export type SelectedMediaFile = {
   id: string;
+  requestId?: string;
   file: File;
   previewUrl: string;
   thumbnail: Blob | null;
@@ -41,6 +42,7 @@ export function createPendingMediaFile(file: File): SelectedMediaFile {
   const previewUrl = URL.createObjectURL(file);
   return {
     id: previewUrl,
+    requestId: crypto.randomUUID(),
     file,
     previewUrl,
     thumbnail: null,

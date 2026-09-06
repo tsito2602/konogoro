@@ -1,6 +1,13 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { api } from "./api";
-import { canReturnInApp, readPages, restoredY, restorePanelPosition } from "./reading-context";
+import {
+  canReturnInApp,
+  isReadingExcursion,
+  readPages,
+  restoredY,
+  restorePanelPosition,
+  setReadingIdentity,
+} from "./reading-context";
 vi.mock("./api", () => ({ api: vi.fn() }));
 afterEach(() => {
   vi.resetAllMocks();
@@ -63,4 +70,39 @@ describe("returning to a paginated list", () => {
     await readPages<{ media: unknown[]; nextCursor: string | null }>("/album", "media", 100);
     expect(api).toHaveBeenCalledTimes(2);
   });
+});
+
+it("retains same-user history but clears it on role, user and logout transitions", () => {
+  const panel = Object.assign(new EventTarget(), { scrollTop: 100 }) as unknown as HTMLElement;
+  const initial = vi.fn();
+  setReadingIdentity("member:owner");
+  restorePanelPosition("session", panel, initial)();
+  setReadingIdentity("member:owner");
+  restorePanelPosition("session", panel, initial)();
+  expect(initial).toHaveBeenCalledTimes(1);
+  setReadingIdentity("member:viewer");
+  restorePanelPosition("session", panel, initial)();
+  setReadingIdentity("other:viewer");
+  restorePanelPosition("session", panel, initial)();
+  setReadingIdentity(null);
+  restorePanelPosition("session", panel, initial)();
+  expect(initial).toHaveBeenCalledTimes(4);
+});
+
+it("only keeps unread context for a post/detail or Viewer excursion", () => {
+  expect(isReadingExcursion("/posts/p/media/m")).toBe(true);
+  expect(isReadingExcursion("/posts/p")).toBe(true);
+  expect(isReadingExcursion("/")).toBe(false);
+  expect(isReadingExcursion("/album")).toBe(false);
+  expect(isReadingExcursion("/posts/new")).toBe(false);
+});
+
+it("deduplicates overlapping pages and continues until the restored count is reached", async () => {
+  vi.mocked(api)
+    .mockResolvedValueOnce({ posts: [{ id: "a" }], nextCursor: "2" })
+    .mockResolvedValueOnce({ posts: [{ id: "a" }], nextCursor: "3" })
+    .mockResolvedValueOnce({ posts: [{ id: "b" }], nextCursor: null });
+  const result = await readPages<{ posts: { id: string }[]; nextCursor: string | null }>("/timeline", "posts", 2);
+  expect(result.posts).toEqual([{ id: "a" }, { id: "b" }]);
+  expect(api).toHaveBeenCalledTimes(3);
 });

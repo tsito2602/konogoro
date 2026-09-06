@@ -2,7 +2,11 @@ import { useEffect, useRef } from "react";
 import { useBlocker } from "react-router-dom";
 
 /** Files stay in memory; neither browser history nor persistent storage can restore File objects. */
-export function useUnsavedChanges(dirty: boolean, busy = false) {
+export function useUnsavedChanges(
+  dirty: boolean,
+  busy = false,
+  discardMessage = "入力内容と選択した写真・動画は保存されません。この画面を離れますか？",
+) {
   const saved = useRef(false);
   const blocker = useBlocker(() => !saved.current && (dirty || busy));
   useEffect(() => {
@@ -26,10 +30,10 @@ export function useUnsavedChanges(dirty: boolean, busy = false) {
     if (busy) {
       window.alert("送信・保存中です。完了するまでこの画面でお待ちください。");
       blocker.reset();
-    } else if (window.confirm("入力内容と選択した写真・動画は保存されません。この画面を離れますか？")) {
+    } else if (window.confirm(discardMessage)) {
       blocker.proceed();
     } else blocker.reset();
-  }, [blocker, busy]);
+  }, [blocker, busy, discardMessage]);
   return () => {
     saved.current = true;
   };

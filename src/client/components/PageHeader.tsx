@@ -1,3 +1,4 @@
+import { useMeasuredHeight } from "../hooks/useMeasuredHeight";
 import { canReturnInApp } from "../reading-context";
 import { ChevronLeft } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -13,11 +14,12 @@ export function PageHeader({
   back?: boolean;
   inverse?: boolean;
 }) {
+  const heightRef = useMeasuredHeight("--page-header-height");
   const navigate = useNavigate();
   const location = useLocation();
   const backPath = location.pathname.startsWith("/events/") ? "/events" : "/";
   return (
-    <header className={`page-header${inverse ? " inverse" : ""}`}>
+    <header ref={heightRef} className={`page-header${inverse ? " inverse" : ""}`}>
       <div className="page-header-inner">
         <div className="header-side">
           {back && (

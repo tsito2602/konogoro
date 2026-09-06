@@ -29,8 +29,15 @@ export function viewerNavigationItems(
   postId: string,
   postMedia: Array<Pick<Media, "id" | "kind" | "thumbnailUrl">>,
   albumMedia?: AlbumMedia[],
+  currentMediaId?: string,
 ): ViewerNavigationItem[] {
-  if (albumMedia?.some((item) => item.postId === postId && postMedia.some((media) => media.id === item.id))) {
+  if (
+    albumMedia?.some(
+      (item) =>
+        item.postId === postId &&
+        (currentMediaId ? item.id === currentMediaId : postMedia.some((media) => media.id === item.id)),
+    )
+  ) {
     return albumMedia;
   }
   return postMedia.map((media) => ({ ...media, postId }));
@@ -97,8 +104,8 @@ export function MediaViewerPage() {
   const post = loadedPost?.postId === postId ? loadedPost.post : null;
   const current = post?.media.find((item) => item.id === mediaId);
   const navigationItems = useMemo(
-    () => (post ? viewerNavigationItems(postId, post.media, viewerState?.albumMedia) : []),
-    [post, postId, viewerState?.albumMedia],
+    () => (post ? viewerNavigationItems(postId, post.media, viewerState?.albumMedia, mediaId) : []),
+    [post, postId, viewerState?.albumMedia, mediaId],
   );
   const index = navigationItems.findIndex((item) => item.id === mediaId && item.postId === postId);
   const closeViewer = useCallback(() => {

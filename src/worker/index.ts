@@ -1,3 +1,4 @@
+import { retryResourceId } from "./request-id";
 import { Hono, type Context } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { ulid } from "ulid";
@@ -1018,12 +1019,18 @@ app.post("/posts", async (c) => {
       .first();
     if (!scene) return c.json({ error: "見出しがイベントと一致しません" }, 400);
   }
-  const id = ulid();
+  const id = input.requestId ? await retryResourceId(["post", c.var.currentUser.id], input.requestId) : ulid();
   const now = new Date().toISOString();
   await c.env.DB.prepare(
-    `INSERT INTO posts (id, event_id, scene_id, caption, created_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO posts (id, event_id, scene_id, caption, created_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING`,
   )
     .bind(id, input.eventId, input.sceneId, input.caption, c.var.currentUser.id, now, now)
+    .run();
+  // A lost creation response can be retried with the same key, including edited text.
+  await c.env.DB.prepare(
+    "UPDATE posts SET event_id = ?, scene_id = ?, caption = ?, updated_at = ? WHERE id = ? AND created_by = ? AND status = 'draft'",
+  )
+    .bind(input.eventId, input.sceneId, input.caption, now, id, c.var.currentUser.id)
     .run();
   return c.json({ id }, 201);
 });
@@ -1163,7 +1170,7 @@ app.post("/posts/:postId/media/upload-urls", async (c) => {
         thumbnail_object_key: string;
       }
     >();
-  if (post.status === "draft" && existing.results.length > 0) {
+  if (post.status === "draft" && existing.results.length > 0 && !input.files.every((file) => file.requestId)) {
     if (!matchesUploadFiles(existing.results, input.files)) {
       return c.json({ error: "下書きの写真・動画が選択内容と一致しません" }, 409);
     }
@@ -1188,6 +1195,18 @@ app.post("/posts/:postId/media/upload-urls", async (c) => {
     return c.json({ media: targets });
   }
 
+  const requestIds = await Promise.all(
+    input.files.map((file) =>
+      file.requestId ? retryResourceId(["media", c.var.currentUser.id, postId], file.requestId) : ulid(),
+    ),
+  );
+  if (new Set(requestIds).size !== requestIds.length)
+    return c.json({ error: "写真・動画のリクエストが重複しています" }, 400);
+  for (const [index, id] of requestIds.entries()) {
+    const previous = existing.results.find((media) => media.id === id);
+    if (previous && !matchesUploadFiles([previous], [input.files[index]]))
+      return c.json({ error: "再試行する写真・動画が元の内容と一致しません" }, 409);
+  }
   if (post.status === "published") {
     const uploaded = existing.results.filter((media) => media.status === "uploaded");
     const replacing = new Set(editInput!.replacingMediaIds);
@@ -1197,7 +1216,10 @@ app.post("/posts/:postId/media/upload-urls", async (c) => {
     ) {
       return c.json({ error: "削除対象の写真・動画が投稿と一致しません" }, 400);
     }
-    if (uploaded.length - replacing.size + input.files.length > 30) {
+    if (
+      uploaded.length - replacing.size + requestIds.filter((id) => !uploaded.some((media) => media.id === id)).length >
+      30
+    ) {
       return c.json({ error: "写真・動画は合計30件までです" }, 400);
     }
   }
@@ -1226,7 +1248,7 @@ app.post("/posts/:postId/media/upload-urls", async (c) => {
   }> = [];
 
   for (const [index, file] of input.files.entries()) {
-    const id = ulid();
+    const id = requestIds[index];
     const extension = extensionForMime(file.mimeType);
     const key = `media/${id}/original/original.${extension}`;
     const previewKey = file.mimeType.startsWith("image/") ? `media/${id}/preview/preview.webp` : null;
@@ -1259,7 +1281,7 @@ app.post("/posts/:postId/media/upload-urls", async (c) => {
       c.env.DB.prepare(
         `
     INSERT INTO media (id, post_id, kind, original_filename, mime_type, original_object_key, preview_object_key, thumbnail_object_key, byte_size, captured_at, duration_seconds, position, created_by, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO NOTHING
   `,
       ).bind(
         record.id,

@@ -7,6 +7,36 @@ type Position = { y: number; item?: string; offset?: number; index?: number };
 type Entry = { values: Map<string, unknown>; position?: Position };
 // In-memory and bounded: no personal content is persisted to device storage.
 const entries = new Map<string, Entry>();
+let readingIdentity: string | null = null;
+let readingGeneration = 0;
+let lastRoute: { key: string; pathname: string } | null = null;
+let unreadExcursion: string | null = null;
+export function setReadingIdentity(identity: string | null) {
+  if (identity === readingIdentity) return;
+  entries.clear();
+  readingGeneration += 1;
+  lastRoute = null;
+  unreadExcursion = null;
+  readingIdentity = identity;
+}
+
+export function isReadingExcursion(pathname: string): boolean {
+  return /^\/posts\/[^/]+(?:\/media\/[^/]+)?$/.test(pathname) && pathname !== "/posts/new";
+}
+function trackReadingRoute(next: { key: string; pathname: string }) {
+  if (lastRoute?.pathname === "/unread" && next.key !== lastRoute.key) {
+    if (isReadingExcursion(next.pathname)) unreadExcursion = lastRoute.key;
+    else entries.get(lastRoute.key)?.values.delete("unreadResponse");
+  }
+  if (unreadExcursion && !isReadingExcursion(next.pathname)) {
+    if (next.pathname !== "/unread" || next.key !== unreadExcursion) {
+      entries.get(unreadExcursion)?.values.delete("unreadResponse");
+    }
+    unreadExcursion = null;
+  }
+  lastRoute = next;
+}
+
 function entry(key: string): Entry {
   let value = entries.get(key);
   if (!value) {
@@ -20,6 +50,7 @@ function entry(key: string): Entry {
 export function useReadingState<T>(name: string, initial: T): [T, Dispatch<SetStateAction<T>>] {
   const location = useLocation();
   const [key] = useState(location.key);
+  const [generation] = useState(readingGeneration);
   const [value, setValue] = useState<T>(() => {
     const values = entry(key).values;
     return values.has(name) ? (values.get(name) as T) : initial;
@@ -27,12 +58,15 @@ export function useReadingState<T>(name: string, initial: T): [T, Dispatch<SetSt
   const set = useCallback<Dispatch<SetStateAction<T>>>(
     (next) => {
       setValue((previous) => {
+        if (generation !== readingGeneration) return previous;
         const value = typeof next === "function" ? (next as (value: T) => T)(previous) : next;
-        entry(key).values.set(name, value);
+        if (name !== "unreadResponse" || lastRoute?.key === key || unreadExcursion === key) {
+          entry(key).values.set(name, value);
+        }
         return value;
       });
     },
-    [key, name],
+    [key, name, generation],
   );
   useEffect(() => {
     const refresh = () => {
@@ -89,6 +123,7 @@ export function ReadingPosition() {
     };
   }, []);
   useLayoutEffect(() => {
+    trackReadingRoute({ key: location.key, pathname: location.pathname });
     const saved = entry(location.key);
     const position = saved.position;
     let restoring = true;
@@ -163,7 +198,7 @@ export function ReadingPosition() {
       window.removeEventListener("pointerdown", stop);
       window.removeEventListener("keydown", stop);
     };
-  }, [location.key]);
+  }, [location.key, location.pathname]);
   return null;
 }
 
@@ -187,12 +222,23 @@ export async function readPages<R extends { nextCursor: string | null }>(
   count: number,
 ): Promise<R> {
   const result = await api<R>(path);
-  const rows = [...(result[field] as unknown as unknown[])];
+  const rows: unknown[] = [];
+  const ids = new Set<unknown>();
+  const append = (items: unknown[]) => {
+    for (const row of items) {
+      if (row && typeof row === "object" && "id" in row) {
+        if (ids.has(row.id)) continue;
+        ids.add(row.id);
+      }
+      rows.push(row);
+    }
+  };
+  append(result[field] as unknown as unknown[]);
   const cursors = new Set<string>();
   while (rows.length < count && result.nextCursor && !cursors.has(result.nextCursor)) {
     cursors.add(result.nextCursor);
     const next = await api<R>(`${path}?cursor=${encodeURIComponent(result.nextCursor)}`);
-    rows.push(...(next[field] as unknown as unknown[]));
+    append(next[field] as unknown as unknown[]);
     result.nextCursor = next.nextCursor;
   }
   return { ...result, [field]: rows };
@@ -206,7 +252,12 @@ export function updateReadingPost(post: Post) {
           name,
           value.map((item) => (item.id === post.id ? post : item)),
         );
-      } else if (name === "detail" && value && typeof value === "object" && "posts" in value) {
+      } else if (
+        (name === "detail" || name === "unreadResponse") &&
+        value &&
+        typeof value === "object" &&
+        "posts" in value
+      ) {
         const detail = value as { posts: Post[] };
         saved.values.set(name, { ...detail, posts: detail.posts.map((item) => (item.id === post.id ? post : item)) });
       }

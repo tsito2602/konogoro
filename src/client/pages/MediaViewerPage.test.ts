@@ -84,3 +84,13 @@ describe("viewerCommentNavigation", () => {
     });
   });
 });
+
+it("uses the post when a detail photo is outside the originating album month", () => {
+  const first = { id: "month-photo", kind: "image" as const, thumbnailUrl: "/1" };
+  const second = { id: "other-month", kind: "image" as const, thumbnailUrl: "/2" };
+  const album = [{ ...first, postId: "p", capturedAt: "2026-09-01", previewUrl: "/1" }];
+  expect(viewerNavigationItems("p", [first, second], album, "other-month")).toEqual([
+    { ...first, postId: "p" },
+    { ...second, postId: "p" },
+  ]);
+});

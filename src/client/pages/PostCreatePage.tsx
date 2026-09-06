@@ -24,6 +24,7 @@ const api = <T,>(path: string, init?: RequestInit) =>
 
 export function PostCreatePage() {
   const navigate = useNavigate();
+  const [requestId] = useState(() => crypto.randomUUID());
   const showToast = useToast();
   const [searchParams] = useSearchParams();
   const [events, setEvents] = useState<EventSummary[]>([]);
@@ -267,6 +268,7 @@ export function PostCreatePage() {
       method: "POST",
       body: JSON.stringify({
         files: files.map((item) => ({
+          requestId: item.requestId,
           filename: item.file.name,
           mimeType: item.file.type,
           byteSize: item.file.size,
@@ -300,7 +302,12 @@ export function PostCreatePage() {
     try {
       const post = await api<{ id: string }>("/posts", {
         method: "POST",
-        body: JSON.stringify({ caption: form.get("caption"), eventId: eventId || null, sceneId: sceneId || null }),
+        body: JSON.stringify({
+          requestId,
+          caption: form.get("caption"),
+          eventId: eventId || null,
+          sceneId: sceneId || null,
+        }),
       });
       setDraftPostId(post.id);
       await requestUploads(post.id);

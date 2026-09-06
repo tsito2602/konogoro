@@ -1,3 +1,4 @@
+import { removeMediaWithReconciliation } from "../remove-media";
 import { uploadMissingParts } from "../upload-parts";
 import { useUnsavedChanges } from "../hooks/useUnsavedChanges";
 import { VideoBadge } from "../components/VideoBadge";
@@ -64,6 +65,7 @@ export function PostEditPage() {
         sceneId !== (post.sceneId ?? "") ||
         mediaOrder.join(",") !== post.media.map((item) => item.id).join(",")),
     saving,
+    "未保存の入力は失われます。送信・削除・保存がすでに成功した変更は残ります。この画面を離れますか？",
   );
   const filesRef = useRef(files);
   const draggedMediaIdRef = useRef<string | null>(null);
@@ -177,7 +179,11 @@ export function PostEditPage() {
     if (!item) return;
     if (item.mediaId) {
       try {
-        await api(`/posts/${post.id}/media/${item.mediaId}`, { method: "DELETE" });
+        await removeMediaWithReconciliation(
+          [item.mediaId],
+          async () => (await api<Post>(`/posts/${post.id}`)).media.map((media) => media.id),
+          (mediaId) => api(`/posts/${post.id}/media/${mediaId}`, { method: "DELETE" }),
+        );
       } catch (reason) {
         setError((reason as Error).message);
         return;
@@ -333,7 +339,11 @@ export function PostEditPage() {
       method: "PUT",
       body: JSON.stringify({ caption, eventId: eventId || null, sceneId: sceneId || null, mediaIds }),
     });
-    for (const mediaId of removedMediaIds) await api(`/posts/${post.id}/media/${mediaId}`, { method: "DELETE" });
+    await removeMediaWithReconciliation(
+      removedMediaIds,
+      async () => (await api<Post>(`/posts/${post.id}`)).media.map((media) => media.id),
+      (mediaId) => api(`/posts/${post.id}/media/${mediaId}`, { method: "DELETE" }),
+    );
     markSaved();
     showToast("投稿を更新しました");
     if ((location.state as { returnToDetail?: boolean } | null)?.returnToDetail) navigate(-1);
@@ -366,6 +376,7 @@ export function PostEditPage() {
           body: JSON.stringify({
             replacingMediaIds: removedMediaIds,
             files: ready.map(({ item }) => ({
+              requestId: item.requestId,
               filename: item.file.name,
               mimeType: item.file.type,
               byteSize: item.file.size,
@@ -378,6 +389,9 @@ export function PostEditPage() {
           ...ready.map(({ item, index }, targetIndex) => ({ item, index, target: response.media[targetIndex] })),
         );
       }
+      // Keep allocated IDs even if renewing a different failed item fails.
+      for (const { item, index, target } of entries)
+        updateFile(index, { mediaId: target.id, status: "failed", completedParts: item.completedParts });
       entries.push(
         ...(await Promise.all(
           failed.map(async ({ item, index }) => ({

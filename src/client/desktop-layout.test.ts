@@ -18,7 +18,9 @@ describe("desktop layout contract", () => {
     expect(appLayout).toContain('" has-desktop-add"');
     expect(desktopCss).toContain(".desktop-add-slot");
     expect(desktopCss).toContain(".desktop-add-button");
-    expect(desktopCss).toMatch(/\.tab-bar\.has-desktop-add\s*{\s*grid-template-rows: 94px repeat\(5, 52px\);/);
+    expect(desktopCss).toMatch(
+      /\.tab-bar\.has-desktop-add\s*{\s*grid-template-rows: minmax\(94px, auto\) repeat\(5, minmax\(52px, auto\)\);/,
+    );
     expect(desktopCss).toMatch(/\.mobile-add-button\s*{\s*display: none;/);
   });
 

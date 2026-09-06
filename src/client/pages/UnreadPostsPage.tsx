@@ -1,3 +1,4 @@
+import { useReadingState } from "../reading-context";
 import { Check } from "lucide-react";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
@@ -12,7 +13,8 @@ import { useSeenTracking } from "../hooks/useSeenTracking";
 type UnreadPostsResponse = { posts: Post[]; unreadCount: number };
 
 export function UnreadPostsPage() {
-  const [response, setResponse] = useState<UnreadPostsResponse | null>(null);
+  const [response, setResponse] = useReadingState<UnreadPostsResponse | null>("unreadResponse", null);
+  const [resumingExcursion] = useState(Boolean(response));
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const fetching = useRef(false);
@@ -39,9 +41,10 @@ export function UnreadPostsPage() {
       fetching.current = false;
       setLoading(false);
     }
-  }, []);
+  }, [setResponse]);
 
   useEffect(() => {
+    if (resumingExcursion) return;
     let active = true;
     void api<UnreadPostsResponse>("/unread-posts")
       .then((result) => {
@@ -53,7 +56,7 @@ export function UnreadPostsPage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [resumingExcursion, setResponse]);
   const post = response?.posts[0];
   return (
     <>
@@ -70,6 +73,18 @@ export function UnreadPostsPage() {
             loading={loading}
             loadError={error}
             loadNext={loadNext}
+            onViewed={() =>
+              setResponse((current) =>
+                current
+                  ? {
+                      ...current,
+                      posts: current.posts.map((item) =>
+                        item.id === post.id ? { ...item, viewedByCurrentUser: true } : item,
+                      ),
+                    }
+                  : current,
+              )
+            }
           />
         )}
       </main>
@@ -83,17 +98,22 @@ function UnreadPostStep({
   loading,
   loadError,
   loadNext,
+  onViewed,
 }: {
   post: Post;
   unreadCount: number;
   loading: boolean;
   loadError: string;
   loadNext: () => Promise<void>;
+  onViewed: () => void;
 }) {
   const [viewError, setViewError] = useState("");
   const advancing = useRef(false);
   const { ref, viewed, recording, markViewed } = useSeenTracking(post.id, post.viewedByCurrentUser, {
-    onViewed: () => setViewError(""),
+    onViewed: () => {
+      setViewError("");
+      onViewed();
+    },
     onError: setViewError,
   });
   const remainingCount = Math.max(0, unreadCount - (viewed ? 1 : 0));

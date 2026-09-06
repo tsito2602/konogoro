@@ -33,7 +33,7 @@ export function PageHeader({
             </button>
           )}
         </div>
-        {title ? <h1>{title}</h1> : <span aria-hidden />}
+        {title ? <h1 title={title}>{title}</h1> : <span aria-hidden />}
         <div className="header-side header-action">{action}</div>
       </div>
     </header>

@@ -234,11 +234,7 @@ export function LoginScreen({ returnTo = "/" }: { returnTo?: string }) {
           <br />
           おすそわけ。
         </h1>
-        <p>
-          「この頃、何してるかな。」ふと気になる日々の様子が、
-          <br />
-          招待された家族にだけ、そっと届きます。
-        </p>
+        <p>「この頃、何してるかな。」ふと気になる日々の様子が、招待された家族にだけ、そっと届きます。</p>
         <a className="line-login-button" href={loginUrl}>
           LINEでログイン
         </a>

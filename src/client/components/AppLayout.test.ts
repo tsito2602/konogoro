@@ -72,7 +72,7 @@ describe("LoginScreen", () => {
     expect(html).toContain("このごろ");
     expect(html).toContain("日々のひとこまを、<br/>おすそわけ。");
     expect(html).toContain(
-      "「この頃、何してるかな。」ふと気になる日々の様子が、<br/>招待された家族にだけ、そっと届きます。",
+      "「この頃、何してるかな。」ふと気になる日々の様子が、招待された家族にだけ、そっと届きます。",
     );
     expect(html).toContain('href="/api/auth/line"');
   });

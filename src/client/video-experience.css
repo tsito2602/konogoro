@@ -91,6 +91,13 @@
 .video-viewer .viewer-header {
   min-height: 56px;
 }
+.video-viewer .viewer-info {
+  container: viewer-information / inline-size;
+  min-width: 0;
+  max-height: 50dvh;
+  overflow-y: auto;
+  overflow-wrap: anywhere;
+}
 .video-viewer .viewer-stage {
   min-width: 0;
 }
@@ -244,6 +251,15 @@
 }
 .viewer-comment-input button:disabled {
   opacity: 0.4;
+}
+@container viewer-information (width < 20em) {
+  .viewer-controls {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .viewer-controls .viewer-continuous {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
 }
 @media (min-width: 760px) {
   .video-viewer .viewer-info,

@@ -1,3 +1,4 @@
+import { PostModalContext } from "../post-modal";
 import { useMeasuredHeight } from "../hooks/useMeasuredHeight";
 import { Bell, CalendarDays, CalendarPlus, GalleryVerticalEnd, ImagePlus, Images, Plus, Settings } from "lucide-react";
 import { Fragment, useCallback, useEffect, useState } from "react";
@@ -66,6 +67,12 @@ export function AppLayout() {
     backgroundContent = routedContent;
     setBackgroundSnapshot({ routeIdentity, sessionIdentity, content: routedContent });
   }
+  const retainBackground =
+    postPageNavigation &&
+    (showPostPage || viewerPattern.test(pathname)) &&
+    !!backgroundContent &&
+    backgroundSnapshot.routeIdentity !== routeIdentity;
+  const modal = showPostPage && retainBackground;
   const hideNavigation = viewerPattern.test(pathname);
   const addPostPath = postCreatePath(pathname);
   const addingToEvent = addPostPath !== "/posts/new";
@@ -117,10 +124,18 @@ export function AppLayout() {
 
   return (
     <ToastProvider>
-      <ReadingPosition key={`${currentUser.id}:${currentUser.role}`} />
+      <ReadingPosition key={`${currentUser.id}:${currentUser.role}`} preserveWindow={retainBackground} />
       <div className={hideNavigation ? "app-shell viewer-shell" : "app-shell"}>
-        {showPostPage && backgroundContent ? backgroundContent : routedContent}
-        {showPostPage && backgroundContent ? routedContent : null}
+        <PostModalContext.Provider value={modal}>
+          <div
+            className="route-background"
+            inert={retainBackground || undefined}
+            aria-hidden={retainBackground || undefined}
+          >
+            {retainBackground ? backgroundContent : routedContent}
+          </div>
+          {retainBackground ? routedContent : null}
+        </PostModalContext.Provider>
         <PwaGuide user={currentUser} />
         {!hideNavigation && (
           <nav

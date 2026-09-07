@@ -1,3 +1,4 @@
+import { rememberPostOrigin } from "../post-modal";
 import { VideoBadge } from "./VideoBadge";
 import { commentNavigationState } from "../comment-navigation";
 import { CalendarDays, Camera, MessageCircle, Upload } from "lucide-react";
@@ -19,8 +20,11 @@ export function PostCard({
   onViewed?: () => void;
   onViewError?: (message: string) => void;
 }) {
-  const postPageState = { postPage: true };
-  const mediaViewerState = { returnToPrevious: true };
+  const postPageState = {
+    postPage: true,
+    previewPostId: post.id,
+    previewUrls: post.media.slice(0, 4).map((media) => media.thumbnailUrl),
+  };
   const { ref: seenRef, viewed } = useSeenTracking(
     post.id,
     post.viewedByCurrentUser,
@@ -37,7 +41,16 @@ export function PostCard({
   const date = post.capturedAt ?? post.publishedAt;
   const dateLabel = post.capturedAt ? "撮影日" : "投稿日";
   return (
-    <article data-reading-item={`post-${post.id}`} className="post-card" ref={seenRef}>
+    <article
+      data-reading-item={`post-${post.id}`}
+      className="post-card"
+      ref={seenRef}
+      onClickCapture={(event) => {
+        const link = (event.target as HTMLElement).closest<HTMLAnchorElement>("a");
+        if (!link || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+        if (link.getAttribute("href") === `/posts/${post.id}`) rememberPostOrigin(post.id, event.currentTarget, link);
+      }}
+    >
       <Link
         className="post-head"
         to={`/posts/${post.id}`}
@@ -68,8 +81,8 @@ export function PostCard({
           <Link
             className="media-cell"
             key={media.id}
-            to={`/posts/${post.id}/media/${media.id}`}
-            state={{ ...mediaViewerState, playVideo: media.kind === "video" }}
+            to={`/posts/${post.id}`}
+            state={postPageState}
             aria-label={`${viewed ? "" : "未閲覧の"}投稿の${media.kind === "video" ? "動画" : "写真"} ${index + 1}/${mediaCount}を開く`}
           >
             <img src={media.thumbnailUrl} alt="" loading="lazy" />
@@ -88,7 +101,7 @@ export function PostCard({
           <Link
             className="comment-count-link"
             to={`/posts/${post.id}`}
-            state={commentNavigationState(commentCount === 0 ? "write" : "read")}
+            state={commentNavigationState(commentCount === 0 ? "write" : "read", postPageState)}
             aria-label={commentCount === 0 ? commentLinkLabel : `${commentLinkLabel}を開く`}
           >
             <MessageCircle aria-hidden />
@@ -105,7 +118,7 @@ export function PostCard({
             <Link
               className="post-comment-preview"
               to={`/posts/${post.id}`}
-              state={commentNavigationState("read")}
+              state={commentNavigationState("read", postPageState)}
               aria-label={`${latestComment.authorName}さんのコメントを開く`}
             >
               <span className="post-comment-avatar" aria-hidden>
@@ -121,7 +134,11 @@ export function PostCard({
               </span>
             </Link>
             {commentCount > 1 && (
-              <Link className="more-comments-link" to={`/posts/${post.id}`} state={commentNavigationState("read")}>
+              <Link
+                className="more-comments-link"
+                to={`/posts/${post.id}`}
+                state={commentNavigationState("read", postPageState)}
+              >
                 ほかのコメントを見る
               </Link>
             )}

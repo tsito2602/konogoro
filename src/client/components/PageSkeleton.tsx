@@ -16,14 +16,14 @@ export type SkeletonVariant =
   | "members"
   | "viewer";
 
-type SkeletonProps = { variant: SkeletonVariant; currentUser?: CurrentUser };
+type SkeletonProps = { variant: SkeletonVariant; currentUser?: CurrentUser; previewUrls?: string[] };
 
-export function PageSkeleton({ variant, currentUser }: SkeletonProps) {
+export function PageSkeleton({ variant, currentUser, previewUrls }: SkeletonProps) {
   return (
     <div className={`page-skeleton skeleton-${variant}`} role="status" aria-busy="true">
       <span className="visually-hidden">読み込み中</span>
       <div className="skeleton-content" aria-hidden>
-        {skeletonContent(variant, currentUser)}
+        {skeletonContent(variant, currentUser, previewUrls)}
       </div>
     </div>
   );
@@ -146,7 +146,7 @@ function roleChoices() {
   );
 }
 
-function skeletonContent(variant: SkeletonVariant, currentUser?: CurrentUser): React.ReactNode {
+function skeletonContent(variant: SkeletonVariant, currentUser?: CurrentUser, previewUrls?: string[]): React.ReactNode {
   switch (variant) {
     case "timeline":
       return (
@@ -250,8 +250,14 @@ function skeletonContent(variant: SkeletonVariant, currentUser?: CurrentUser): R
             </div>
             {line("medium")}
           </div>
-          <div className="detail-media-grid media-grid skeleton-media-grid" data-count="4">
-            {tiles(4)}
+          <div className="detail-media-grid media-grid skeleton-media-grid" data-count={previewUrls?.length || 4}>
+            {previewUrls?.length
+              ? previewUrls.map((url, index) => (
+                  <div className="media-cell" key={index}>
+                    <img src={url} alt="" />
+                  </div>
+                ))
+              : tiles(4)}
           </div>
           <div className="post-detail-copy skeleton-copy">
             {line()}

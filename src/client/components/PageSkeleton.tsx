@@ -355,15 +355,34 @@ function skeletonContent(variant: SkeletonVariant, currentUser?: CurrentUser): R
     case "members":
       return (
         <div className="family-page skeleton-family-layout">
-          <section className="family-section">
-            <h2>{line("short")}</h2>
-            <div className="member-list">{memberRows(4)}</div>
-          </section>
-          <section className="family-section invite-section skeleton-copy">
+          <section className="family-section request-section">
             <h2>{line("short")}</h2>
             {line()}
-            {roleChoices()}
+            <div className="request-list">
+              {Array.from({ length: 2 }, (_, i) => (
+                <div className="request-row" key={i}>
+                  <span className="member-avatar skeleton-circle" />
+                  <span className="skeleton-copy">
+                    {line()}
+                    {line("short")}
+                  </span>
+                  <span className="skeleton-circle" />
+                </div>
+              ))}
+            </div>
+          </section>
+          <section className="family-section invite-section invitation-paper skeleton-copy">
+            <div className="invitation-mark">
+              <span className="invitation-seal skeleton-tile" />
+              {line("short")}
+            </div>
+            <h2>{line("short")}</h2>
+            {line()}
             <div className="skeleton-field" />
+          </section>
+          <section className="family-section">
+            <h2>{line("short")}</h2>
+            <div className="member-list">{memberRows(3)}</div>
           </section>
         </div>
       );

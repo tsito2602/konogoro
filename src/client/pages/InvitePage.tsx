@@ -4,6 +4,7 @@ import { useParams } from "react-router-dom";
 import type { InviteAccess } from "../../shared/types";
 import { api } from "../api";
 import { PageHeader } from "../components/PageHeader";
+import { InvitationMark } from "../components/InvitationMark";
 
 const unavailableCopy: Record<Exclude<InviteAccess["reason"], "available">, string> = {
   expired: "この招待URLの有効期限が切れています。",
@@ -62,7 +63,14 @@ export function InvitePage() {
       </div>
     );
   } else if (!access) {
-    content = <div className="invite-loading" aria-label="招待を確認中" />;
+    content = (
+      <div className="invite-state invitation-skeleton" role="status" aria-label="招待を確認中">
+        <span className="skeleton-circle" />
+        <span className="skeleton-line" />
+        <span className="skeleton-line" />
+        <span className="skeleton-field" />
+      </div>
+    );
   } else if (access.member || access.requestStatus === "approved") {
     content = (
       <div className="invite-state">
@@ -119,7 +127,7 @@ export function InvitePage() {
         <h2>写真や動画を見ますか？</h2>
         <p>管理者が確認した方だけが、このごろの写真や動画を見られます。</p>
         <button className="primary-button wide" type="button" onClick={requestAccess} disabled={submitting}>
-          {submitting ? "送信中…" : "閲覧をリクエストする"}
+          {submitting ? "送信中…" : "閲覧のリクエストをする"}
         </button>
       </div>
     );
@@ -129,7 +137,10 @@ export function InvitePage() {
     <>
       <PageHeader title="このごろへの招待" />
       <main className="page-content invite-page">
-        <section>{content}</section>
+        <section className="invitation-paper">
+          <InvitationMark />
+          {content}
+        </section>
       </main>
     </>
   );

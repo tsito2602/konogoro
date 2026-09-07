@@ -741,7 +741,7 @@ export function PostEditPage() {
                 <input
                   value={newScene}
                   onChange={(event) => setNewScene(event.target.value)}
-                  placeholder="例: 2日目・プレゼント"
+                  placeholder="例: 2日目 午前（午後）"
                   maxLength={100}
                 />
                 <button
@@ -758,6 +758,7 @@ export function PostEditPage() {
             ひとこと（任意）
             <textarea
               name="caption"
+              placeholder="行った場所、やったことなど"
               rows={4}
               maxLength={2000}
               value={caption ?? post.caption}

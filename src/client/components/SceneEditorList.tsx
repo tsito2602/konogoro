@@ -69,6 +69,7 @@ export function SceneEditorList({
             )}
             <input
               aria-label={`見出し${index + 1}の名前`}
+              placeholder="例: 2日目 午前（午後）"
               value={scene.title}
               maxLength={100}
               disabled={disabled}

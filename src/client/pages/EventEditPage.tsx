@@ -178,6 +178,7 @@ export function EventEditPage() {
             メモ
             <textarea
               name="description"
+              placeholder="行った場所、やったことなど"
               rows={4}
               maxLength={1000}
               value={description}
@@ -206,7 +207,7 @@ export function EventEditPage() {
               onChange={(event) => setNewSceneTitle(event.target.value)}
               required
               maxLength={100}
-              placeholder="新しい見出し"
+              placeholder="例: 2日目 午前（午後）"
               disabled={saving}
             />
             <button className="outline-button" disabled={saving}>

@@ -1,6 +1,7 @@
+import { PostModalContext, modalTransform } from "../post-modal";
 import { useMeasuredHeight } from "../hooks/useMeasuredHeight";
 import { Bell, CalendarDays, GalleryVerticalEnd, Images, Plus, Settings } from "lucide-react";
-import { Fragment, useCallback, useEffect, useState } from "react";
+import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link, Navigate, NavLink, useLocation, useOutlet, useOutletContext } from "react-router-dom";
 import type { CurrentUser } from "../../shared/types";
 import { canCreatePost, canInviteFamily, canManageEvent } from "../../shared/permissions";
@@ -28,6 +29,7 @@ export function outletKey(pathname: string, locationKey: string): string {
 export function canAccessPath(user: CurrentUser, pathname: string): boolean {
   if (/^\/posts\/(new|[^/]+\/edit)$/.test(pathname)) return canCreatePost(user);
   if (/^\/events\/new$/.test(pathname) || /^\/events\/[^/]+\/edit$/.test(pathname)) return canManageEvent(user);
+  if (pathname === "/settings/design") return Boolean(user.isStaging);
   if (pathname === "/settings/family") return canInviteFamily(user);
   return true;
 }
@@ -68,9 +70,30 @@ export function AppLayout() {
     backgroundContent = routedContent;
     setBackgroundSnapshot({ routeIdentity, sessionIdentity, content: routedContent });
   }
+  const retainBackground =
+    postPageNavigation && showPostPage && !!backgroundContent && backgroundSnapshot.routeIdentity !== routeIdentity;
+  const modal = showPostPage && retainBackground;
   const hideNavigation = viewerPattern.test(pathname);
+  const viewerEntryRef = useRef<{ path: string; rect: DOMRect } | null>(null);
+  useLayoutEffect(() => {
+    const entry = viewerEntryRef.current;
+    viewerEntryRef.current = null;
+    if (!entry || entry.path !== pathname || !viewerPattern.test(pathname)) return;
+    const viewer = document.querySelector<HTMLElement>(".media-viewer");
+    if (!viewer?.animate || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const transform = modalTransform(entry.rect, viewer.getBoundingClientRect(), window.innerWidth, window.innerHeight);
+    const animation = viewer.animate(
+      [
+        { transform: transform ?? "scale(.96)", opacity: 0 },
+        { transform: "none", opacity: 1 },
+      ],
+      { duration: 260, easing: "cubic-bezier(.2,.8,.2,1)" },
+    );
+    return () => animation.cancel();
+  }, [pathname]);
   const addPostPath = postCreatePath(pathname);
   const hideAddButton =
+    pathname === "/settings/design" ||
     /^\/posts\/[^/]+$/.test(pathname) ||
     pathname === "/posts/new" ||
     /^\/posts\/[^/]+\/edit$/.test(pathname) ||
@@ -118,10 +141,26 @@ export function AppLayout() {
 
   return (
     <ToastProvider>
-      <ReadingPosition key={`${currentUser.id}:${currentUser.role}`} />
-      <div className={hideNavigation ? "app-shell viewer-shell" : "app-shell"}>
-        {showPostPage && backgroundContent ? backgroundContent : routedContent}
-        {showPostPage && backgroundContent ? routedContent : null}
+      <ReadingPosition key={`${currentUser.id}:${currentUser.role}`} preserveWindow={retainBackground} />
+      <div
+        className={hideNavigation ? "app-shell viewer-shell" : "app-shell"}
+        onClickCapture={(event) => {
+          if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+          const link = (event.target as Element).closest<HTMLAnchorElement>("a");
+          if (link && viewerPattern.test(link.pathname))
+            viewerEntryRef.current = { path: link.pathname, rect: link.getBoundingClientRect() };
+        }}
+      >
+        <PostModalContext.Provider value={modal}>
+          <div
+            className="route-background"
+            inert={retainBackground || undefined}
+            aria-hidden={retainBackground || undefined}
+          >
+            {retainBackground ? backgroundContent : routedContent}
+          </div>
+          {retainBackground ? routedContent : null}
+        </PostModalContext.Provider>
         <PwaGuide user={currentUser} />
         {!hideNavigation && (
           <nav

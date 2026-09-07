@@ -1,8 +1,8 @@
 import { VideoBadge } from "../components/VideoBadge";
 import { useReadingState } from "../reading-context";
-import { ChevronLeft, ChevronRight, Grid2X2 } from "lucide-react";
+import { ArrowUpRight, ChevronLeft, ChevronRight, Grid2X2 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigationType } from "react-router-dom";
 import type { AlbumMedia } from "../../shared/types";
 import { api } from "../api";
 import {
@@ -114,14 +114,27 @@ export function AlbumPage() {
               ))}
             </div>
           </div>
-          <AlbumPeriod key={period} period={period} count={count} />
+          <AlbumPeriod key={period} period={period} count={count} months={months} selectPeriod={selectPeriod} />
         </>
       )}
     </main>
   );
 }
 
-function AlbumPeriod({ period, count }: { period: string; count: number }) {
+function AlbumPeriod({
+  period,
+  count,
+  months,
+  selectPeriod,
+}: {
+  period: string;
+  count: number;
+  months: AlbumMonthSummary[];
+  selectPeriod: (period: string) => void;
+}) {
+  const [lastMedia] = useReadingState("albumLastMedia", "");
+  const navigationType = useNavigationType();
+  const returnedMedia = navigationType === "POP" ? lastMedia : "";
   const [media, setMedia] = useReadingState<AlbumMedia[] | null>(`album-${period}-media`, null);
   const [nextCursor, setNextCursor] = useReadingState<string | null>(`album-${period}-cursor`, null);
   const [restoreCount] = useState(() => media?.length ?? 0);
@@ -211,32 +224,78 @@ function AlbumPeriod({ period, count }: { period: string; count: number }) {
         />
       )}
       {media?.length === 0 && (
-        <EmptyState title="この期間の写真はありません" body="別の月や年を選んで思い出を探せます。" />
+        <EmptyState kind="search" title="この期間の写真はありません" body="別の月や年を選んで思い出を探せます。" />
       )}
       {media && media.length > 0 && (
-        <section className="album-month" aria-label={label}>
-          {!allYear && (
-            <AlbumMediaLink item={media[0]} viewerMedia={media} className="album-cover">
-              <img src={media[0].previewUrl} alt="" />
-              <span className="album-cover-label">
-                <strong>{month}月</strong>
-                <small>{year}</small>
-                <small>{count}件の思い出</small>
-              </span>
-            </AlbumMediaLink>
+        <section className={allYear ? "album-year" : "album-month"} aria-label={label}>
+          {allYear ? (
+            groupAlbumMedia(media).map((group) => (
+              <section className="album-calendar-month" key={group.key} aria-label={group.label}>
+                <button
+                  className="album-month-heading"
+                  type="button"
+                  onClick={() => selectPeriod(group.key)}
+                  aria-label={`${group.label}を開く`}
+                >
+                  <span>
+                    <small>{group.year}年</small>
+                    <strong>{group.month}月</strong>
+                  </span>
+                  <span className="album-month-count">
+                    {months.find((month) => month.key === group.key)?.count ?? group.media.length}件
+                    <ArrowUpRight aria-hidden="true" />
+                  </span>
+                </button>
+                <div className="album-grid">
+                  {group.media.map((item) => (
+                    <AlbumMediaLink
+                      item={item}
+                      viewerMedia={media}
+                      key={item.id}
+                      highlighted={returnedMedia === item.id}
+                    >
+                      <img src={item.thumbnailUrl} alt="" loading="lazy" />
+                    </AlbumMediaLink>
+                  ))}
+                </div>
+              </section>
+            ))
+          ) : (
+            <>
+              <AlbumMediaLink
+                item={media[0]}
+                viewerMedia={media}
+                className="album-cover"
+                highlighted={returnedMedia === media[0].id}
+              >
+                <img src={media[0].previewUrl} alt="" />
+                <span className="album-cover-label">
+                  <small>{year}</small>
+                  <strong>{month}月</strong>
+                  <small>{count}件の思い出</small>
+                </span>
+              </AlbumMediaLink>
+              {media.length > 1 && (
+                <div className="album-grid">
+                  {media.slice(1).map((item) => (
+                    <AlbumMediaLink
+                      item={item}
+                      viewerMedia={media}
+                      key={item.id}
+                      highlighted={returnedMedia === item.id}
+                    >
+                      <img src={item.thumbnailUrl} alt="" loading="lazy" />
+                    </AlbumMediaLink>
+                  ))}
+                </div>
+              )}
+            </>
           )}
-          {(allYear || media.length > 1) && (
-            <div className="album-grid skeleton-album-grid">
-              {(allYear ? media : media.slice(1)).map((item) => (
-                <AlbumMediaLink item={item} viewerMedia={media} key={item.id}>
-                  <img src={item.thumbnailUrl} alt="" loading="lazy" />
-                </AlbumMediaLink>
+          {busy && nextCursor && (
+            <div className="album-grid album-loading-tiles" aria-hidden="true">
+              {Array.from({ length: 6 }, (_, i) => (
+                <span className="skeleton-tile" key={i} />
               ))}
-              {busy &&
-                nextCursor &&
-                Array.from({ length: 6 }, (_, i) => (
-                  <span className="skeleton-tile" key={`loading-${i}`} aria-hidden="true" />
-                ))}
             </div>
           )}
         </section>
@@ -280,16 +339,23 @@ function AlbumMediaLink({
   viewerMedia,
   className,
   children,
+  highlighted = false,
 }: {
   item: AlbumMedia;
   viewerMedia: AlbumMedia[];
   className?: string;
   children: React.ReactNode;
+  highlighted?: boolean;
 }) {
   const location = useLocation();
+  const linkRef = useRef<HTMLAnchorElement>(null);
+  useEffect(() => {
+    if (highlighted) linkRef.current?.focus({ preventScroll: true });
+  }, [highlighted]);
   return (
     <Link
-      className={className}
+      ref={linkRef}
+      className={`${className ?? ""}${highlighted ? " album-return-target" : ""}`}
       to={`/posts/${item.postId}/media/${item.id}`}
       state={{ returnToPrevious: true, albumMedia: viewerMedia, albumOrigin: location.key }}
       data-reading-item={`media-${item.id}`}

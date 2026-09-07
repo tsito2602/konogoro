@@ -1,8 +1,29 @@
+import { PostModalContext, postOrigin, modalTransform } from "../post-modal";
 import { VideoBadge } from "../components/VideoBadge";
-import { commentIntent } from "../comment-navigation";
+import { commentIntent, commentTargetId, revealComment } from "../comment-navigation";
 import { canReturnInApp, removeReadingPost, restorePanelPosition, updateReadingPost } from "../reading-context";
-import { CalendarDays, Camera, ChevronLeft, Ellipsis, MessageCircle, Pencil, Send, Trash2, Upload } from "lucide-react";
-import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import {
+  CalendarDays,
+  Camera,
+  ChevronLeft,
+  X,
+  Ellipsis,
+  MessageCircle,
+  Pencil,
+  Send,
+  Trash2,
+  Upload,
+} from "lucide-react";
+import {
+  useCallback,
+  useContext,
+  useLayoutEffect,
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import type { Comment, Post } from "../../shared/types";
 import { api, formatDate } from "../api";
@@ -20,6 +41,11 @@ export function PostDetailPage() {
   const { postId = "" } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const preview = location.state as { previewPostId?: string; previewUrls?: string[] } | null;
+  const previewUrls =
+    preview?.previewPostId === postId && Array.isArray(preview.previewUrls)
+      ? preview.previewUrls.slice(0, 4)
+      : undefined;
   const currentUser = useCurrentUser();
   const showToast = useToast();
   const [post, setPost] = useState<Post | null>(null);
@@ -32,6 +58,7 @@ export function PostDetailPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const commentInputRef = useRef<HTMLInputElement>(null);
   const conversationRef = useRef<HTMLElement>(null);
+  const sentCommentId = useRef<string | null>(null);
   const fallbackPath = post?.eventId ? `/events/${post.eventId}` : "/";
   const closePage = useCallback(() => {
     if ((location.state as { postPage?: boolean } | null)?.postPage && canReturnInApp()) navigate(-1);
@@ -58,18 +85,23 @@ export function PostDetailPage() {
       const intent = commentIntent(location.state);
       if (intent === "read") {
         const conversation = conversationRef.current!;
-        panel.scrollTop =
-          conversation.getBoundingClientRect().top - panel.getBoundingClientRect().top + panel.scrollTop;
+        revealComment(conversation, commentTargetId(location.state));
         conversation.focus({ preventScroll: true });
       } else if (intent === "write") {
         commentInputRef.current?.focus({ preventScroll: true });
       }
     });
   }, [location.key, location.state, post]);
+  useEffect(() => {
+    if (!post || !sentCommentId.current || !conversationRef.current) return;
+    revealComment(conversationRef.current, sentCommentId.current);
+    sentCommentId.current = null;
+  }, [post]);
+
   if (!post && !error)
     return (
       <PostPage onClose={closePage} footer={<CommentComposerSkeleton />}>
-        <PageSkeleton variant="post-detail" />
+        <PageSkeleton variant="post-detail" previewUrls={previewUrls} />
       </PostPage>
     );
   if (error)
@@ -94,6 +126,16 @@ export function PostDetailPage() {
   };
   return (
     <PostPage
+      onEscape={
+        menuOpen || deleteOpen
+          ? () => {
+              if (!deleting) {
+                setMenuOpen(false);
+                setDeleteOpen(false);
+              }
+            }
+          : undefined
+      }
       onClose={closePage}
       overlay={
         deleteOpen && (
@@ -211,6 +253,7 @@ export function PostDetailPage() {
                   method: "POST",
                   body: JSON.stringify({ body }),
                 });
+                sentCommentId.current = comment.id;
                 setPost((current) => (current ? { ...current, comments: [...current.comments, comment] } : current));
                 form.reset();
               } catch (reason) {
@@ -327,26 +370,79 @@ function PostPage({
   footer,
   overlay,
   onClose,
+  onEscape,
 }: {
   children: ReactNode;
   action?: ReactNode;
   footer?: ReactNode;
   overlay?: ReactNode;
   onClose: () => void;
+  onEscape?: () => void;
 }) {
+  const modal = useContext(PostModalContext);
+  const { postId = "" } = useParams();
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const animationRef = useRef<Animation | null>(null);
   const [closing, setClosing] = useState(false);
-  const closeTimer = useRef<number | null>(null);
 
   const close = useCallback(() => {
     if (closing) return;
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      onClose();
-      return;
-    }
+    const panel = panelRef.current;
+    if (!modal || !panel?.animate || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return onClose();
     setClosing(true);
-    closeTimer.current = window.setTimeout(onClose, 220);
-  }, [closing, onClose]);
+    animationRef.current?.cancel();
+    const origin = postOrigin(postId);
+    const transform = origin
+      ? modalTransform(
+          origin.photo.getBoundingClientRect(),
+          panel.getBoundingClientRect(),
+          window.innerWidth,
+          window.innerHeight,
+        )
+      : null;
+    const animation = panel.animate(
+      [
+        { transform: "none", opacity: 1 },
+        { transform: transform ?? "none", opacity: 0 },
+      ],
+      { duration: 180, easing: "ease-in", fill: "forwards" },
+    );
+    animationRef.current = animation;
+    animation.finished.then(onClose).catch(() => {});
+  }, [closing, modal, onClose, postId]);
 
+  useLayoutEffect(() => {
+    const dialog = dialogRef.current;
+    const panel = panelRef.current;
+    if (!modal || !dialog || !panel) return;
+    dialog.showModal();
+    closeButtonRef.current?.focus({ preventScroll: true });
+    const origin = postOrigin(postId);
+    const transform = origin
+      ? modalTransform(
+          origin.photo.getBoundingClientRect(),
+          panel.getBoundingClientRect(),
+          window.innerWidth,
+          window.innerHeight,
+        )
+      : null;
+    if (panel.animate && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      animationRef.current = panel.animate(
+        [
+          { transform: transform ?? "scale(.96)", opacity: 0 },
+          { transform: "none", opacity: 1 },
+        ],
+        { duration: 260, easing: "cubic-bezier(.2,.8,.2,1)" },
+      );
+    }
+    return () => {
+      animationRef.current?.cancel();
+      dialog.close();
+      if (origin?.trigger.isConnected) origin.trigger.focus({ preventScroll: true });
+    };
+  }, [modal, postId]);
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -355,26 +451,30 @@ function PostPage({
     };
   }, []);
   useEffect(() => {
+    if (modal) return;
     const keydown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") close();
+      if (event.key === "Escape" && !event.defaultPrevented) {
+        if (onEscape) onEscape();
+        else close();
+      }
     };
     window.addEventListener("keydown", keydown);
     return () => window.removeEventListener("keydown", keydown);
-  }, [close]);
-  useEffect(
-    () => () => {
-      if (closeTimer.current !== null) window.clearTimeout(closeTimer.current);
-    },
-    [],
-  );
+  }, [close, modal, onEscape]);
 
-  return (
-    <div className={`post-page-layer${closing ? " closing" : ""}`}>
+  const content = (
+    <div ref={panelRef} className={`post-page-layer${modal ? " post-modal-panel" : ""}`}>
       <header className="page-header post-page-header">
         <div className="page-header-inner">
           <div className="header-side">
-            <button className="icon-button" type="button" onClick={close} aria-label="戻る">
-              <ChevronLeft />
+            <button
+              ref={closeButtonRef}
+              className="icon-button"
+              type="button"
+              onClick={close}
+              aria-label={modal ? "投稿を閉じる" : "戻る"}
+            >
+              {modal ? <X /> : <ChevronLeft />}
             </button>
           </div>
           <span aria-hidden />
@@ -385,6 +485,25 @@ function PostPage({
       {footer}
       {overlay}
     </div>
+  );
+  return modal ? (
+    <dialog
+      ref={dialogRef}
+      className="post-modal"
+      aria-label="投稿詳細"
+      onCancel={(event) => {
+        event.preventDefault();
+        if (onEscape) onEscape();
+        else close();
+      }}
+      onClick={(event) => {
+        if (event.target === event.currentTarget) close();
+      }}
+    >
+      {content}
+    </dialog>
+  ) : (
+    content
   );
 }
 
@@ -397,7 +516,7 @@ function formatPostDate(value: string | null): string {
 
 function CommentRow({ comment, onDelete }: { comment: Comment; onDelete: () => Promise<void> }) {
   return (
-    <article className="comment">
+    <article className="comment" data-comment-id={comment.id}>
       <div className="comment-avatar">
         {comment.avatarUrl ? <img src={comment.avatarUrl} alt="" /> : comment.authorName.slice(0, 1)}
       </div>

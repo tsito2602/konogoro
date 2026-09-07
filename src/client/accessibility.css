@@ -83,3 +83,8 @@
     text-underline-offset: 0.2em;
   }
 }
+
+/* Programmatic return focus stays available without a ring after pointer navigation. */
+:root[data-input-method="pointer"] :where(a, button, [tabindex]):not(input, select, textarea, [contenteditable]):focus {
+  outline: none;
+}

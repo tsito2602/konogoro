@@ -1,22 +1,27 @@
 import { useReadingState } from "../reading-context";
 import { Pencil } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { Link, useParams } from "react-router-dom";
-import type { EventDetail } from "../../shared/types";
+import { Link, useLocation, useParams, useViewTransitionState } from "react-router-dom";
+import type { EventDetail, EventSummary } from "../../shared/types";
 import { api, eventDate } from "../api";
 import { EmptyState, ErrorState } from "../components/AsyncState";
 import { PageHeader } from "../components/PageHeader";
-import { PageSkeleton } from "../components/PageSkeleton";
+import { PageSkeleton, EventPostsSkeleton } from "../components/PageSkeleton";
 import { PostCard } from "../components/PostCard";
 import { useCurrentUser } from "../components/AppLayout";
+import "../event-material.css";
 import { canCreatePost, canManageEvent } from "../../shared/permissions";
 
 export function EventDetailPage() {
   const currentUser = useCurrentUser();
   const canAddPost = canCreatePost(currentUser);
   const { eventId = "" } = useParams();
+  const location = useLocation();
+  const transitioning = useViewTransitionState("/events");
+  const preview = (location.state as { eventPreview?: EventSummary } | null)?.eventPreview;
   const [detail, setDetail] = useReadingState<EventDetail | null>("detail", null);
   const [error, setError] = useState("");
+  const cover = detail ?? (preview?.id === eventId ? preview : null);
   const coverImageRef = useRef<HTMLDivElement>(null);
   const load = () => {
     setError("");
@@ -25,9 +30,13 @@ export function EventDetailPage() {
       .catch((reason: Error) => setError(reason.message));
   };
   useEffect(() => {
-    void api<EventDetail>(`/events/${eventId}`)
+    const controller = new AbortController();
+    void api<EventDetail>(`/events/${eventId}`, { signal: controller.signal })
       .then(setDetail)
-      .catch((reason: Error) => setError(reason.message));
+      .catch((reason: Error) => {
+        if (!controller.signal.aborted) setError(reason.message);
+      });
+    return () => controller.abort();
   }, [eventId, setDetail]);
   useEffect(() => {
     const coverImage = coverImageRef.current;
@@ -49,8 +58,8 @@ export function EventDetailPage() {
       window.removeEventListener("scroll", handleScroll);
       if (animationFrame) window.cancelAnimationFrame(animationFrame);
     };
-  }, [detail?.coverUrl]);
-  if (!detail && !error)
+  }, [cover?.coverUrl]);
+  if (!cover && !error)
     return (
       <>
         <PageHeader
@@ -68,15 +77,15 @@ export function EventDetailPage() {
         <ErrorState message={error} retry={load} />
       </>
     );
-  if (!detail) return null;
-  const description = detail.description.trim();
+  if (!cover) return null;
+  const description = detail?.description.trim();
   return (
     <>
       <PageHeader
-        title={detail.title}
+        title={cover.title}
         back
         action={
-          canManageEvent(currentUser) ? (
+          detail && canManageEvent(currentUser) ? (
             <Link
               className="icon-button"
               to={`/events/${detail.id}/edit`}
@@ -89,32 +98,38 @@ export function EventDetailPage() {
         }
       />
       <main className="event-detail">
-        <section className={`event-cover${detail.coverUrl ? "" : " no-cover"}`}>
-          {detail.coverUrl && (
+        <section
+          className={`event-cover${cover.coverUrl ? "" : " no-cover"}`}
+          style={{ viewTransitionName: transitioning ? "event-surface" : undefined }}
+        >
+          {cover.coverUrl && (
             <div
               ref={coverImageRef}
               className="event-cover-image"
               style={{
-                backgroundImage: `url(${detail.coverUrl})`,
-                backgroundPosition: `${detail.coverPosition?.x ?? 50}% ${detail.coverPosition?.y ?? 50}%`,
+                backgroundImage: `url(${cover.coverUrl})`,
+                backgroundPosition: `${cover.coverPosition?.x ?? 50}% ${cover.coverPosition?.y ?? 50}%`,
               }}
               aria-hidden
             />
           )}
           <div className="event-cover-copy">
-            <p>{eventDate(detail.startDate, detail.endDate)}</p>
-            <h2>{detail.title}</h2>
+            <p>{eventDate(cover.startDate, cover.endDate)}</p>
+            <h2 style={{ viewTransitionName: transitioning ? "event-title" : undefined }}>{cover.title}</h2>
           </div>
         </section>
         <section className="event-post-feed" aria-label="イベントの投稿">
-          <p className="event-detail-counts">{eventCounts(detail.postCount, detail.photoCount, detail.videoCount)}</p>
+          {!detail && <EventPostsSkeleton />}
+          {detail && (
+            <p className="event-detail-counts">{eventCounts(detail.postCount, detail.photoCount, detail.videoCount)}</p>
+          )}
           {description && (
             <section className="event-memo" aria-labelledby="event-memo-title">
               <h3 id="event-memo-title">メモ</h3>
               <p>{description}</p>
             </section>
           )}
-          {detail.posts.length === 0 && (
+          {detail?.posts.length === 0 && (
             <EmptyState
               title="まだ投稿がありません"
               body={canAddPost ? "このイベントの写真を追加できます。" : "投稿が追加されると、ここに表示されます。"}
@@ -127,7 +142,7 @@ export function EventDetailPage() {
               }
             />
           )}
-          {detail.posts.map((post) => (
+          {detail?.posts.map((post) => (
             <PostCard key={post.id} post={post} showContext={false} />
           ))}
         </section>

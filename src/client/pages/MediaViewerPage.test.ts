@@ -88,8 +88,8 @@ describe("mediaExitOffset", () => {
 });
 
 describe("swipeDragOffset", () => {
-  it("移動できる方向では指の動きに近い距離だけ追従する", () => {
-    expect(swipeDragOffset(-100, true, true)).toBe(-88);
+  it("移動できる方向では指の動きに1対1で追従する", () => {
+    expect(swipeDragOffset(-100, true, true)).toBe(-100);
   });
 
   it("先頭より前へ引いた場合は抵抗を付ける", () => {

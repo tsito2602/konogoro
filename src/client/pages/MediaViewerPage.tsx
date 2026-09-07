@@ -1,3 +1,4 @@
+import "../viewer-material.css";
 import { ViewerComments } from "../components/ViewerComments";
 import { clearPreparedVideo, prepareNextVideo, useVideoPreparation } from "../video-experience";
 import { VideoPlayer } from "../components/VideoPlayer";
@@ -77,7 +78,7 @@ export function swipeDirection(deltaX: number, deltaY: number): "previous" | "ne
 
 export function swipeDragOffset(deltaX: number, canMovePrevious: boolean, canMoveNext: boolean) {
   const reachedEdge = (deltaX > 0 && !canMovePrevious) || (deltaX < 0 && !canMoveNext);
-  return deltaX * (reachedEdge ? 0.24 : 0.88);
+  return deltaX * (reachedEdge ? 0.24 : 1);
 }
 
 export function mediaExitOffset(direction: "previous" | "next", width: number): number {
@@ -155,8 +156,11 @@ export function MediaViewerPage() {
   const [imageGestureActive, setImageGestureActive] = useState(false);
   const stageRef = useRef<HTMLDivElement>(null);
   const thumbnailStripRef = useRef<HTMLDivElement>(null);
+  const thumbnailPositioned = useRef(false);
   const swipeStart = useRef<{ x: number; y: number; pointerId: number } | null>(null);
-  const swipeAnimation = useRef<number | null>(null);
+  const swipeAnimation = useRef<Animation | null>(null);
+  const entryOffset = useRef(0);
+  const mediaFrameRef = useRef<HTMLDivElement>(null);
   const imagePointers = useRef(new Map<number, Point>());
   const pinchStart = useRef<{
     pointerIds: [number, number];
@@ -191,13 +195,21 @@ export function MediaViewerPage() {
       });
     return () => controller.abort();
   }, [postId, retry]);
-  useEffect(
-    () => () => {
-      if (swipeAnimation.current !== null) window.clearTimeout(swipeAnimation.current);
+  useLayoutEffect(() => {
+    const frame = mediaFrameRef.current;
+    const offset = entryOffset.current;
+    entryOffset.current = 0;
+    if (frame?.animate && offset && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      swipeAnimation.current = frame.animate(
+        [{ transform: `translate3d(${offset}px, 0, 0)` }, { transform: "translate3d(0, 0, 0)" }],
+        { duration: 240, easing: "cubic-bezier(.2,.8,.2,1)" },
+      );
+    }
+    return () => {
+      swipeAnimation.current?.cancel();
       swipeAnimation.current = null;
-    },
-    [postId, mediaId],
-  );
+    };
+  }, [postId, mediaId]);
   const post = loadedPost?.postId === postId ? loadedPost.post : null;
   const current = post?.media.find((item) => item.id === mediaId);
   const navigationItems = useMemo(
@@ -241,7 +253,7 @@ export function MediaViewerPage() {
     const stripBounds = strip.getBoundingClientRect();
     const selectedBounds = selected.getBoundingClientRect();
     // Scroll this strip only; scrollIntoView could also move the page or viewer.
-    strip.scrollLeft = Math.max(
+    const left = Math.max(
       0,
       Math.min(
         strip.scrollWidth - strip.clientWidth,
@@ -253,6 +265,14 @@ export function MediaViewerPage() {
           strip.clientWidth / 2,
       ),
     );
+    strip.scrollTo({
+      left,
+      behavior:
+        thumbnailPositioned.current && !window.matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "smooth"
+          : "instant",
+    });
+    thumbnailPositioned.current = true;
   }, [current?.id, postId, navigationItems.length]);
 
   useEffect(() => {
@@ -288,10 +308,8 @@ export function MediaViewerPage() {
     (targetIndex: number) => {
       const target = navigationItems[targetIndex];
       if (!target) return;
-      if (swipeAnimation.current !== null) {
-        window.clearTimeout(swipeAnimation.current);
-        swipeAnimation.current = null;
-      }
+      swipeAnimation.current?.cancel();
+      swipeAnimation.current = null;
       setDragOffset(0);
       setDragging(false);
       resetImageTransform();
@@ -309,20 +327,12 @@ export function MediaViewerPage() {
   );
   const animateToMedia = useCallback(
     (targetIndex: number, direction: "previous" | "next") => {
-      if (targetIndex < 0 || targetIndex >= navigationItems.length || swipeAnimation.current !== null) return;
-      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-        showMedia(targetIndex);
-        return;
-      }
-      setDragging(false);
-      setDragOffset(mediaExitOffset(direction, stageRef.current?.clientWidth ?? window.innerWidth));
-      swipeAnimation.current = window.setTimeout(() => {
-        showMedia(targetIndex);
-        setDragOffset(0);
-        swipeAnimation.current = null;
-      }, 200);
+      if (targetIndex < 0 || targetIndex >= navigationItems.length || targetIndex === index) return;
+      const width = stageRef.current?.clientWidth ?? window.innerWidth;
+      entryOffset.current = -mediaExitOffset(direction, width) + dragOffset;
+      showMedia(targetIndex);
     },
-    [navigationItems.length, showMedia],
+    [navigationItems.length, index, dragOffset, showMedia],
   );
   useEffect(() => {
     const keydown = (event: KeyboardEvent) => {
@@ -352,7 +362,8 @@ export function MediaViewerPage() {
     setDragOffset(0);
   };
   const startGesture = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (swipeAnimation.current !== null) return;
+    swipeAnimation.current?.cancel();
+    swipeAnimation.current = null;
     if (event.pointerType === "mouse" && event.button !== 0) return;
     if (event.target instanceof Element && event.target.closest("video, button, a")) return;
     const onImage =
@@ -522,7 +533,8 @@ export function MediaViewerPage() {
           onPointerCancel={cancelGesture}
         >
           <div
-            key={current?.id ?? `${postId}/${mediaId}`}
+            ref={mediaFrameRef}
+            key={`${postId}/${mediaId}`}
             className={`viewer-media-frame${dragging ? " dragging" : ""}`}
             style={{ transform: `translate3d(${dragOffset}px, 0, 0)` }}
           >
@@ -559,8 +571,8 @@ export function MediaViewerPage() {
         </div>
         <div
           className="viewer-info viewer-overlay"
-          aria-hidden={!overlayVisible}
-          inert={overlayVisible ? undefined : true}
+          aria-hidden={!overlayVisible || commentsOpen}
+          inert={overlayVisible && !commentsOpen ? undefined : true}
         >
           <strong>{post?.caption || "写真・動画"}</strong>
           <span>
@@ -620,7 +632,7 @@ export function MediaViewerPage() {
             onClick={(event) => {
               if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
               event.preventDefault();
-              showMedia(mediaIndex);
+              animateToMedia(mediaIndex, mediaIndex < index ? "previous" : "next");
             }}
           >
             <img src={media.thumbnailUrl} alt="" loading="lazy" />

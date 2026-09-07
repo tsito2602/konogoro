@@ -133,7 +133,10 @@ function UnreadPostStep({
   return (
     <>
       <div className="unread-progress" role="status">
-        <span>新しい思い出</span>
+        <span className={`unread-receipt${viewed ? " recorded" : ""}`}>
+          {viewed && <Check aria-hidden="true" />}
+          {viewed ? "この投稿を閲覧しました" : "新しい思い出"}
+        </span>
         <strong>残り{remainingCount}件</strong>
       </div>
       <section ref={ref} aria-label="新しい投稿">

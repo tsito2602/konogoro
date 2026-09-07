@@ -2,8 +2,14 @@ import { useEffect, useRef, useState } from "react";
 import { moveMediaItem } from "../media-order";
 
 // Keep the real grid stable while dragging so moving siblings cannot change hit targets.
-export function useMediaReorder(order: string[], onChange: (order: string[]) => void, disabled: boolean) {
+export function useMediaReorder(
+  order: string[],
+  onChange: (order: string[]) => void,
+  disabled: boolean,
+  reduceMotion = false,
+) {
   return useLongPressReorder(order, onChange, disabled, {
+    reduceMotion,
     itemSelector: "[data-media-id]",
     dataKey: "mediaId",
     dataAttribute: "data-media-id",
@@ -36,6 +42,7 @@ export function moveItemByOffset<T>(items: T[], index: number, offset: number): 
 }
 
 type ReorderConfig = {
+  reduceMotion?: boolean;
   itemSelector: string;
   dataKey: string;
   dataAttribute: string;
@@ -87,7 +94,7 @@ function useLongPressReorder(
       const update = () => {
         if (!overlay) return;
         const scrollDelta = window.scrollY - initialScroll;
-        overlay.style.transform = `translate(${x - event.clientX}px, ${y - event.clientY}px) scale(${window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? 1 : 1.03})`;
+        overlay.style.transform = `translate(${x - event.clientX}px, ${y - event.clientY}px) scale(${config.reduceMotion || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? 1 : 1.03})`;
         // Clamp to the closest stable grid slot, including the final row and grid gaps.
         let distance = Infinity;
         positions.forEach((position, index) => {
@@ -210,6 +217,7 @@ function useLongPressReorder(
     };
   }, [
     disabled,
+    config.reduceMotion,
     config.itemSelector,
     config.dataKey,
     config.dataAttribute,

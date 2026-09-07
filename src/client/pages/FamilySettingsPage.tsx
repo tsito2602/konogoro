@@ -93,7 +93,7 @@ export function FamilySettingsPage() {
   const copyInvite = async () => {
     try {
       await navigator.clipboard.writeText(inviteUrl);
-      showToast("招待URLをコピーしました");
+      showToast("招待URLをコピーしました", { success: true });
     } catch {
       setInviteError("招待URLをコピーできませんでした");
     }

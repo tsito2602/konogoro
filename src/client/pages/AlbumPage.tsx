@@ -1,3 +1,4 @@
+import { hapticFeedback } from "../interaction-feedback";
 import { VideoBadge } from "../components/VideoBadge";
 import { useReadingState } from "../reading-context";
 import { ChevronLeft, ChevronRight, Grid2X2 } from "lucide-react";
@@ -51,6 +52,7 @@ export function AlbumPage() {
     ? months.reduce((sum, month) => sum + month.count, 0)
     : (months.find((month) => month.key === period)?.count ?? 0);
   const selectPeriod = (next: string) => {
+    if (next !== period) hapticFeedback("selection");
     setSelected(next);
     window.scrollTo(0, 0);
   };

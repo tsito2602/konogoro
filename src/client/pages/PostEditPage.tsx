@@ -413,7 +413,7 @@ export function PostEditPage() {
       (mediaId) => api(`/posts/${post.id}/media/${mediaId}`, { method: "DELETE" }),
     );
     markSaved();
-    showToast("投稿を更新しました");
+    showToast("投稿を更新しました", { success: true });
     if ((location.state as { returnToDetail?: boolean } | null)?.returnToDetail) navigate(-1);
     else navigate(`/posts/${post.id}`, { replace: true, state: location.state });
   };

@@ -27,6 +27,8 @@ import { openInstallGuide, openOnboardingGuide } from "../components/PwaGuide";
 import { useToast } from "../components/Toast";
 import { getThemePreference, setThemePreference, type ThemePreference } from "../theme";
 
+import { getHapticsEnabled, setHapticsEnabled } from "../interaction-feedback";
+
 const themeOptions = [
   { value: "system", label: "システム", description: "端末に合わせる", icon: Monitor },
   { value: "light", label: "ライト", description: "明るい表示", icon: Sun },
@@ -90,6 +92,7 @@ export function SettingsPage() {
   const [busy, setBusy] = useState(false);
   const [switchingRole, setSwitchingRole] = useState(false);
   const [theme, setTheme] = useState<ThemePreference>(getThemePreference);
+  const [hapticsEnabled, setHaptics] = useState(getHapticsEnabled);
   const showToast = useToast();
   const hasChanges = Boolean(
     user && (displayName !== user.displayName || notificationEnabled !== (user.notificationEnabled ?? false)),
@@ -137,7 +140,7 @@ export function SettingsPage() {
       setUser(result);
       setDisplayName(result.displayName);
       setNotificationEnabled(result.notificationEnabled ?? false);
-      showToast("設定を保存しました");
+      showToast("設定を保存しました", { success: true });
     } catch (reason) {
       setError((reason as Error).message);
     } finally {
@@ -316,6 +319,23 @@ export function SettingsPage() {
               </fieldset>
             </section>
 
+            <section className="settings-section">
+              <h2>操作の反応</h2>
+              <div className="settings-card feedback-setting">
+                <label>
+                  <span>操作時の振動</span>
+                  <input
+                    type="checkbox"
+                    checked={hapticsEnabled}
+                    onChange={(event) => {
+                      setHaptics(event.target.checked);
+                      setHapticsEnabled(event.target.checked);
+                    }}
+                  />
+                </label>
+                <p>選択や保存の完了を短い振動でお知らせします。対応する端末で有効です。この端末にすぐ反映されます。</p>
+              </div>
+            </section>
             <section className="settings-section">
               <h2>使い方</h2>
               <div className="settings-card">

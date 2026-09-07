@@ -1,3 +1,4 @@
+import { hapticFeedback } from "../interaction-feedback";
 import { Send, X } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { Comment, Post } from "../../shared/types";
@@ -32,6 +33,7 @@ export function ViewerComments({
         body: JSON.stringify({ body: body.trim() }),
       });
       onComment(comment);
+      hapticFeedback("success");
       setBody("");
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : "コメントを送信できませんでした");

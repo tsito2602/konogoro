@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { hapticFeedback } from "../interaction-feedback";
 import { moveMediaItem } from "../media-order";
 
 // Keep the real grid stable while dragging so moving siblings cannot change hit targets.
@@ -87,7 +88,7 @@ function useLongPressReorder(
       const update = () => {
         if (!overlay) return;
         const scrollDelta = window.scrollY - initialScroll;
-        overlay.style.transform = `translate(${x - event.clientX}px, ${y - event.clientY}px) scale(1.04)`;
+        overlay.style.transform = `translate(${x - event.clientX}px, ${y - event.clientY}px) scale(${window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? 1 : 1.03})`;
         // Clamp to the closest stable grid slot, including the final row and grid gaps.
         let distance = Infinity;
         positions.forEach((position, index) => {
@@ -117,6 +118,7 @@ function useLongPressReorder(
         frame = requestAnimationFrame(update);
       };
       const activate = () => {
+        hapticFeedback("lift");
         overlay = source.cloneNode(true) as HTMLElement;
         overlay.removeAttribute(config.dataAttribute);
         overlay.removeAttribute("tabindex");
@@ -144,6 +146,7 @@ function useLongPressReorder(
         if (active && commit) {
           onChangeRef.current(moveMediaItem(activeOrder, sourceId, cards[targetIndex].dataset[config.dataKey]!));
           setAnnouncement(`${targetIndex + 1}番目に移動しました`);
+          if (targetIndex !== sourceIndex) hapticFeedback("selection");
         } else if (active) setAnnouncement("並び替えをキャンセルしました");
       };
       const move = (next: PointerEvent) => {

@@ -8,6 +8,11 @@ const viewer: CurrentUser = { id: "viewer", displayName: "Viewer", role: "viewer
 const uploader: CurrentUser = { id: "uploader", displayName: "Uploader", role: "uploader" };
 
 describe("canAccessPath", () => {
+  it("デザイン試作はステージングでのみ利用できる", () => {
+    expect(canAccessPath({ ...viewer, isStaging: true }, "/settings/design")).toBe(true);
+    expect(canAccessPath({ ...uploader, role: "owner", isStaging: false }, "/settings/design")).toBe(false);
+    expect(canAccessPath(viewer, "/settings/design")).toBe(false);
+  });
   it.each(["/posts/new", "/posts/post-1/edit", "/events/new", "/events/event-1/edit", "/settings/family"])(
     "viewerの管理ルート%sを拒否する",
     (pathname) => {

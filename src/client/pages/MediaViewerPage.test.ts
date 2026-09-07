@@ -3,6 +3,7 @@ import {
   clampImageScale,
   clampImageTranslation,
   isImageTap,
+  isViewerOverlayVisible,
   mediaExitOffset,
   pinchImageTransform,
   pointCenter,
@@ -49,6 +50,12 @@ describe("image zoom", () => {
     expect(isImageTap(3, -4)).toBe(true);
     expect(isImageTap(8, 0)).toBe(false);
     expect(isImageTap(0, -8)).toBe(false);
+  });
+
+  it("写真の表示設定を維持しつつ動画では操作を常に表示する", () => {
+    expect(isViewerOverlayVisible("image", false)).toBe(false);
+    expect(isViewerOverlayVisible("image", true)).toBe(true);
+    expect(isViewerOverlayVisible("video", false)).toBe(true);
   });
 });
 

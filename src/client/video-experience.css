@@ -66,7 +66,8 @@
   flex-shrink: 0;
 }
 .viewer-comment-button {
-  margin-top: 5px;
+  margin-top: 2px;
+  margin-bottom: -2px;
   border-color: transparent;
   background: transparent;
 }
@@ -77,14 +78,14 @@
 }
 .viewer-comments {
   position: fixed;
-  z-index: 3;
+  z-index: 6;
   left: 0;
   right: 0;
-  bottom: 0;
+  bottom: var(--viewer-thumbnail-height);
   display: flex;
   flex-direction: column;
-  max-height: min(65dvh, calc(100dvh - 64px - env(safe-area-inset-top)));
-  padding: 8px 16px calc(16px + env(safe-area-inset-bottom));
+  max-height: min(65dvh, calc(100dvh - 64px - var(--viewer-thumbnail-height) - env(safe-area-inset-top)));
+  padding: 8px 16px 16px;
   color: white;
   background: #1a1a1a;
   border-top: 1px solid #5d5d5d;
@@ -178,12 +179,13 @@
 }
 @media (orientation: landscape) and (max-height: 560px) {
   .video-viewer {
+    --viewer-thumbnail-height: 68px;
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: minmax(140px, 1fr) auto;
   }
   .video-viewer .viewer-info {
     max-height: calc(100% - 44px);
-    padding: 44px 12px 8px;
+    padding: 30px 12px 4px;
   }
   .video-viewer .thumbnail-strip {
     padding: 8px;

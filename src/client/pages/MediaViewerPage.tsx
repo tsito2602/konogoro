@@ -88,6 +88,10 @@ export function isImageTap(deltaX: number, deltaY: number) {
   return Math.abs(deltaX) < 8 && Math.abs(deltaY) < 8;
 }
 
+export function isViewerOverlayVisible(kind: Media["kind"] | undefined, preferredVisible: boolean) {
+  return kind === "video" || preferredVisible;
+}
+
 type ViewerNavigationItem = Pick<AlbumMedia, "id" | "postId" | "kind" | "thumbnailUrl">;
 
 export function viewerNavigationItems(
@@ -291,7 +295,6 @@ export function MediaViewerPage() {
       setDragOffset(0);
       setDragging(false);
       resetImageTransform();
-      setViewerOverlayVisible(true);
       setCommentsOpen(false);
       navigate(`/posts/${target.postId}/media/${target.id}`, {
         replace: true,
@@ -493,13 +496,14 @@ export function MediaViewerPage() {
     setImageGestureActive(false);
     cancelSwipe();
   };
+  const overlayVisible = isViewerOverlayVisible(current?.kind, viewerOverlayVisible);
   return (
     <main className={`media-viewer video-viewer${commentsOpen ? " comments-open" : ""}`}>
-      <div className={`viewer-viewport${viewerOverlayVisible ? " overlay-visible" : " overlay-hidden"}`}>
+      <div className={`viewer-viewport${overlayVisible ? " overlay-visible" : " overlay-hidden"}`}>
         <header
           className="viewer-header viewer-overlay"
-          aria-hidden={!viewerOverlayVisible}
-          inert={viewerOverlayVisible ? undefined : true}
+          aria-hidden={!overlayVisible}
+          inert={overlayVisible ? undefined : true}
         >
           <button className="viewer-button" type="button" onClick={closeViewer} aria-label="閉じる">
             <X />
@@ -555,8 +559,8 @@ export function MediaViewerPage() {
         </div>
         <div
           className="viewer-info viewer-overlay"
-          aria-hidden={!viewerOverlayVisible}
-          inert={viewerOverlayVisible ? undefined : true}
+          aria-hidden={!overlayVisible}
+          inert={overlayVisible ? undefined : true}
         >
           <strong>{post?.caption || "写真・動画"}</strong>
           <span>

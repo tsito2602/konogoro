@@ -1,6 +1,6 @@
 .video-viewer {
   height: 100dvh;
-  grid-template-rows: calc(56px + env(safe-area-inset-top)) minmax(160px, 1fr) auto auto;
+  grid-template-rows: minmax(160px, 1fr) auto;
 }
 .video-viewer .viewer-header {
   min-height: 56px;
@@ -8,9 +8,7 @@
 .video-viewer .viewer-info {
   container: viewer-information / inline-size;
   min-width: 0;
-  max-height: 50dvh;
-  overflow-y: auto;
-  overflow-wrap: anywhere;
+  max-height: min(62%, 420px);
 }
 .video-viewer .viewer-stage {
   min-width: 0;
@@ -163,7 +161,12 @@
   opacity: 0.4;
 }
 @media (min-width: 760px) {
-  .video-viewer .viewer-info,
+  .video-viewer .viewer-info {
+    right: auto;
+    left: 50%;
+    width: min(calc(100% - 32px), 800px);
+    transform: translateX(-50%);
+  }
   .video-viewer .thumbnail-strip {
     width: min(100%, 800px);
     justify-self: center;
@@ -175,26 +178,14 @@
 }
 @media (orientation: landscape) and (max-height: 560px) {
   .video-viewer {
-    position: relative;
-    grid-template-columns: minmax(0, 1fr) minmax(230px, 32%);
-    grid-template-rows: 52px minmax(140px, 1fr) 68px;
-  }
-  .video-viewer .viewer-header {
-    grid-column: 1 / -1;
-  }
-  .video-viewer .viewer-stage {
-    grid-column: 1;
-    grid-row: 2 / 4;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: minmax(140px, 1fr) auto;
   }
   .video-viewer .viewer-info {
-    grid-column: 2;
-    grid-row: 2;
-    overflow-y: auto;
-    padding: 8px;
+    max-height: calc(100% - 44px);
+    padding: 44px 12px 8px;
   }
   .video-viewer .thumbnail-strip {
-    grid-column: 2;
-    grid-row: 3;
     padding: 8px;
   }
   .viewer-controls {
@@ -203,7 +194,8 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .video-viewer .viewer-media-frame {
+  .video-viewer .viewer-media-frame,
+  .video-viewer .viewer-overlay {
     transition: none;
   }
 }

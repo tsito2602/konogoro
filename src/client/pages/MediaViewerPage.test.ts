@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   clampImageScale,
   clampImageTranslation,
+  isImageTap,
   mediaExitOffset,
   pinchImageTransform,
   pointCenter,
@@ -42,6 +43,12 @@ describe("image zoom", () => {
     expect(
       clampImageTranslation({ scale: 1, x: 100, y: -100 }, { width: 300, height: 200 }, { width: 300, height: 300 }),
     ).toEqual({ scale: 1, x: 0, y: 0 });
+  });
+
+  it("短い指移動だけをオーバーレイ切替のタップとみなす", () => {
+    expect(isImageTap(3, -4)).toBe(true);
+    expect(isImageTap(8, 0)).toBe(false);
+    expect(isImageTap(0, -8)).toBe(false);
   });
 });
 
@@ -169,5 +176,8 @@ it("keeps viewer controls and album selection rendered while another post is loa
   expect(html).toContain('aria-label="前の写真・動画"');
   expect(html).toContain('aria-current="true"');
   expect(html).toContain('role="status"');
+  expect(html).toContain('class="viewer-viewport overlay-visible"');
+  expect(html).toContain('class="viewer-header viewer-overlay"');
+  expect(html).toContain('class="viewer-info viewer-overlay"');
   expect(html).not.toContain("skeleton-viewer");
 });

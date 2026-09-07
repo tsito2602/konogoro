@@ -84,6 +84,10 @@ export function mediaExitOffset(direction: "previous" | "next", width: number): 
   return direction === "previous" ? width : -width;
 }
 
+export function isImageTap(deltaX: number, deltaY: number) {
+  return Math.abs(deltaX) < 8 && Math.abs(deltaY) < 8;
+}
+
 type ViewerNavigationItem = Pick<AlbumMedia, "id" | "postId" | "kind" | "thumbnailUrl">;
 
 export function viewerNavigationItems(
@@ -135,6 +139,7 @@ export function MediaViewerPage() {
   const [retry, setRetry] = useState(0);
   const postCache = useRef(new Map<string, Post>());
   const [commentsOpen, setCommentsOpen] = useState(false);
+  const [viewerOverlayVisible, setViewerOverlayVisible] = useState(true);
   const [finishedMedia, setFinishedMedia] = useState<string | null>(null);
   const [playingMedia, setPlayingMedia] = useState<string | null>(null);
   const commentButtonRef = useRef<HTMLButtonElement>(null);
@@ -159,6 +164,7 @@ export function MediaViewerPage() {
     pointerId: number;
     point: Point;
     transform: ViewerImageTransform;
+    allowTap: boolean;
   } | null>(null);
   const load = () => {
     setFailure(null);
@@ -285,6 +291,7 @@ export function MediaViewerPage() {
       setDragOffset(0);
       setDragging(false);
       resetImageTransform();
+      setViewerOverlayVisible(true);
       setCommentsOpen(false);
       navigate(`/posts/${target.postId}/media/${target.id}`, {
         replace: true,
@@ -369,7 +376,12 @@ export function MediaViewerPage() {
         return;
       }
       if (imageTransformRef.current.scale > MIN_IMAGE_SCALE) {
-        panStart.current = { pointerId: event.pointerId, point, transform: imageTransformRef.current };
+        panStart.current = {
+          pointerId: event.pointerId,
+          point,
+          transform: imageTransformRef.current,
+          allowTap: true,
+        };
         cancelSwipe();
         setImageGestureActive(true);
         event.preventDefault();
@@ -433,6 +445,7 @@ export function MediaViewerPage() {
           pointerId: remaining[0],
           point: remaining[1],
           transform: imageTransformRef.current,
+          allowTap: false,
         };
       } else {
         panStart.current = null;
@@ -442,8 +455,12 @@ export function MediaViewerPage() {
       return;
     }
     if (panStart.current?.pointerId === event.pointerId) {
+      const pan = panStart.current;
       panStart.current = null;
       setImageGestureActive(false);
+      if (pan.allowTap && isImageTap(event.clientX - pan.point.x, event.clientY - pan.point.y)) {
+        setViewerOverlayVisible((visible) => !visible);
+      }
       event.preventDefault();
       return;
     }
@@ -455,11 +472,16 @@ export function MediaViewerPage() {
     const start = swipeStart.current;
     swipeStart.current = null;
     if (!start || start.pointerId !== event.pointerId) return;
-    const direction = swipeDirection(event.clientX - start.x, event.clientY - start.y);
+    const deltaX = event.clientX - start.x;
+    const deltaY = event.clientY - start.y;
+    const direction = swipeDirection(deltaX, deltaY);
     const targetIndex = direction === "previous" ? index - 1 : direction === "next" ? index + 1 : -1;
     if (direction && targetIndex >= 0 && targetIndex < navigationItems.length) {
       animateToMedia(targetIndex, direction);
       return;
+    }
+    if (current?.kind === "image" && isImageTap(deltaX, deltaY)) {
+      setViewerOverlayVisible((visible) => !visible);
     }
     setDragging(false);
     setDragOffset(0);
@@ -473,103 +495,113 @@ export function MediaViewerPage() {
   };
   return (
     <main className={`media-viewer video-viewer${commentsOpen ? " comments-open" : ""}`}>
-      <header className="viewer-header">
-        <button className="viewer-button" type="button" onClick={closeViewer} aria-label="閉じる">
-          <X />
-        </button>
-        <span>{navigationItems.length ? `${index + 1} / ${navigationItems.length}` : "読み込み中"}</span>
-        <a className="viewer-button" href={current?.downloadUrl} aria-disabled={!current} aria-label="保存">
-          <Download />
-        </a>
-      </header>
-      <div
-        ref={stageRef}
-        className={`viewer-stage${current?.kind === "image" ? " image-stage" : ""}`}
-        onPointerDown={startGesture}
-        onPointerMove={moveGesture}
-        onPointerUp={finishGesture}
-        onPointerCancel={cancelGesture}
-      >
+      <div className={`viewer-viewport${viewerOverlayVisible ? " overlay-visible" : " overlay-hidden"}`}>
+        <header
+          className="viewer-header viewer-overlay"
+          aria-hidden={!viewerOverlayVisible}
+          inert={viewerOverlayVisible ? undefined : true}
+        >
+          <button className="viewer-button" type="button" onClick={closeViewer} aria-label="閉じる">
+            <X />
+          </button>
+          <span>{navigationItems.length ? `${index + 1} / ${navigationItems.length}` : "読み込み中"}</span>
+          <a className="viewer-button" href={current?.downloadUrl} aria-disabled={!current} aria-label="保存">
+            <Download />
+          </a>
+        </header>
         <div
-          key={current?.id ?? `${postId}/${mediaId}`}
-          className={`viewer-media-frame${dragging ? " dragging" : ""}`}
-          style={{ transform: `translate3d(${dragOffset}px, 0, 0)` }}
+          ref={stageRef}
+          className={`viewer-stage${current?.kind === "image" ? " image-stage" : ""}`}
+          onPointerDown={startGesture}
+          onPointerMove={moveGesture}
+          onPointerUp={finishGesture}
+          onPointerCancel={cancelGesture}
         >
-          {error || (post && !current) ? (
-            <ErrorState message={error || "写真が見つかりません"} retry={error ? load : undefined} />
-          ) : !current ? (
-            <Loading />
-          ) : current.kind === "video" ? (
-            <VideoPlayer
-              key={current.id}
-              src={current.contentUrl}
-              poster={current.thumbnailUrl}
-              mediaId={current.id}
-              autoPlay={viewerState?.playVideo === true}
-              requestedAt={viewerState?.playRequestedAt}
-              paused={commentsOpen}
-              onPlaybackStarted={() => {
-                setFinishedMedia(null);
-              }}
-              onNearEnd={() => setPlayingMedia(current.id)}
-              onEnded={() => {
-                setFinishedMedia(current.id);
-              }}
-            />
-          ) : (
-            <ViewerImage
-              src={current.contentUrl}
-              alt={`投稿の写真 ${index + 1}`}
-              transform={imageTransform}
-              interacting={imageGestureActive}
-            />
+          <div
+            key={current?.id ?? `${postId}/${mediaId}`}
+            className={`viewer-media-frame${dragging ? " dragging" : ""}`}
+            style={{ transform: `translate3d(${dragOffset}px, 0, 0)` }}
+          >
+            {error || (post && !current) ? (
+              <ErrorState message={error || "写真が見つかりません"} retry={error ? load : undefined} />
+            ) : !current ? (
+              <Loading />
+            ) : current.kind === "video" ? (
+              <VideoPlayer
+                key={current.id}
+                src={current.contentUrl}
+                poster={current.thumbnailUrl}
+                mediaId={current.id}
+                autoPlay={viewerState?.playVideo === true}
+                requestedAt={viewerState?.playRequestedAt}
+                paused={commentsOpen}
+                onPlaybackStarted={() => {
+                  setFinishedMedia(null);
+                }}
+                onNearEnd={() => setPlayingMedia(current.id)}
+                onEnded={() => {
+                  setFinishedMedia(current.id);
+                }}
+              />
+            ) : (
+              <ViewerImage
+                src={current.contentUrl}
+                alt={`投稿の写真 ${index + 1}`}
+                transform={imageTransform}
+                interacting={imageGestureActive}
+              />
+            )}
+          </div>
+        </div>
+        <div
+          className="viewer-info viewer-overlay"
+          aria-hidden={!viewerOverlayVisible}
+          inert={viewerOverlayVisible ? undefined : true}
+        >
+          <strong>{post?.caption || "写真・動画"}</strong>
+          <span>
+            {post && current ? `${formatDate(current.capturedAt ?? post.capturedAt)} · ${post.authorName}` : ""}
+          </span>
+          {post && (post.eventTitle || post.sceneTitle) && (
+            <span>{[post.eventTitle, post.sceneTitle].filter(Boolean).join(" · ")}</span>
           )}
-        </div>
-      </div>
-      <div className="viewer-info">
-        <strong>{post?.caption || "写真・動画"}</strong>
-        <span>
-          {post && current ? `${formatDate(current.capturedAt ?? post.capturedAt)} · ${post.authorName}` : ""}
-        </span>
-        {post && (post.eventTitle || post.sceneTitle) && (
-          <span>{[post.eventTitle, post.sceneTitle].filter(Boolean).join(" · ")}</span>
-        )}
-        <div className="viewer-controls">
+          <div className="viewer-controls">
+            <button
+              type="button"
+              onClick={() => animateToMedia(index - 1, "previous")}
+              disabled={index <= 0}
+              aria-label="前の写真・動画"
+            >
+              <ChevronLeft aria-hidden />
+              前へ
+            </button>
+            <button
+              type="button"
+              onClick={() => animateToMedia(index + 1, "next")}
+              disabled={index >= navigationItems.length - 1}
+              aria-label="次の写真・動画"
+            >
+              次へ
+              <ChevronRight aria-hidden />
+            </button>
+          </div>
+          {current && finishedMedia === current.id && (
+            <p className="viewer-playback-complete" role="status">
+              {index === navigationItems.length - 1 ? "最後の動画の再生が終わりました" : "再生が終わりました"}
+            </p>
+          )}
           <button
+            ref={commentButtonRef}
+            className="viewer-comment-button"
             type="button"
-            onClick={() => animateToMedia(index - 1, "previous")}
-            disabled={index <= 0}
-            aria-label="前の写真・動画"
+            disabled={!post || !current}
+            aria-expanded={commentsOpen}
+            onClick={() => setCommentsOpen((open) => !open)}
           >
-            <ChevronLeft aria-hidden />
-            前へ
-          </button>
-          <button
-            type="button"
-            onClick={() => animateToMedia(index + 1, "next")}
-            disabled={index >= navigationItems.length - 1}
-            aria-label="次の写真・動画"
-          >
-            次へ
-            <ChevronRight aria-hidden />
+            <MessageCircle aria-hidden />
+            この投稿にコメント {post && post.comments.length > 0 ? `· ${post.comments.length}件` : ""}
           </button>
         </div>
-        {current && finishedMedia === current.id && (
-          <p className="viewer-playback-complete" role="status">
-            {index === navigationItems.length - 1 ? "最後の動画の再生が終わりました" : "再生が終わりました"}
-          </p>
-        )}
-        <button
-          ref={commentButtonRef}
-          className="viewer-comment-button"
-          type="button"
-          disabled={!post || !current}
-          aria-expanded={commentsOpen}
-          onClick={() => setCommentsOpen((open) => !open)}
-        >
-          <MessageCircle aria-hidden />
-          この投稿にコメント {post && post.comments.length > 0 ? `· ${post.comments.length}件` : ""}
-        </button>
       </div>
       <div className="thumbnail-strip" ref={thumbnailStripRef}>
         {navigationItems.map((media, mediaIndex) => (

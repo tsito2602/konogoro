@@ -597,7 +597,7 @@ export function PostCreatePage() {
                         value={newScene}
                         onChange={(event) => setNewScene(event.target.value)}
                         aria-label="新しい見出し名"
-                        placeholder="例: 2日目・プレゼント"
+                        placeholder="例: 2日目 午前（午後）"
                         maxLength={100}
                       />
                       <button type="button" className="outline-button" onClick={createScene}>
@@ -615,7 +615,7 @@ export function PostCreatePage() {
                 name="caption"
                 rows={4}
                 maxLength={2000}
-                placeholder="思い出をひとこと"
+                placeholder="行った場所、やったことなど"
                 disabled={busy || !!draftPostId}
               />
             </label>

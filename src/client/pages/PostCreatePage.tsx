@@ -1,3 +1,4 @@
+import { useMediaReorder, moveItemByOffset } from "../hooks/useMediaReorder";
 import { PreparedVideoImport } from "../components/PreparedVideoImport";
 import { uploadPreparedPlayback, type PreparedPlayback } from "../video-playback";
 import { abortMultipartUpload } from "../multipart-upload";
@@ -48,6 +49,13 @@ export function PostCreatePage() {
   const [showSceneForm, setShowSceneForm] = useState(false);
   const [draggingFiles, setDraggingFiles] = useState(false);
   const [caption, setCaption] = useState("");
+  const reorderDisabled =
+    busy || importingPlayback || !!draftPostId || files.some((item) => item.status === "preparing");
+  const { gridRef, announcement } = useMediaReorder(
+    files.map((item) => item.id),
+    (ids) => setFiles((current) => ids.flatMap((id) => current.filter((item) => item.id === id))),
+    reorderDisabled,
+  );
   const markSaved = useUnsavedChanges(
     files.length > 0 ||
       !!caption ||
@@ -334,7 +342,7 @@ export function PostCreatePage() {
     await api(`/posts/${postId}/publish`, { method: "POST" });
     markSaved();
     showToast("投稿しました", { success: true });
-    navigate(`/posts/${postId}`, { replace: true });
+    navigate(`/posts/${postId}`, { replace: true, viewTransition: true });
   };
 
   const requestUploads = async (postId: string) => {
@@ -439,7 +447,7 @@ export function PostCreatePage() {
       await api(`/posts/${draftPostId}/publish`, { method: "POST" });
       markSaved();
       showToast("投稿しました", { success: true });
-      navigate(`/posts/${draftPostId}`, { replace: true });
+      navigate(`/posts/${draftPostId}`, { replace: true, viewTransition: true });
     } catch (reason) {
       setError((reason as Error).message);
       setBusy(false);
@@ -458,15 +466,34 @@ export function PostCreatePage() {
         <form onSubmit={submit} className="form-stack post-create-form">
           <MediaProcessingStatus files={files} uploading={busy} uploadProgress={progress} />
           <section className="photo-picker post-create-media">
-            <div className="selected-photos">
+            <div className="selected-photos" ref={gridRef}>
               {files.map((item) => (
-                <div className={`selected-photo ${item.status}`} key={item.id}>
+                <div
+                  className={`selected-photo ${item.status}`}
+                  key={item.id}
+                  data-media-id={item.id}
+                  tabIndex={reorderDisabled ? -1 : 0}
+                  aria-label={`${item.file.name}。長押し、または矢印キーで並び替え`}
+                  onKeyDown={(event) => {
+                    if (event.target !== event.currentTarget || reorderDisabled) return;
+                    if (["ArrowLeft", "ArrowUp", "ArrowRight", "ArrowDown"].includes(event.key)) {
+                      event.preventDefault();
+                      setFiles((current) =>
+                        moveItemByOffset(
+                          current,
+                          current.findIndex((file) => file.id === item.id),
+                          event.key === "ArrowLeft" || event.key === "ArrowUp" ? -1 : 1,
+                        ),
+                      );
+                    }
+                  }}
+                >
                   {item.file.type.startsWith("video/") && !item.thumbnail ? (
                     <span className="video-preview-placeholder" aria-hidden="true">
                       <Video />
                     </span>
                   ) : (
-                    <img src={item.previewUrl} alt="" loading="lazy" decoding="async" />
+                    <img src={item.previewUrl} alt="" loading="lazy" decoding="async" draggable={false} />
                   )}
                   {item.file.type.startsWith("video/") && <VideoBadge durationSeconds={item.durationSeconds} />}
                   {item.status === "preparing" && (
@@ -535,18 +562,22 @@ export function PostCreatePage() {
                 {[photos ? `写真${photos}枚` : "", videos ? `動画${videos}本` : ""].filter(Boolean).join(" · ")}
               </p>
             )}
+            {files.length > 1 && <p className="muted media-reorder-hint">長押しで並び替え</p>}
+            <span className="visually-hidden" role="status">
+              {announcement}
+            </span>
+            <PreparedVideoImport
+              files={files}
+              disabled={busy || preparing || !!draftPostId}
+              onImport={importPlayback}
+              onBusy={setImportingPlayback}
+            />
+            {busy && files.some((item) => item.status === "uploading") && (
+              <button type="button" className="outline-button" onClick={() => activeUploadRef.current?.abort()}>
+                送信を中断
+              </button>
+            )}
           </section>
-          <PreparedVideoImport
-            files={files}
-            disabled={busy || preparing || !!draftPostId}
-            onImport={importPlayback}
-            onBusy={setImportingPlayback}
-          />
-          {busy && files.some((item) => item.status === "uploading") && (
-            <button type="button" className="outline-button" onClick={() => activeUploadRef.current?.abort()}>
-              送信を中断
-            </button>
-          )}
           <section className="post-create-details" aria-label="投稿内容">
             <p className="selection-count">保存前に画面を閉じると、入力やファイルの再選択が必要です。</p>
             <label>

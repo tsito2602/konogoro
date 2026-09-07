@@ -43,7 +43,7 @@ describe("PostCard", () => {
     expect(html).not.toContain('class="media-grid unseen"');
   });
 
-  it("画像ごとにMedia Viewerへ直接移動する", () => {
+  it("写真から直接ビューワへ移動する", () => {
     const media = [
       {
         id: "media-1",

@@ -1,5 +1,6 @@
+import { ArrowUpRight, Bookmark } from "lucide-react";
 import { readPages, useReadingState } from "../reading-context";
-import { Fragment, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import type { Post } from "../../shared/types";
 import { api } from "../api";
@@ -59,7 +60,11 @@ export function TimelinePage() {
       <main className="timeline-layout page-content">
         {currentUser.role === "viewer" && ((!posts && !error) || (posts && unreadCount > 0)) && (
           <aside className="timeline-sidebar">
-            {posts ? <UnreadSummary count={unreadCount} /> : <UnreadSummarySkeleton />}
+            {posts ? (
+              <UnreadSummary count={unreadCount} previewUrl={unreadPreview(posts)} />
+            ) : (
+              <UnreadSummarySkeleton />
+            )}
           </aside>
         )}
         <section className="feed" aria-label="タイムライン">
@@ -82,17 +87,34 @@ export function TimelinePage() {
               }
             />
           )}
-          {posts?.map((post, index) => {
-            const month = formatTimelineMonth(timelineDate(post));
-            const previous = posts[index - 1];
-            const previousMonth = previous ? formatTimelineMonth(timelineDate(previous)) : null;
-            return (
-              <Fragment key={post.id}>
-                {month !== previousMonth && <h2 className="timeline-month-heading">{month}</h2>}
-                <PostCard post={post} onViewed={() => setUnreadCount((count) => Math.max(0, count - 1))} />
-              </Fragment>
-            );
-          })}
+          {groupTimelinePosts(posts ?? []).map((group) => (
+            <section className="timeline-month-group" key={group.posts[0].id} aria-label={group.month}>
+              <h2 className="timeline-month-heading">
+                {group.month.includes("年") ? (
+                  <>
+                    <span className="timeline-year">{group.month.split("年")[0]}年</span>
+                    <span className="timeline-month">{group.month.split("年")[1]}</span>
+                  </>
+                ) : (
+                  <span className="timeline-month">{group.month}</span>
+                )}
+              </h2>
+              {group.posts.map((post) => (
+                <PostCard
+                  key={post.id}
+                  post={post}
+                  onViewed={() => {
+                    setUnreadCount((count) => Math.max(0, count - 1));
+                    setPosts(
+                      (current) =>
+                        current?.map((item) => (item.id === post.id ? { ...item, viewedByCurrentUser: true } : item)) ??
+                        null,
+                    );
+                  }}
+                />
+              ))}
+            </section>
+          ))}
           {posts && nextCursor && (
             <div className="form-page">
               {moreError && (
@@ -118,18 +140,40 @@ export function TimelinePage() {
 
 type TimelineResponse = { posts: Post[]; nextCursor: string | null; unreadCount: number };
 
-export function UnreadSummary({ count }: { count: number }) {
+export function UnreadSummary({ count, previewUrl }: { count: number; previewUrl?: string }) {
   return (
     <section className="unread-summary" aria-labelledby="unread-summary-title">
-      <div>
+      <div className="unread-summary-art" aria-hidden="true">
+        {previewUrl ? <img src={previewUrl} alt="" /> : <Bookmark />}
+        <span className="unread-bookmark">
+          <Bookmark />
+        </span>
+      </div>
+      <div className="unread-summary-copy">
         <strong>{count}件</strong>
         <h2 id="unread-summary-title">新しい思い出があります</h2>
       </div>
       <Link className="primary-button" to="/unread">
         新しい思い出を見る
+        <ArrowUpRight aria-hidden="true" />
       </Link>
     </section>
   );
+}
+
+export function unreadPreview(posts: Post[]): string | undefined {
+  return posts.find((post) => !post.viewedByCurrentUser && post.media.length > 0)?.media[0].thumbnailUrl;
+}
+
+export function groupTimelinePosts(posts: Post[]) {
+  const groups: { month: string; posts: Post[] }[] = [];
+  for (const post of posts) {
+    const month = formatTimelineMonth(timelineDate(post));
+    const last = groups.at(-1);
+    if (last?.month === month) last.posts.push(post);
+    else groups.push({ month, posts: [post] });
+  }
+  return groups;
 }
 
 export function appendUniquePosts(current: Post[], incoming: Post[]): Post[] {

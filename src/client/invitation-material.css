@@ -39,6 +39,15 @@
 .family-page .family-section + .family-section {
   border-top: 0;
 }
+.family-page > .page-skeleton,
+.family-page > .state-message,
+.family-page > .invitation-receipt {
+  grid-column: 1 / -1;
+}
+.family-page .skeleton-family-layout {
+  max-width: none;
+  padding: 0;
+}
 .family-page .family-section.invitation-paper {
   padding: 24px;
 }

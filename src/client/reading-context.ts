@@ -116,7 +116,7 @@ export function restoredY(position: Position, items: { id: string; top: number }
   return Math.max(0, Math.min(maximum, target ? target.top - (position.offset ?? 0) : position.y));
 }
 
-export function ReadingPosition() {
+export function ReadingPosition({ preserveWindow = false }: { preserveWindow?: boolean } = {}) {
   const location = useLocation();
   useLayoutEffect(() => {
     const previous = window.history.scrollRestoration;
@@ -127,6 +127,7 @@ export function ReadingPosition() {
   }, []);
   useLayoutEffect(() => {
     trackReadingRoute({ key: location.key, pathname: location.pathname });
+    if (preserveWindow) return;
     const saved = entry(location.key);
     const position = saved.position;
     let restoring = true;
@@ -208,7 +209,7 @@ export function ReadingPosition() {
       window.removeEventListener("pointerdown", stop);
       window.removeEventListener("keydown", stop);
     };
-  }, [location.key, location.pathname]);
+  }, [location.key, location.pathname, preserveWindow]);
   return null;
 }
 

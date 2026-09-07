@@ -266,6 +266,12 @@ export function SettingsPage() {
             {user.isStaging && (
               <section className="settings-section">
                 <h2>ステージング確認</h2>
+                <Link className="settings-menu-row" to="/settings/design">
+                  <span>
+                    <strong>新しい触り心地を試す</strong>
+                    <small>イベント・写真・LINE通知のデザイン試作</small>
+                  </span>
+                </Link>
                 <StagingRoleGuide
                   currentRole={user.role}
                   disabled={switchingRole}

@@ -224,7 +224,7 @@ function AlbumPeriod({
         />
       )}
       {media?.length === 0 && (
-        <EmptyState title="この期間の写真はありません" body="別の月や年を選んで思い出を探せます。" />
+        <EmptyState kind="search" title="この期間の写真はありません" body="別の月や年を選んで思い出を探せます。" />
       )}
       {media && media.length > 0 && (
         <section className={allYear ? "album-year" : "album-month"} aria-label={label}>

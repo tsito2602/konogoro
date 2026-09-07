@@ -87,7 +87,11 @@ export function ActivityPage() {
         {error && <ErrorState message={error} retry={load} />}
         {activities && canViewMemberLastViewed(currentUser) && <MemberLastViewedList members={memberLastViewed} />}
         {activities?.length === 0 && (
-          <EmptyState title="お知らせはまだありません" body="新しい投稿やコメントがここに表示されます。" />
+          <EmptyState
+            kind="activity"
+            title="お知らせはまだありません"
+            body="新しい投稿やコメントがここに表示されます。"
+          />
         )}
         {activities && (
           <div className="activity-list">

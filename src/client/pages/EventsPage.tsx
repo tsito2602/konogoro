@@ -78,6 +78,7 @@ export function EventsPage() {
         {events && events.length > 0 && filteredEvents?.length === 0 && (
           <EmptyState
             title="条件に一致するイベントがありません"
+            kind="search"
             body="条件を変えてもう一度探してみてください。"
             action={
               <button className="outline-button" type="button" onClick={() => setFilters(emptyFilters)}>

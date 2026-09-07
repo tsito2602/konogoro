@@ -2,6 +2,7 @@ import { Send, X } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { Comment, Post } from "../../shared/types";
 import { api, formatDate } from "../api";
+import { revealComment } from "../comment-navigation";
 import { useCurrentUser } from "./AppLayout";
 
 export function ViewerComments({
@@ -18,6 +19,13 @@ export function ViewerComments({
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
   const regionRef = useRef<HTMLElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const sentCommentId = useRef<string | null>(null);
+  useEffect(() => {
+    if (!sentCommentId.current || !listRef.current) return;
+    revealComment(listRef.current, sentCommentId.current);
+    sentCommentId.current = null;
+  }, [post.comments]);
   useEffect(() => {
     regionRef.current?.focus();
   }, []);
@@ -31,6 +39,7 @@ export function ViewerComments({
         method: "POST",
         body: JSON.stringify({ body: body.trim() }),
       });
+      sentCommentId.current = comment.id;
       onComment(comment);
       setBody("");
     } catch (reason) {
@@ -49,13 +58,18 @@ export function ViewerComments({
           <X />
         </button>
       </header>
-      <div className="viewer-comment-list" aria-live="polite">
+      <div className="viewer-comment-list" aria-live="polite" ref={listRef}>
         {post.comments.length === 0 && <p>まだコメントはありません</p>}
         {post.comments.map((comment) => (
-          <article key={comment.id}>
-            <strong>{comment.authorName}</strong>
-            <time dateTime={comment.createdAt}>{formatDate(comment.createdAt)}</time>
-            <p>{comment.body}</p>
+          <article key={comment.id} data-comment-id={comment.id}>
+            <span className="comment-avatar" aria-hidden>
+              {comment.avatarUrl ? <img src={comment.avatarUrl} alt="" /> : comment.authorName.slice(0, 1)}
+            </span>
+            <div className="viewer-comment-copy">
+              <strong>{comment.authorName}</strong>
+              <time dateTime={comment.createdAt}>{formatDate(comment.createdAt)}</time>
+              <p>{comment.body}</p>
+            </div>
           </article>
         ))}
       </div>

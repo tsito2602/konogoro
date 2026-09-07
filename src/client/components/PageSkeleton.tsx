@@ -178,7 +178,7 @@ function skeletonContent(variant: SkeletonVariant, currentUser?: CurrentUser): R
           <div className="activity-list skeleton-rows">
             {Array.from({ length: 5 }, (_, i) => (
               <div className="activity-row" key={i}>
-                <span className="activity-icon skeleton-circle" />
+                <span className="activity-person skeleton-circle" />
                 <span className="activity-copy skeleton-copy">
                   {line()}
                   {line("medium")}

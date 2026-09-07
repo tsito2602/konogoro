@@ -2,7 +2,6 @@ import { Send, X } from "lucide-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { Comment, Post } from "../../shared/types";
 import { api, formatDate } from "../api";
-import { useCurrentUser } from "./AppLayout";
 
 export function ViewerComments({
   post,
@@ -13,7 +12,6 @@ export function ViewerComments({
   onClose: () => void;
   onComment: (comment: Comment) => void;
 }) {
-  const currentUser = useCurrentUser();
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
@@ -92,7 +90,6 @@ export function ViewerComments({
         ))}
       </div>
       <form onSubmit={(event) => void send(event)}>
-        <label htmlFor="viewer-comment">{currentUser?.displayName ?? "あなた"}として、この投稿にコメント</label>
         {error && (
           <p role="alert" className="form-error">
             {error}
@@ -102,6 +99,7 @@ export function ViewerComments({
           <textarea
             id="viewer-comment"
             name="body"
+            aria-label="この投稿にコメント"
             value={body}
             onChange={(event) => setBody(event.target.value)}
             placeholder="コメントを書く"

@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { hapticFeedback } from "../interaction-feedback";
 import { moveMediaItem } from "../media-order";
 
 // Keep the real grid stable while dragging so moving siblings cannot change hit targets.
@@ -118,7 +117,6 @@ function useLongPressReorder(
         frame = requestAnimationFrame(update);
       };
       const activate = () => {
-        hapticFeedback("lift");
         overlay = source.cloneNode(true) as HTMLElement;
         overlay.removeAttribute(config.dataAttribute);
         overlay.removeAttribute("tabindex");
@@ -146,7 +144,6 @@ function useLongPressReorder(
         if (active && commit) {
           onChangeRef.current(moveMediaItem(activeOrder, sourceId, cards[targetIndex].dataset[config.dataKey]!));
           setAnnouncement(`${targetIndex + 1}番目に移動しました`);
-          if (targetIndex !== sourceIndex) hapticFeedback("selection");
         } else if (active) setAnnouncement("並び替えをキャンセルしました");
       };
       const move = (next: PointerEvent) => {

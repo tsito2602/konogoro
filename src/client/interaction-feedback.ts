@@ -1,38 +1,3 @@
-const hapticStorageKey = "konogoro-haptics";
-let sessionPreference: boolean | undefined;
-let lastHapticAt = -Infinity;
-
-export function getHapticsEnabled(): boolean {
-  if (sessionPreference !== undefined) return sessionPreference;
-  try {
-    return window.localStorage.getItem(hapticStorageKey) !== "off";
-  } catch {
-    return sessionPreference ?? true;
-  }
-}
-
-export function setHapticsEnabled(enabled: boolean) {
-  sessionPreference = enabled;
-  try {
-    window.localStorage.setItem(hapticStorageKey, enabled ? "on" : "off");
-  } catch {
-    // The preference still applies to this session when storage is unavailable.
-  }
-}
-
-export function hapticFeedback(kind: "selection" | "lift" | "success" = "selection") {
-  if (typeof window === "undefined" || typeof navigator === "undefined") return;
-  if (!getHapticsEnabled() || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
-  if (typeof navigator.vibrate !== "function" || document.visibilityState === "hidden") return;
-  const now = Date.now();
-  if (now - lastHapticAt < 120) return;
-  try {
-    if (navigator.vibrate(kind === "success" ? 18 : kind === "lift" ? 12 : 8)) lastHapticAt = now;
-  } catch {
-    // Haptics are optional: browser policy or hardware must never block an action.
-  }
-}
-
 const controlSelector = 'button, a[href], input, select, textarea, label, [role="button"], [role="tab"], summary';
 const unavailableSelector = ':disabled, [aria-disabled="true"], [aria-busy="true"], [inert], [data-feedback="none"]';
 
@@ -106,15 +71,6 @@ export function initializeInteractionFeedback() {
   const focusOut = () => {
     if (key) reset();
   };
-  const change = (event: Event) => {
-    const target = event.target;
-    if (!(target instanceof HTMLInputElement) || !target.matches('[type="checkbox"], [type="radio"]')) return;
-    const checked = target.checked;
-    // Wait for controlled inputs to accept/revert their new local selection.
-    queueMicrotask(() => {
-      if (target.checked === checked && !target.closest(unavailableSelector)) hapticFeedback();
-    });
-  };
   document.addEventListener("pointerdown", down, true);
   document.addEventListener("pointermove", move, true);
   document.addEventListener("pointerup", up, true);
@@ -124,7 +80,6 @@ export function initializeInteractionFeedback() {
   document.addEventListener("keydown", keyDown, true);
   document.addEventListener("keyup", keyUp, true);
   document.addEventListener("focusout", focusOut, true);
-  document.addEventListener("change", change, true);
   document.addEventListener("visibilitychange", reset);
   window.addEventListener("blur", reset);
   return () => {
@@ -138,7 +93,6 @@ export function initializeInteractionFeedback() {
     document.removeEventListener("keydown", keyDown, true);
     document.removeEventListener("keyup", keyUp, true);
     document.removeEventListener("focusout", focusOut, true);
-    document.removeEventListener("change", change, true);
     document.removeEventListener("visibilitychange", reset);
     window.removeEventListener("blur", reset);
   };

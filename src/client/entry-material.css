@@ -87,7 +87,11 @@
 .add-menu-dialog {
   inset: auto max(18px, env(safe-area-inset-right)) calc(var(--bottom-nav-height, 64px) + 78px) auto;
   width: min(300px, calc(100vw - 36px));
+  height: max-content;
+  min-height: 0;
   max-height: calc(100dvh - 180px);
+  display: flex;
+  flex-direction: column;
   margin: 0;
   padding: 10px;
   overflow-y: auto;
@@ -106,6 +110,7 @@
   background: rgb(0 0 0 / 18%);
 }
 .add-menu-dialog > header {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -114,6 +119,7 @@
   font-size: 0.8125rem;
 }
 .add-menu-dialog > a {
+  flex-shrink: 0;
   min-height: 72px;
   border-radius: 14px;
   grid-template-columns: 40px minmax(0, 1fr);

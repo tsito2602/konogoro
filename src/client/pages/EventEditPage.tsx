@@ -160,28 +160,15 @@ export function EventEditPage() {
               disabled={saving}
             />
           </label>
-          <div className="date-row">
-            <label>
-              開始日
-              <input
-                name="startDate"
-                type="date"
-                value={startDate}
-                onChange={(event) => setStartDate(event.target.value)}
-                disabled={saving}
-              />
-            </label>
-            <label>
-              終了日
-              <input
-                name="endDate"
-                type="date"
-                value={endDate}
-                onChange={(event) => setEndDate(event.target.value)}
-                disabled={saving}
-              />
-            </label>
-          </div>
+          <DateRangePicker
+            startDate={startDate}
+            endDate={endDate}
+            disabled={saving}
+            onChange={(range) => {
+              setStartDate(range.startDate);
+              setEndDate(range.endDate);
+            }}
+          />
           <label>
             メモ
             <textarea
@@ -385,3 +372,4 @@ export function EventEditPage() {
     </>
   );
 }
+import { DateRangePicker } from "../components/DateRangePicker";

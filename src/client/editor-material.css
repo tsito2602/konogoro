@@ -22,12 +22,35 @@
 }
 .post-create-form .photo-add,
 .post-edit-form .photo-add {
+  min-width: 0;
+  padding: 12px;
+  text-align: center;
+  justify-content: center;
   border-radius: 12px;
   border: 1px dashed var(--ash);
   background: var(--surface);
   transition:
     background 160ms ease,
     border-color 160ms ease;
+}
+.post-create-form .photo-add:only-child,
+.post-edit-form .photo-add:only-child {
+  grid-column: 1 / -1;
+  aspect-ratio: auto;
+  min-height: 160px;
+  padding: 24px 16px;
+}
+.post-create-form .photo-add strong,
+.post-edit-form .photo-add strong,
+.post-edit-form .photo-add > span {
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.post-create-form .photo-add:only-child strong,
+.post-edit-form .photo-add:only-child strong,
+.post-edit-form .photo-add:only-child > span {
+  font-size: 1rem;
 }
 .post-create-form .photo-add.drag-active {
   background: color-mix(in srgb, var(--accent) 14%, var(--surface));

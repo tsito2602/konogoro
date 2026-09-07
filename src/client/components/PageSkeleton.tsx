@@ -293,9 +293,9 @@ function skeletonContent(variant: SkeletonVariant, currentUser?: CurrentUser, pr
           <div className="event-draft-preview skeleton-tile" />
           <div className="form-stack">
             {field()}
-            <div className="date-row">
-              {field()}
-              {field()}
+            <div className="skeleton-copy">
+              {line("short")}
+              <div className="skeleton-tile" style={{ height: 78, borderRadius: 16 }} />
             </div>
             {field(true)}
           </div>

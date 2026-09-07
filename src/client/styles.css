@@ -1937,7 +1937,7 @@ textarea:focus {
 }
 .scene-editor {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 44px;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 6px;
   margin-bottom: 8px;
 }

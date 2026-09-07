@@ -300,10 +300,9 @@ function skeletonContent(variant: SkeletonVariant, currentUser?: CurrentUser): R
                 <div className="skeleton-line" />
               </div>
             </section>
+            {field()}
+            {/* 見出しはイベント選択の取得後に表示するため、取得前には行を作らない。 */}
             {field(true)}
-            {field()}
-            {field()}
-            {field()}
             <div className="skeleton-field" />
           </div>
         </div>

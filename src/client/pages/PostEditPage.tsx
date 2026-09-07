@@ -1,3 +1,4 @@
+import { SceneOrderButtons, moveScene } from "../components/SceneOrderButtons";
 import { useMediaReorder } from "../hooks/useMediaReorder";
 import { PreparedVideoImport } from "../components/PreparedVideoImport";
 import { uploadPreparedPlayback, type PreparedPlayback } from "../video-playback";
@@ -42,7 +43,13 @@ export function PostEditPage() {
   const showToast = useToast();
   const [post, setPost] = useState<Post | null>(null);
   const [events, setEvents] = useState<EventSummary[]>([]);
-  const [scenes, setScenes] = useState<EventScene[]>([]);
+  const [scenes, setScenes] = useState<(EventScene & { isNew?: boolean })[]>([]);
+  const [originalScenes, setOriginalScenes] = useState<EventScene[]>([]);
+  const [scenesLoading, setScenesLoading] = useState(true);
+  const [scenesError, setScenesError] = useState("");
+  const [sceneLoadAttempt, setSceneLoadAttempt] = useState(0);
+  const scenesUnavailable = scenesLoading || !!scenesError;
+  const scenesChanged = JSON.stringify(scenes) !== JSON.stringify(originalScenes);
   const [eventId, setEventId] = useState("");
   const [sceneId, setSceneId] = useState("");
   const [newScene, setNewScene] = useState("");
@@ -62,6 +69,7 @@ export function PostEditPage() {
       (files.length > 0 ||
         removedMediaIds.length > 0 ||
         !!newScene ||
+        scenesChanged ||
         (caption !== null && caption !== post.caption) ||
         eventId !== (post.eventId ?? "") ||
         sceneId !== (post.sceneId ?? "") ||
@@ -98,10 +106,25 @@ export function PostEditPage() {
   }, [postId]);
   useEffect(() => {
     if (!eventId) return;
+    let active = true;
     void api<EventDetail>(`/events/${eventId}`)
-      .then((event) => setScenes(event.scenes))
-      .catch((reason: Error) => setError(reason.message));
-  }, [eventId]);
+      .then((event) => {
+        if (active) {
+          setScenes(event.scenes);
+          setOriginalScenes(event.scenes);
+          setScenesLoading(false);
+        }
+      })
+      .catch((reason: Error) => {
+        if (active) {
+          setScenesError(reason.message);
+          setScenesLoading(false);
+        }
+      });
+    return () => {
+      active = false;
+    };
+  }, [eventId, sceneLoadAttempt]);
   useEffect(() => {
     filesRef.current = files;
   }, [files]);
@@ -376,7 +399,13 @@ export function PostEditPage() {
   const finishSave = async (caption: FormDataEntryValue | null, mediaIds: string[]) => {
     await api(`/posts/${post.id}`, {
       method: "PUT",
-      body: JSON.stringify({ caption, eventId: eventId || null, sceneId: sceneId || null, mediaIds }),
+      body: JSON.stringify({
+        caption,
+        eventId: eventId || null,
+        sceneId: sceneId || null,
+        mediaIds,
+        ...(eventId && scenesChanged ? { scenes: scenes.map(({ id, title, isNew }) => ({ id, title, isNew })) } : {}),
+      }),
     });
     await removeMediaWithReconciliation(
       removedMediaIds,
@@ -612,9 +641,18 @@ export function PostEditPage() {
             <select
               value={eventId}
               onChange={(event) => {
+                if (
+                  (scenesChanged || !!newScene.trim()) &&
+                  !confirm("見出しの未保存の変更を破棄してイベントを変更しますか？")
+                )
+                  return;
                 setEventId(event.target.value);
                 setSceneId("");
                 setScenes([]);
+                setOriginalScenes([]);
+                setNewScene("");
+                setScenesLoading(!!event.target.value);
+                setScenesError("");
                 setShowSceneForm(false);
               }}
               disabled={saving || importingPlayback}
@@ -644,9 +682,61 @@ export function PostEditPage() {
               </select>
             </label>
           )}
+          {eventId && (
+            <section className="management-section">
+              <h2>イベントの見出しを編集</h2>
+              <p className="muted">名前と順序は同じイベントの投稿にも反映されます。変更は保存するまで確定しません。</p>
+              {scenesError ? (
+                <div role="alert">
+                  <p className="form-error">{scenesError}</p>
+                  <button
+                    type="button"
+                    className="outline-button"
+                    onClick={() => {
+                      setScenesError("");
+                      setScenesLoading(true);
+                      setSceneLoadAttempt((current) => current + 1);
+                    }}
+                  >
+                    見出しの読み込みを再試行
+                  </button>
+                </div>
+              ) : scenesLoading ? (
+                <p role="status">見出しを読み込み中…</p>
+              ) : (
+                scenes.map((scene, index) => (
+                  <div className="scene-editor" key={scene.id}>
+                    <input
+                      aria-label={`見出し${index + 1}の名前`}
+                      value={scene.title}
+                      maxLength={100}
+                      disabled={saving || importingPlayback}
+                      onChange={(event) =>
+                        setScenes((current) =>
+                          current.map((item) => (item.id === scene.id ? { ...item, title: event.target.value } : item)),
+                        )
+                      }
+                    />
+                    <SceneOrderButtons
+                      title={scene.title}
+                      index={index}
+                      count={scenes.length}
+                      disabled={saving || importingPlayback}
+                      onMove={(offset) => setScenes((current) => moveScene(current, index, offset))}
+                    />
+                  </div>
+                ))
+              )}
+            </section>
+          )}
           {eventId &&
             (!showSceneForm ? (
-              <button className="text-button inline-action" type="button" onClick={() => setShowSceneForm(true)}>
+              <button
+                className="text-button inline-action"
+                type="button"
+                disabled={saving || importingPlayback || scenesUnavailable || scenes.length >= 100}
+                onClick={() => setShowSceneForm(true)}
+              >
                 <Plus />
                 新しい見出し
               </button>
@@ -658,7 +748,12 @@ export function PostEditPage() {
                   placeholder="例: 2日目・プレゼント"
                   maxLength={100}
                 />
-                <button type="button" className="outline-button" onClick={createScene}>
+                <button
+                  type="button"
+                  className="outline-button"
+                  disabled={saving || importingPlayback || scenesUnavailable || !newScene.trim()}
+                  onClick={createScene}
+                >
                   作成
                 </button>
               </div>
@@ -681,7 +776,13 @@ export function PostEditPage() {
           )}
           <button
             className={files.some((item) => item.status === "failed") ? "outline-button wide" : "primary-button wide"}
-            disabled={saving || preparing || hasPreparationFailure}
+            disabled={
+              saving ||
+              preparing ||
+              hasPreparationFailure ||
+              (eventId !== "" && scenesUnavailable) ||
+              scenes.some((scene) => !scene.title.trim())
+            }
           >
             {files.some((item) => item.status === "failed") && <RotateCcw />}
             {saving

@@ -62,6 +62,20 @@ export const postInputSchema = z.object({
     .optional(),
 });
 
+export const postEditInputSchema = postInputSchema.extend({
+  scenes: z
+    .array(
+      z.object({
+        id: z.string().min(1),
+        title: z.string().trim().min(1).max(100),
+        isNew: z.boolean().optional(),
+      }),
+    )
+    .max(100)
+    .refine((items) => new Set(items.map((item) => item.id)).size === items.length, "同じ見出しが重複しています")
+    .optional(),
+});
+
 export const uploadFilesSchema = z.object({
   files: z
     .array(

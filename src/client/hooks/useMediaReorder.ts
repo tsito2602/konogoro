@@ -3,8 +3,61 @@ import { moveMediaItem } from "../media-order";
 
 // Keep the real grid stable while dragging so moving siblings cannot change hit targets.
 export function useMediaReorder(order: string[], onChange: (order: string[]) => void, disabled: boolean) {
+  return useLongPressReorder(order, onChange, disabled, {
+    itemSelector: "[data-media-id]",
+    dataKey: "mediaId",
+    dataAttribute: "data-media-id",
+    reorderingClass: "media-reordering",
+    placeholderClass: "media-drag-placeholder",
+    previewClass: "media-drag-preview",
+    interactiveSelector: "button, input, label, a",
+  });
+}
+
+export function useSceneReorder(order: string[], onChange: (order: string[]) => void, disabled: boolean) {
+  return useLongPressReorder(order, onChange, disabled, {
+    itemSelector: "[data-scene-id]",
+    dataKey: "sceneId",
+    dataAttribute: "data-scene-id",
+    reorderingClass: "scene-reordering",
+    placeholderClass: "scene-drag-placeholder",
+    previewClass: "scene-drag-preview",
+    interactiveSelector: "button, a, label",
+  });
+}
+
+export function moveItemByOffset<T>(items: T[], index: number, offset: number): T[] {
+  const destination = index + offset;
+  if (destination < 0 || destination >= items.length) return items;
+  const result = [...items];
+  result.splice(destination, 0, ...result.splice(index, 1));
+  return result;
+}
+
+type ReorderConfig = {
+  itemSelector: string;
+  dataKey: string;
+  dataAttribute: string;
+  reorderingClass: string;
+  placeholderClass: string;
+  previewClass: string;
+  interactiveSelector: string;
+};
+
+function useLongPressReorder(
+  order: string[],
+  onChange: (order: string[]) => void,
+  disabled: boolean,
+  config: ReorderConfig,
+) {
   const gridRef = useRef<HTMLDivElement>(null);
+  const orderRef = useRef(order);
+  const onChangeRef = useRef(onChange);
   const [announcement, setAnnouncement] = useState("");
+  useEffect(() => {
+    orderRef.current = order;
+    onChangeRef.current = onChange;
+  }, [order, onChange]);
   useEffect(() => {
     const grid = gridRef.current;
     if (!grid || disabled) return;
@@ -12,11 +65,12 @@ export function useMediaReorder(order: string[], onChange: (order: string[]) => 
     const start = (event: PointerEvent) => {
       if (!event.isPrimary || event.button !== 0 || cleanupGesture) return;
       const target = event.target as HTMLElement;
-      if (target.closest("button, input, label, a")) return;
-      const source = target.closest<HTMLElement>("[data-media-id]");
-      if (!source?.dataset.mediaId) return;
-      const sourceId = source.dataset.mediaId;
-      const cards = [...grid.querySelectorAll<HTMLElement>("[data-media-id]")];
+      if (target.closest(config.interactiveSelector)) return;
+      const source = target.closest<HTMLElement>(config.itemSelector);
+      const sourceId = source?.dataset[config.dataKey];
+      if (!source || !sourceId) return;
+      const activeOrder = orderRef.current;
+      const cards = [...grid.querySelectorAll<HTMLElement>(config.itemSelector)];
       const positions = cards.map((card) => card.getBoundingClientRect());
       const sourceIndex = cards.indexOf(source);
       const origin = positions[sourceIndex];
@@ -42,9 +96,9 @@ export function useMediaReorder(order: string[], onChange: (order: string[]) => 
             targetIndex = index;
           }
         });
-        const preview = moveMediaItem(order, sourceId, cards[targetIndex].dataset.mediaId!);
+        const preview = moveMediaItem(activeOrder, sourceId, cards[targetIndex].dataset[config.dataKey]!);
         cards.forEach((card, index) => {
-          const destination = positions[preview.indexOf(card.dataset.mediaId!)];
+          const destination = positions[preview.indexOf(card.dataset[config.dataKey]!)];
           if (destination)
             card.style.transform = `translate(${destination.left - positions[index].left}px, ${destination.top - positions[index].top}px)`;
         });
@@ -60,10 +114,10 @@ export function useMediaReorder(order: string[], onChange: (order: string[]) => 
       };
       const timer = window.setTimeout(() => {
         overlay = source.cloneNode(true) as HTMLElement;
-        overlay.removeAttribute("data-media-id");
+        overlay.removeAttribute(config.dataAttribute);
         overlay.removeAttribute("tabindex");
         overlay.setAttribute("aria-hidden", "true");
-        overlay.classList.add("media-drag-preview");
+        overlay.classList.add(config.previewClass);
         Object.assign(overlay.style, {
           left: `${origin.left}px`,
           top: `${origin.top}px`,
@@ -71,8 +125,10 @@ export function useMediaReorder(order: string[], onChange: (order: string[]) => 
           height: `${origin.height}px`,
         });
         document.body.append(overlay);
-        source.classList.add("media-drag-placeholder");
-        grid.classList.add("media-reordering");
+        source.classList.add(config.placeholderClass);
+        grid.classList.add(config.reorderingClass);
+        if (source.contains(document.activeElement)) (document.activeElement as HTMLElement).blur();
+        window.getSelection()?.removeAllRanges();
         source.setPointerCapture(event.pointerId);
         setAnnouncement("移動中。指を離すと並び替え、Escapeでキャンセルできます。");
         update();
@@ -81,7 +137,7 @@ export function useMediaReorder(order: string[], onChange: (order: string[]) => 
         const active = !!overlay;
         cleanupGesture?.();
         if (active && commit) {
-          onChange(moveMediaItem(order, sourceId, cards[targetIndex].dataset.mediaId!));
+          onChangeRef.current(moveMediaItem(activeOrder, sourceId, cards[targetIndex].dataset[config.dataKey]!));
           setAnnouncement(`${targetIndex + 1}番目に移動しました`);
         } else if (active) setAnnouncement("並び替えをキャンセルしました");
       };
@@ -123,8 +179,8 @@ export function useMediaReorder(order: string[], onChange: (order: string[]) => 
         clearTimeout(timer);
         cancelAnimationFrame(frame);
         overlay?.remove();
-        source.classList.remove("media-drag-placeholder");
-        grid.classList.remove("media-reordering");
+        source.classList.remove(config.placeholderClass);
+        grid.classList.remove(config.reorderingClass);
         cards.forEach((card) => card.style.removeProperty("transform"));
         if (source.hasPointerCapture(event.pointerId)) source.releasePointerCapture(event.pointerId);
         window.removeEventListener("pointermove", move);
@@ -137,7 +193,7 @@ export function useMediaReorder(order: string[], onChange: (order: string[]) => 
       };
     };
     const context = (event: Event) => {
-      if ((event.target as HTMLElement).closest("[data-media-id]")) event.preventDefault();
+      if ((event.target as HTMLElement).closest(config.itemSelector)) event.preventDefault();
     };
     grid.addEventListener("pointerdown", start);
     grid.addEventListener("contextmenu", context);
@@ -146,6 +202,15 @@ export function useMediaReorder(order: string[], onChange: (order: string[]) => 
       grid.removeEventListener("pointerdown", start);
       grid.removeEventListener("contextmenu", context);
     };
-  }, [order, onChange, disabled]);
+  }, [
+    disabled,
+    config.itemSelector,
+    config.dataKey,
+    config.dataAttribute,
+    config.reorderingClass,
+    config.placeholderClass,
+    config.previewClass,
+    config.interactiveSelector,
+  ]);
   return { gridRef, announcement };
 }

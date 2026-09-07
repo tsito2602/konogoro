@@ -1,4 +1,3 @@
-import { SceneOrderButtons, moveScene } from "../components/SceneOrderButtons";
 import { Plus, Trash2, Video } from "lucide-react";
 import { useCallback, useEffect, useState, useRef, type FormEvent } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
@@ -8,6 +7,7 @@ import { ErrorState } from "../components/AsyncState";
 import { PageHeader } from "../components/PageHeader";
 import { PageSkeleton } from "../components/PageSkeleton";
 import { useToast } from "../components/Toast";
+import { moveItemByOffset, useSceneReorder } from "../hooks/useMediaReorder";
 
 type EditableScene = { key: string; id?: string; title: string };
 
@@ -29,6 +29,17 @@ export function EventEditPage() {
   const [coverPosition, setCoverPosition] = useState({ x: 50, y: 50 });
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const { gridRef: sceneListRef, announcement: sceneAnnouncement } = useSceneReorder(
+    scenes.map((scene) => scene.key),
+    (order) =>
+      setScenes((current) =>
+        order.flatMap((key) => {
+          const scene = current.find((item) => item.key === key);
+          return scene ? [scene] : [];
+        }),
+      ),
+    saving,
+  );
 
   const applyDetail = (event: EventDetail, cover: { media: EventCoverMedia[] }) => {
     setDetail(event);
@@ -189,37 +200,50 @@ export function EventEditPage() {
 
         <section className="management-section">
           <h2>見出し</h2>
-          {scenes.map((scene, index) => (
-            <div className="scene-editor scene-editor-deletable" key={scene.key}>
-              <input
-                aria-label={`見出し「${scene.title}」の名前`}
-                value={scene.title}
-                onChange={(event) =>
-                  setScenes((current) =>
-                    current.map((item) => (item.key === scene.key ? { ...item, title: event.target.value } : item)),
-                  )
-                }
-                maxLength={100}
-                disabled={saving}
-              />
-              <SceneOrderButtons
-                title={scene.title}
-                index={index}
-                count={scenes.length}
-                disabled={saving}
-                onMove={(offset) => setScenes((current) => moveScene(current, index, offset))}
-              />
-              <button
-                className="icon-button"
-                type="button"
-                aria-label={`見出し「${scene.title}」を削除`}
-                onClick={() => deleteScene(scene)}
-                disabled={saving}
+          <div className="scene-list" ref={sceneListRef}>
+            {scenes.map((scene, index) => (
+              <div
+                className="scene-editor scene-editor-deletable"
+                data-scene-id={scene.key}
+                key={scene.key}
+                tabIndex={saving ? -1 : 0}
+                aria-label={`見出し「${scene.title}」。長押し、または上下矢印キーで並び替え`}
+                onKeyDown={(event) => {
+                  if (event.target !== event.currentTarget || (event.key !== "ArrowUp" && event.key !== "ArrowDown"))
+                    return;
+                  event.preventDefault();
+                  setScenes((current) => moveItemByOffset(current, index, event.key === "ArrowUp" ? -1 : 1));
+                }}
               >
-                <Trash2 />
-              </button>
-            </div>
-          ))}
+                <input
+                  aria-label={`見出し「${scene.title}」の名前`}
+                  value={scene.title}
+                  onChange={(event) =>
+                    setScenes((current) =>
+                      current.map((item) => (item.key === scene.key ? { ...item, title: event.target.value } : item)),
+                    )
+                  }
+                  maxLength={100}
+                  disabled={saving}
+                />
+                <button
+                  className="icon-button"
+                  type="button"
+                  aria-label={`見出し「${scene.title}」を削除`}
+                  onClick={() => deleteScene(scene)}
+                  disabled={saving}
+                >
+                  <Trash2 />
+                </button>
+              </div>
+            ))}
+          </div>
+          <p className="muted scene-reorder-hint">
+            見出しを長押しして並び替え。キーボードでは見出しを選んで上下矢印キー。
+          </p>
+          <span className="media-reorder-status" role="status" aria-live="polite">
+            {sceneAnnouncement}
+          </span>
           <form className="inline-form" onSubmit={addScene}>
             <input
               value={newSceneTitle}

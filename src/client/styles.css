@@ -1938,11 +1938,33 @@ textarea:focus {
 .scene-editor {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
+  position: relative;
   gap: 6px;
-  margin-bottom: 8px;
+  padding: 8px;
+  border: 1px solid var(--separator);
+  border-radius: 10px;
+  background: var(--surface);
+  cursor: grab;
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-touch-callout: none;
+  transition:
+    transform 160ms ease,
+    opacity 160ms ease;
 }
 .scene-editor svg {
   width: 19px;
+}
+.scene-editor input {
+  user-select: text;
+}
+.scene-list {
+  display: grid;
+  gap: 8px;
+}
+.scene-reorder-hint {
+  margin: 8px 0 0;
+  font-size: 0.82rem;
 }
 .management-heading {
   display: flex;
@@ -4759,6 +4781,28 @@ textarea:focus {
 }
 .album-load-more:empty {
   padding: 0;
+}
+
+.scene-editor-deletable {
+  grid-template-columns: minmax(0, 1fr) 44px;
+}
+.scene-drag-placeholder {
+  outline: 2px dashed var(--separator);
+  outline-offset: -2px;
+  opacity: 0.45;
+}
+.scene-drag-placeholder > * {
+  visibility: hidden;
+}
+.scene-drag-preview {
+  position: fixed;
+  z-index: 1000;
+  box-sizing: border-box;
+  margin: 0;
+  pointer-events: none;
+  opacity: 0.94;
+  box-shadow: 0 12px 30px rgb(0 0 0 / 20%);
+  cursor: grabbing;
 }
 
 .media-reorder-status {

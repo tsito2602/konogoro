@@ -3,7 +3,6 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { Comment, Post } from "../../shared/types";
 import { api, formatDate } from "../api";
 import { revealComment } from "../comment-navigation";
-import { useCurrentUser } from "./AppLayout";
 
 export function ViewerComments({
   post,
@@ -14,11 +13,25 @@ export function ViewerComments({
   onClose: () => void;
   onComment: (comment: Comment) => void;
 }) {
-  const currentUser = useCurrentUser();
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
   const regionRef = useRef<HTMLElement>(null);
+  const closing = useRef(false);
+  const closeAnimation = useRef<Animation | null>(null);
+  const dismiss = () => {
+    if (closing.current) return;
+    const region = regionRef.current;
+    if (!region?.animate || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return onClose();
+    closing.current = true;
+    const animation = region.animate([{ opacity: 1 }, { opacity: 0 }], {
+      duration: 180,
+      easing: "ease-out",
+      fill: "forwards",
+    });
+    closeAnimation.current = animation;
+    animation.finished.then(onClose).catch(() => {});
+  };
   const listRef = useRef<HTMLDivElement>(null);
   const sentCommentId = useRef<string | null>(null);
   useEffect(() => {
@@ -27,7 +40,10 @@ export function ViewerComments({
     sentCommentId.current = null;
   }, [post.comments]);
   useEffect(() => {
-    regionRef.current?.focus();
+    regionRef.current?.focus({ preventScroll: true });
+    return () => {
+      closeAnimation.current?.cancel();
+    };
   }, []);
   const send = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -49,12 +65,23 @@ export function ViewerComments({
     }
   };
   return (
-    <section className="viewer-comments" ref={regionRef} tabIndex={-1} aria-label="この投稿のコメント">
+    <section
+      className="viewer-comments"
+      ref={regionRef}
+      tabIndex={-1}
+      aria-label="この投稿のコメント"
+      onKeyDown={(event) => {
+        if (event.key === "Escape") {
+          event.stopPropagation();
+          dismiss();
+        }
+      }}
+    >
       <header>
         <h2>
           この投稿のコメント <span>{post.comments.length}件</span>
         </h2>
-        <button className="viewer-button" type="button" onClick={onClose} aria-label="コメントを閉じて写真・動画に戻る">
+        <button className="viewer-button" type="button" onClick={dismiss} aria-label="コメントを閉じて写真・動画に戻る">
           <X />
         </button>
       </header>
@@ -74,7 +101,6 @@ export function ViewerComments({
         ))}
       </div>
       <form onSubmit={(event) => void send(event)}>
-        <label htmlFor="viewer-comment">{currentUser?.displayName ?? "あなた"}として、この投稿にコメント</label>
         {error && (
           <p role="alert" className="form-error">
             {error}
@@ -84,6 +110,7 @@ export function ViewerComments({
           <textarea
             id="viewer-comment"
             name="body"
+            aria-label="この投稿にコメント"
             value={body}
             onChange={(event) => setBody(event.target.value)}
             placeholder="コメントを書く"

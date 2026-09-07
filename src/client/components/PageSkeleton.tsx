@@ -58,6 +58,7 @@ export function CommentComposerSkeleton() {
 export function UnreadSummarySkeleton() {
   return (
     <div className="unread-summary skeleton-unread-summary" role="status" aria-busy="true">
+      <div className="unread-summary-art skeleton-tile" aria-hidden="true" />
       <span className="visually-hidden">新着件数を読み込み中</span>
       <div aria-hidden>
         {line("short")}
@@ -150,14 +151,22 @@ function skeletonContent(variant: SkeletonVariant, currentUser?: CurrentUser): R
   switch (variant) {
     case "timeline":
       return (
-        <>
+        <section className="timeline-month-group">
           <div className="timeline-month-heading">{line("short")}</div>
           {postSkeleton()}
           {postSkeleton()}
-        </>
+        </section>
       );
     case "unread":
-      return postSkeleton();
+      return (
+        <>
+          <div className="unread-progress skeleton-copy">
+            {line("medium")}
+            {line("short")}
+          </div>
+          {postSkeleton()}
+        </>
+      );
     case "activity":
       return (
         <>

@@ -1,0 +1,159 @@
+.timeline-layout .timeline-month-group {
+  padding-bottom: 20px;
+}
+.timeline-layout .timeline-month-heading {
+  margin: 0 0 16px;
+  padding: 12px 0;
+  background: var(--frost);
+  color: var(--carbon);
+  font-size: 0.875rem;
+  letter-spacing: 0.04em;
+}
+.timeline-layout .timeline-month-heading > span {
+  display: inline-block;
+  border-left: 3px solid var(--accent);
+  padding: 2px 12px;
+}
+.timeline-layout .post-card,
+.unread-flow .post-card {
+  background: transparent;
+  border: 0;
+}
+.timeline-layout .post-head,
+.unread-flow .post-head {
+  padding: 12px 2px;
+}
+.timeline-layout .post-card .media-grid,
+.unread-flow .post-card .media-grid {
+  border-radius: 18px;
+  overflow: hidden;
+  gap: 3px;
+}
+.timeline-layout .post-copy,
+.unread-flow .post-copy {
+  padding: 18px 2px 6px;
+}
+.timeline-layout .post-caption,
+.unread-flow .post-caption {
+  line-height: 1.8;
+}
+.timeline-layout .feed .post-card {
+  margin-bottom: 34px;
+}
+.timeline-layout .unread-summary {
+  display: grid;
+  grid-template-columns: 80px minmax(0, 1fr);
+  gap: 18px;
+  padding: 20px;
+  border: 0;
+  border-radius: 22px;
+  background: color-mix(in srgb, var(--accent) 9%, var(--surface));
+}
+.unread-summary .unread-summary-art {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 80px;
+  aspect-ratio: 1;
+  border-radius: 14px;
+  background: var(--surface-muted);
+  color: var(--ash);
+}
+.unread-summary-art > img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: inherit;
+}
+.unread-summary .unread-bookmark {
+  position: absolute;
+  right: -7px;
+  bottom: -7px;
+  width: 30px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  border-radius: 7px 7px 3px 3px;
+}
+.unread-bookmark svg {
+  width: 17px;
+}
+.unread-summary .unread-summary-copy {
+  align-self: center;
+}
+.unread-summary .unread-summary-copy > strong {
+  font-size: 2rem;
+  line-height: 1.1;
+  letter-spacing: -0.04em;
+}
+.unread-summary .unread-summary-copy > h2 {
+  font-size: 0.8125rem;
+  margin-top: 8px;
+}
+.timeline-layout .unread-summary .primary-button {
+  grid-column: 1 / -1;
+  justify-content: space-between;
+  gap: 12px;
+}
+.unread-summary .primary-button svg {
+  width: 19px;
+  height: 19px;
+}
+.unread-progress {
+  min-height: 42px;
+  margin-bottom: 18px;
+  gap: 12px;
+}
+.unread-progress .unread-receipt {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8125rem;
+}
+.unread-receipt svg {
+  width: 16px;
+  height: 16px;
+}
+.unread-progress .recorded {
+  color: var(--accent-ink);
+}
+.unread-progress > strong {
+  padding: 7px 12px;
+  border-radius: 99px;
+  background: var(--surface-muted);
+  white-space: nowrap;
+  font-size: 0.8125rem;
+}
+.unread-flow .unread-actions {
+  padding-top: 24px;
+}
+.unread-flow .unread-complete {
+  padding-top: clamp(48px, 12vh, 120px);
+}
+.unread-complete > span {
+  background: var(--accent);
+  color: var(--accent-contrast);
+  border-radius: 18px;
+}
+.unread-complete h2 {
+  letter-spacing: -0.03em;
+}
+.timeline-layout .skeleton-unread-summary > .skeleton-field {
+  grid-column: 1 / -1;
+}
+@media (min-width: 960px) {
+  .timeline-sidebar .unread-summary {
+    grid-template-columns: 1fr;
+    gap: 22px;
+  }
+  .timeline-sidebar .unread-summary-art {
+    width: 100%;
+    aspect-ratio: 16 / 10;
+  }
+  .timeline-layout .timeline-month-heading {
+    padding-top: 16px;
+    padding-bottom: 16px;
+  }
+}

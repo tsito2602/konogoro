@@ -1,3 +1,4 @@
+import { EventDraftPreview } from "../components/EventDraftPreview";
 import { Plus, Video } from "lucide-react";
 import { useCallback, useEffect, useState, useRef, type FormEvent } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
@@ -140,6 +141,13 @@ export function EventEditPage() {
     <>
       <PageHeader title="イベントを編集" back />
       <main className={`form-page page-content event-edit${hasChanges ? " has-save-bar" : ""}`}>
+        <EventDraftPreview
+          title={title}
+          startDate={startDate}
+          endDate={endDate}
+          coverUrl={selectedCover?.thumbnailUrl}
+          coverPosition={coverPosition}
+        />
         <form id="event-edit-form" onSubmit={saveEvent} className="form-stack">
           <label>
             タイトル

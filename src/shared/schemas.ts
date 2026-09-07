@@ -63,6 +63,7 @@ export const postInputSchema = z.object({
 });
 
 export const postEditInputSchema = postInputSchema.extend({
+  deletedSceneIds: z.array(z.string().min(1)).max(100).optional(),
   scenes: z
     .array(
       z.object({

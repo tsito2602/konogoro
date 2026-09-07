@@ -274,8 +274,11 @@ function skeletonContent(variant: SkeletonVariant, currentUser?: CurrentUser): R
             {field(true)}
           </div>
           <section className="management-section skeleton-copy">
-            {line("short")}
-            {field()}
+            <div className="management-heading scene-management-heading">
+              <h2>{line("short")}</h2>
+              <span className="skeleton-tile" style={{ width: 64, height: 44 }} />
+            </div>
+            {/* 取得前には件数不明の見出し行や編集時の操作を作らない。 */}
             <div className="skeleton-field" />
           </section>
           <section className="management-section skeleton-copy">

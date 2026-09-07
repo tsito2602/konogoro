@@ -87,6 +87,58 @@ describe("投稿編集の見出し管理", () => {
       sql.close();
     }
   });
+  it("明示した見出しだけを削除し、関連投稿を見出しなしにして保存する", async () => {
+    const { sql, env } = setup();
+    try {
+      const response = await app.request(
+        "/api/posts/post-1",
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            caption: "保存",
+            eventId: "event-1",
+            sceneId: null,
+            scenes: [{ id: "scene-2", title: "夜" }],
+            deletedSceneIds: ["scene-1"],
+          }),
+        },
+        env,
+      );
+      expect(response.status).toBe(200);
+      expect(sql.prepare("SELECT id FROM event_scenes").all()).toEqual([{ id: "scene-2" }]);
+      expect(sql.prepare("SELECT scene_id FROM posts").get()?.scene_id).toBeNull();
+    } finally {
+      sql.close();
+    }
+  });
+  it("他イベントの見出しを削除指定しても保存しない", async () => {
+    const { sql, env } = setup();
+    try {
+      const response = await app.request(
+        "/api/posts/post-1",
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            caption: "保存",
+            eventId: "event-1",
+            sceneId: null,
+            scenes: [
+              { id: "scene-1", title: "朝" },
+              { id: "scene-2", title: "夜" },
+            ],
+            deletedSceneIds: ["other-scene"],
+          }),
+        },
+        env,
+      );
+      expect(response.status).toBe(400);
+      expect(sql.prepare("SELECT COUNT(*) AS n FROM event_scenes").get()?.n).toBe(2);
+    } finally {
+      sql.close();
+    }
+  });
   it.each([
     [{ id: "scene-1", title: "変更" }],
     [

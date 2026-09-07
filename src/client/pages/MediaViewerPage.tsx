@@ -16,8 +16,8 @@ import {
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import type { AlbumMedia, Media, Post } from "../../shared/types";
 import { api, formatDate } from "../api";
-import { ErrorState } from "../components/AsyncState";
-import { PageSkeleton } from "../components/PageSkeleton";
+import { ViewerImage } from "../components/ViewerImage";
+import { ErrorState, Loading } from "../components/AsyncState";
 
 export function swipeDirection(deltaX: number, deltaY: number): "previous" | "next" | null {
   if (Math.abs(deltaX) < 50 || Math.abs(deltaX) <= Math.abs(deltaY) * 1.2) return null;
@@ -79,7 +79,10 @@ export function MediaViewerPage() {
     );
   }, [mediaId, viewerState?.albumOrigin, viewerState?.albumMedia]);
   const [loadedPost, setLoadedPost] = useState<{ postId: string; post: Post } | null>(null);
-  const [error, setError] = useState("");
+  const [failure, setFailure] = useState<{ postId: string; message: string } | null>(null);
+  const error = failure?.postId === postId ? failure.message : "";
+  const [retry, setRetry] = useState(0);
+  const postCache = useRef(new Map<string, Post>());
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [finishedMedia, setFinishedMedia] = useState<string | null>(null);
   const [playingMedia, setPlayingMedia] = useState<string | null>(null);
@@ -92,37 +95,40 @@ export function MediaViewerPage() {
   const swipeStart = useRef<{ x: number; y: number; pointerId: number } | null>(null);
   const swipeAnimation = useRef<number | null>(null);
   const load = () => {
-    setError("");
-    void api<Post>(`/posts/${postId}`)
-      .then((post) => setLoadedPost({ postId, post }))
-      .catch((reason: Error) => setError(reason.message));
+    setFailure(null);
+    postCache.current.delete(postId);
+    setRetry((value) => value + 1);
   };
   useEffect(() => {
-    let active = true;
-    void api<Post>(`/posts/${postId}`)
+    const controller = new AbortController();
+    const cached = postCache.current.get(postId);
+    const request = cached ? Promise.resolve(cached) : api<Post>(`/posts/${postId}`, { signal: controller.signal });
+    void request
       .then((post) => {
-        if (active) {
-          setError("");
-          setLoadedPost({ postId, post });
-        }
+        if (controller.signal.aborted) return;
+        postCache.current.set(postId, post);
+        setFailure(null);
+        setLoadedPost({ postId, post });
       })
       .catch((reason: Error) => {
-        if (active) setError(reason.message);
+        if (!controller.signal.aborted) setFailure({ postId, message: reason.message });
       });
-    return () => {
-      active = false;
-    };
-  }, [postId]);
+    return () => controller.abort();
+  }, [postId, retry]);
   useEffect(
     () => () => {
       if (swipeAnimation.current !== null) window.clearTimeout(swipeAnimation.current);
+      swipeAnimation.current = null;
     },
-    [],
+    [postId, mediaId],
   );
   const post = loadedPost?.postId === postId ? loadedPost.post : null;
   const current = post?.media.find((item) => item.id === mediaId);
   const navigationItems = useMemo(
-    () => (post ? viewerNavigationItems(postId, post.media, viewerState?.albumMedia, mediaId) : []),
+    () =>
+      post
+        ? viewerNavigationItems(postId, post.media, viewerState?.albumMedia, mediaId)
+        : (viewerState?.albumMedia ?? []),
     [post, postId, viewerState?.albumMedia, mediaId],
   );
   const index = navigationItems.findIndex((item) => item.id === mediaId && item.postId === postId);
@@ -180,6 +186,12 @@ export function MediaViewerPage() {
     (targetIndex: number) => {
       const target = navigationItems[targetIndex];
       if (!target) return;
+      if (swipeAnimation.current !== null) {
+        window.clearTimeout(swipeAnimation.current);
+        swipeAnimation.current = null;
+      }
+      setDragOffset(0);
+      setDragging(false);
       setCommentsOpen(false);
       navigate(`/posts/${target.postId}/media/${target.id}`, {
         replace: true,
@@ -266,38 +278,14 @@ export function MediaViewerPage() {
     setDragging(false);
     setDragOffset(0);
   };
-  if (!post && !error)
-    return (
-      <main className="media-viewer video-viewer">
-        <header className="viewer-header">
-          <button className="viewer-button" type="button" onClick={closeViewer} aria-label="閉じる">
-            <X />
-          </button>
-          <span className="skeleton-line short" aria-hidden />
-          <span className="skeleton-square" aria-hidden />
-        </header>
-        <PageSkeleton variant="viewer" />
-      </main>
-    );
-  if (error || !post || !current)
-    return (
-      <div className="media-viewer">
-        <button className="viewer-button" type="button" onClick={closeViewer} aria-label="閉じる">
-          <X />
-        </button>
-        <ErrorState message={error || "写真が見つかりません"} retry={error ? load : undefined} />
-      </div>
-    );
   return (
     <main className={`media-viewer video-viewer${commentsOpen ? " comments-open" : ""}`}>
       <header className="viewer-header">
         <button className="viewer-button" type="button" onClick={closeViewer} aria-label="閉じる">
           <X />
         </button>
-        <span>
-          {index + 1} / {navigationItems.length}
-        </span>
-        <a className="viewer-button" href={current.downloadUrl} aria-label="保存">
+        <span>{navigationItems.length ? `${index + 1} / ${navigationItems.length}` : "読み込み中"}</span>
+        <a className="viewer-button" href={current?.downloadUrl} aria-disabled={!current} aria-label="保存">
           <Download />
         </a>
       </header>
@@ -310,11 +298,15 @@ export function MediaViewerPage() {
         onPointerCancel={cancelSwipe}
       >
         <div
-          key={current.id}
+          key={current?.id ?? `${postId}/${mediaId}`}
           className={`viewer-media-frame${dragging ? " dragging" : ""}`}
           style={{ transform: `translate3d(${dragOffset}px, 0, 0)` }}
         >
-          {current.kind === "video" ? (
+          {error || (post && !current) ? (
+            <ErrorState message={error || "写真が見つかりません"} retry={error ? load : undefined} />
+          ) : !current ? (
+            <Loading />
+          ) : current.kind === "video" ? (
             <VideoPlayer
               key={current.id}
               src={current.contentUrl}
@@ -332,16 +324,16 @@ export function MediaViewerPage() {
               }}
             />
           ) : (
-            <img src={current.contentUrl} alt={`投稿の写真 ${index + 1}`} draggable={false} />
+            <ViewerImage src={current.contentUrl} alt={`投稿の写真 ${index + 1}`} />
           )}
         </div>
       </div>
       <div className="viewer-info">
-        <strong>{post.caption || "写真・動画"}</strong>
+        <strong>{post?.caption || "写真・動画"}</strong>
         <span>
-          {formatDate(current.capturedAt ?? post.capturedAt)} · {post.authorName}
+          {post && current ? `${formatDate(current.capturedAt ?? post.capturedAt)} · ${post.authorName}` : ""}
         </span>
-        {(post.eventTitle || post.sceneTitle) && (
+        {post && (post.eventTitle || post.sceneTitle) && (
           <span>{[post.eventTitle, post.sceneTitle].filter(Boolean).join(" · ")}</span>
         )}
         <div className="viewer-controls">
@@ -364,7 +356,7 @@ export function MediaViewerPage() {
             <ChevronRight aria-hidden />
           </button>
         </div>
-        {finishedMedia === current.id && (
+        {current && finishedMedia === current.id && (
           <p className="viewer-playback-complete" role="status">
             {index === navigationItems.length - 1 ? "最後の動画の再生が終わりました" : "再生が終わりました"}
           </p>
@@ -373,23 +365,24 @@ export function MediaViewerPage() {
           ref={commentButtonRef}
           className="viewer-comment-button"
           type="button"
+          disabled={!post || !current}
           aria-expanded={commentsOpen}
           onClick={() => setCommentsOpen((open) => !open)}
         >
           <MessageCircle aria-hidden />
-          この投稿にコメント {post.comments.length > 0 ? `· ${post.comments.length}件` : ""}
+          この投稿にコメント {post && post.comments.length > 0 ? `· ${post.comments.length}件` : ""}
         </button>
       </div>
       <div className="thumbnail-strip" ref={thumbnailStripRef}>
         {navigationItems.map((media, mediaIndex) => (
           <Link
-            className={media.id === current.id ? "selected" : ""}
+            className={media.id === mediaId && media.postId === postId ? "selected" : ""}
             key={media.id}
             to={`/posts/${media.postId}/media/${media.id}`}
             replace
             state={{ ...(location.state as object | null), playVideo: media.kind === "video" }}
             aria-label={`${media.kind === "video" ? "動画" : "写真"} ${mediaIndex + 1}を開く`}
-            aria-current={media.id === current.id ? "true" : undefined}
+            aria-current={media.id === mediaId && media.postId === postId ? "true" : undefined}
             onClick={(event) => {
               if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
               event.preventDefault();
@@ -405,7 +398,7 @@ export function MediaViewerPage() {
           </Link>
         ))}
       </div>
-      {commentsOpen && (
+      {commentsOpen && post && (
         <ViewerComments
           key={post.id}
           post={post}
@@ -416,6 +409,7 @@ export function MediaViewerPage() {
           onComment={(comment) => {
             const nextPost = { ...post, comments: [...post.comments, comment], commentCount: post.comments.length + 1 };
             setLoadedPost((loaded) => (loaded?.postId === post.id ? { postId: post.id, post: nextPost } : loaded));
+            postCache.current.set(post.id, nextPost);
             updateReadingPost(nextPost);
           }}
         />

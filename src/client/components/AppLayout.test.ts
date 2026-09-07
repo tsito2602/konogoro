@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import type { CurrentUser } from "../../shared/types";
-import { BootScreen, canAccessPath, LoginScreen, mainNavigationItems, postCreatePath } from "./AppLayout";
+import { BootScreen, canAccessPath, LoginScreen, mainNavigationItems, outletKey, postCreatePath } from "./AppLayout";
 
 const viewer: CurrentUser = { id: "viewer", displayName: "Viewer", role: "viewer" };
 const uploader: CurrentUser = { id: "uploader", displayName: "Uploader", role: "uploader" };
@@ -98,5 +98,16 @@ describe("BootScreen", () => {
     expect(html).toContain('class="boot-symbol boot-symbol-dark"');
     expect(html).toContain("このごろ");
     expect(html).toContain('role="status"');
+  });
+});
+
+describe("viewer route identity", () => {
+  it("preserves the viewer across media and post navigation", () => {
+    expect(outletKey("/posts/p1/media/m1", "first")).toBe(outletKey("/posts/p1/media/m2", "next"));
+    expect(outletKey("/posts/p1/media/m1", "first")).toBe(outletKey("/posts/p2/media/m3", "album-next"));
+  });
+  it("still resets normal pages and starts a fresh viewer after leaving", () => {
+    expect(outletKey("/posts/p1", "detail")).toBe("detail");
+    expect(outletKey("/album", "album")).not.toBe(outletKey("/posts/p1/media/m1", "viewer"));
   });
 });

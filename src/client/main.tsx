@@ -34,6 +34,7 @@ import "./settings-material.css";
 import "./conversation-material.css";
 import "./invitation-material.css";
 import "./common-material.css";
+import "./entry-material.css";
 import { initializeInteractionFeedback } from "./interaction-feedback";
 
 const stopInstallPromptCapture = installPromptStore.start(window);

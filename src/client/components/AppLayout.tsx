@@ -1,6 +1,6 @@
 import { PostModalContext, modalTransform } from "../post-modal";
 import { useMeasuredHeight } from "../hooks/useMeasuredHeight";
-import { Bell, CalendarDays, CalendarPlus, GalleryVerticalEnd, ImagePlus, Images, Plus, Settings } from "lucide-react";
+import { Bell, CalendarDays, GalleryVerticalEnd, Images, Plus, Settings } from "lucide-react";
 import { Fragment, useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Link, Navigate, NavLink, useLocation, useOutlet, useOutletContext } from "react-router-dom";
 import type { CurrentUser } from "../../shared/types";
@@ -9,6 +9,8 @@ import { ReadingPosition, setReadingIdentity } from "../reading-context";
 import { api } from "../api";
 import { ErrorState } from "./AsyncState";
 import { PwaGuide } from "./PwaGuide";
+import { WelcomePhotos } from "./WelcomePhotos";
+import { AddMenu } from "./AddMenu";
 import { ToastProvider } from "./Toast";
 
 export const mainNavigationItems = [
@@ -90,7 +92,6 @@ export function AppLayout() {
     return () => animation.cancel();
   }, [pathname]);
   const addPostPath = postCreatePath(pathname);
-  const addingToEvent = addPostPath !== "/posts/new";
   const hideAddButton =
     pathname === "/settings/design" ||
     /^\/posts\/[^/]+$/.test(pathname) ||
@@ -200,30 +201,7 @@ export function AppLayout() {
           </nav>
         )}
         {!hideNavigation && canCreatePost(currentUser) && canManageEvent(currentUser) && addMenuOpen && (
-          <>
-            <button
-              className="add-menu-backdrop"
-              type="button"
-              onClick={() => setAddMenuOpen(false)}
-              aria-label="追加メニューを閉じる"
-            />
-            <div className="add-menu" role="menu" aria-label="追加するものを選択">
-              <Link to={addPostPath} role="menuitem" onClick={() => setAddMenuOpen(false)}>
-                <ImagePlus />
-                <span>
-                  <strong>{addingToEvent ? "このイベントに写真・動画" : "写真・動画"}</strong>
-                  <small>{addingToEvent ? "表示中のイベントを選択して投稿" : "思い出を投稿する"}</small>
-                </span>
-              </Link>
-              <Link to="/events/new" role="menuitem" onClick={() => setAddMenuOpen(false)}>
-                <CalendarPlus />
-                <span>
-                  <strong>イベント</strong>
-                  <small>旅行やお出かけを作る</small>
-                </span>
-              </Link>
-            </div>
-          </>
+          <AddMenu postPath={addPostPath} close={() => setAddMenuOpen(false)} />
         )}
         {!hideNavigation &&
           !hideAddButton &&
@@ -269,6 +247,7 @@ export function LoginScreen({ returnTo = "/" }: { returnTo?: string }) {
   return (
     <main className="login-page">
       <section>
+        <WelcomePhotos />
         <span className="login-icon-frame" aria-hidden>
           <img className="login-icon login-icon-light" src="/icons/icon-light-transparent.png" alt="" />
           <img className="login-icon login-icon-dark" src="/icons/icon-dark-transparent.png" alt="" />

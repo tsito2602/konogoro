@@ -1,0 +1,195 @@
+.login-page {
+  padding-block: 28px;
+}
+.login-page .login-icon-frame,
+.login-page .login-icon {
+  width: 88px;
+  height: 88px;
+}
+.login-page .login-icon-frame {
+  margin: 0 auto -8px;
+}
+.login-page h1 {
+  margin-block: 18px;
+  line-height: 1.3;
+}
+.login-page .line-login-button {
+  width: 100%;
+  justify-content: center;
+  margin-top: 28px;
+  border-radius: 16px;
+}
+.welcome-photos {
+  position: relative;
+  display: block;
+  width: min(100%, 360px);
+  height: 224px;
+  margin: 0 auto 12px;
+  padding: 0;
+  border: 0;
+  border-radius: 20px;
+  background: transparent;
+  color: var(--ash);
+  cursor: pointer;
+}
+.welcome-photos img {
+  position: absolute;
+  width: 68%;
+  height: 160px;
+  object-fit: cover;
+  border-radius: 16px;
+  background: var(--surface-muted);
+  transition: transform 300ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.welcome-photo-back {
+  top: 8px;
+  right: 9%;
+  transform: rotate(8deg);
+}
+.welcome-photo-front {
+  top: 26px;
+  left: 7%;
+  transform: rotate(-6deg);
+}
+.welcome-photos.expanded .welcome-photo-front {
+  transform: rotate(0) scale(1.06);
+}
+.welcome-photos > span {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  font-size: 0.75rem;
+}
+.tab-bar .tab-item {
+  position: relative;
+}
+.tab-bar .tab-item > svg {
+  box-sizing: content-box;
+  padding: 5px 14px;
+  border-radius: 16px;
+  transition:
+    background-color 160ms ease,
+    color 160ms ease;
+}
+.tab-bar .tab-item.active > svg {
+  background: color-mix(in srgb, var(--accent) 24%, transparent);
+  animation: entry-selected 180ms ease-out;
+}
+@keyframes entry-selected {
+  from {
+    scale: 0.9;
+  }
+  to {
+    scale: 1;
+  }
+}
+.add-menu-dialog {
+  inset: auto max(18px, env(safe-area-inset-right)) calc(var(--bottom-nav-height, 64px) + 78px) auto;
+  width: min(300px, calc(100vw - 36px));
+  max-height: calc(100dvh - 180px);
+  margin: 0;
+  padding: 10px;
+  overflow-y: auto;
+  border: 0;
+  border-radius: 22px;
+  color: var(--carbon);
+  transform-origin: bottom right;
+}
+.add-menu-dialog:not([open]) {
+  display: none;
+}
+.add-menu-dialog[open] {
+  animation: entry-tray 180ms ease-out;
+}
+.add-menu-dialog::backdrop {
+  background: rgb(0 0 0 / 18%);
+}
+.add-menu-dialog > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-left: 12px;
+  color: var(--ash);
+  font-size: 0.8125rem;
+}
+.add-menu-dialog > a {
+  min-height: 72px;
+  border-radius: 14px;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 12px;
+}
+.add-menu-dialog > a > svg {
+  box-sizing: content-box;
+  padding: 8px;
+  border-radius: 13px;
+  background: var(--surface-muted);
+}
+@keyframes entry-tray {
+  from {
+    opacity: 0;
+    scale: 0.95;
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
+.guide-photo {
+  border: 0;
+  box-shadow: none;
+}
+.guide-photo-one::before {
+  background: url("/demo/lake.jpg") center / cover;
+}
+.guide-photo-two::before {
+  background: url("/demo/forest.jpg") center / cover;
+}
+.onboarding-guide-footer {
+  border-top: 0;
+}
+.onboarding-guide-close,
+.install-guide {
+  box-shadow: 0 8px 28px rgb(0 0 0 / 12%);
+}
+.install-guide {
+  border: 0;
+  border-radius: 24px;
+}
+@media (min-width: 960px) {
+  .tab-bar .tab-item > svg {
+    padding: 5px;
+    border-radius: 10px;
+  }
+  .tab-bar .tab-item.active > svg {
+    background: transparent;
+  }
+  .tab-bar .tab-item {
+    border-radius: 16px;
+  }
+  .tab-bar .tab-item.active {
+    background: color-mix(in srgb, var(--accent) 18%, transparent);
+  }
+  .add-menu-dialog {
+    inset: 28px auto auto 224px;
+    max-height: calc(100dvh - 56px);
+    transform-origin: top left;
+  }
+}
+@media (max-height: 700px) {
+  .welcome-photos {
+    height: 168px;
+  }
+  .welcome-photos img {
+    height: 110px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .welcome-photos img {
+    transition: none;
+  }
+  .add-menu-dialog[open],
+  .tab-bar .tab-item.active > svg {
+    animation: none;
+  }
+}

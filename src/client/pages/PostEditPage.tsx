@@ -1,4 +1,4 @@
-import { SceneOrderButtons, moveScene } from "../components/SceneOrderButtons";
+import { useMediaReorder } from "../hooks/useMediaReorder";
 import { PreparedVideoImport } from "../components/PreparedVideoImport";
 import { uploadPreparedPlayback, type PreparedPlayback } from "../video-playback";
 import { abortMultipartUpload } from "../multipart-upload";
@@ -6,15 +6,8 @@ import { removeMediaWithReconciliation } from "../remove-media";
 import { uploadMissingParts } from "../upload-parts";
 import { useUnsavedChanges } from "../hooks/useUnsavedChanges";
 import { VideoBadge } from "../components/VideoBadge";
-import { AlertCircle, GripVertical, ImagePlus, LoaderCircle, Plus, RotateCcw, Video, X } from "lucide-react";
-import {
-  useEffect,
-  useRef,
-  useState,
-  type ChangeEvent,
-  type FormEvent,
-  type PointerEvent as ReactPointerEvent,
-} from "react";
+import { AlertCircle, ImagePlus, LoaderCircle, Plus, RotateCcw, Video, X } from "lucide-react";
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import type { EventDetail, EventScene, EventSummary, Post, UploadTarget } from "../../shared/types";
 import { api as request } from "../api";
@@ -63,11 +56,11 @@ export function PostEditPage() {
   const [removedMediaIds, setRemovedMediaIds] = useState<string[]>([]);
   const [files, setFiles] = useState<SelectedMediaFile[]>([]);
   const [mediaOrder, setMediaOrder] = useState<string[]>([]);
-  const [draggedMediaId, setDraggedMediaId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [progress, setProgress] = useState(0);
   const [importingPlayback, setImportingPlayback] = useState(false);
+  const { gridRef, announcement } = useMediaReorder(mediaOrder, setMediaOrder, saving || importingPlayback);
   const activeUploadRef = useRef<AbortController | null>(null);
   const [caption, setCaption] = useState<string | null>(null);
   const markSaved = useUnsavedChanges(
@@ -84,8 +77,6 @@ export function PostEditPage() {
     "未保存の入力は失われます。送信・削除・保存がすでに成功した変更は残ります。この画面を離れますか？",
   );
   const filesRef = useRef(files);
-  const draggedMediaIdRef = useRef<string | null>(null);
-  const dragTargetMediaIdRef = useRef<string | null>(null);
   const mountedRef = useRef(true);
 
   const load = () => {
@@ -250,12 +241,6 @@ export function PostEditPage() {
     setMediaOrder((current) => current.filter((mediaId) => mediaId !== id));
   };
 
-  const reorderMedia = (targetId: string) => {
-    const sourceId = draggedMediaIdRef.current;
-    if (!sourceId || sourceId === targetId) return;
-    setMediaOrder((current) => moveMediaItem(current, sourceId, targetId));
-  };
-
   const moveMediaByOffset = (id: string, offset: number) => {
     setMediaOrder((current) => {
       const index = current.indexOf(id);
@@ -264,31 +249,20 @@ export function PostEditPage() {
     });
   };
 
-  const startMediaDrag = (id: string) => {
-    draggedMediaIdRef.current = id;
-    dragTargetMediaIdRef.current = id;
-    setDraggedMediaId(id);
-  };
-
-  const finishMediaDrag = () => {
-    draggedMediaIdRef.current = null;
-    dragTargetMediaIdRef.current = null;
-    setDraggedMediaId(null);
-  };
-
-  const movePointerMedia = (event: ReactPointerEvent<HTMLElement>) => {
-    const targetId = document.elementFromPoint(event.clientX, event.clientY)?.closest<HTMLElement>("[data-media-id]")
-      ?.dataset.mediaId;
-    if (targetId) dragTargetMediaIdRef.current = targetId;
-  };
-
-  const createScene = () => {
-    if (!eventId || !newScene.trim() || scenesUnavailable || scenes.length >= 100) return;
-    const id = crypto.randomUUID();
-    setScenes((current) => [...current, { id, title: newScene.trim(), sortOrder: current.length, isNew: true }]);
-    setSceneId(id);
-    setNewScene("");
-    setShowSceneForm(false);
+  const createScene = async () => {
+    if (!eventId || !newScene.trim()) return;
+    try {
+      const scene = await api<EventScene>(`/events/${eventId}/scenes`, {
+        method: "POST",
+        body: JSON.stringify({ title: newScene }),
+      });
+      setScenes((current) => [...current, scene]);
+      setSceneId(scene.id);
+      setNewScene("");
+      setShowSceneForm(false);
+    } catch (reason) {
+      setError((reason as Error).message);
+    }
   };
 
   const uploadEntries = async (entries: Array<{ item: SelectedMediaFile; index: number; target: UploadTarget }>) => {
@@ -547,23 +521,22 @@ export function PostEditPage() {
             </button>
           )}
           <section className="photo-picker">
-            <div
-              className="selected-photos"
-              onPointerMove={movePointerMedia}
-              onPointerUp={() => {
-                if (dragTargetMediaIdRef.current) reorderMedia(dragTargetMediaIdRef.current);
-                finishMediaDrag();
-              }}
-              onPointerCancel={finishMediaDrag}
-            >
+            <div className="selected-photos" ref={gridRef}>
               {orderedMedia.map((entry) => {
                 const id = entry.type === "existing" ? entry.media.id : entry.file.id;
                 const filename = entry.type === "existing" ? entry.media.originalFilename : entry.file.file.name;
                 return (
                   <div
-                    className={`selected-photo${entry.type === "new" ? ` ${entry.file.status}` : ""}${
-                      draggedMediaId === id ? " dragging" : ""
-                    }`}
+                    className={`selected-photo${entry.type === "new" ? ` ${entry.file.status}` : ""}`}
+                    tabIndex={saving || importingPlayback ? -1 : 0}
+                    aria-label={`${filename}。長押し、または矢印キーで並び替え`}
+                    onKeyDown={(event) => {
+                      if (event.target !== event.currentTarget || saving || importingPlayback) return;
+                      if (["ArrowLeft", "ArrowUp", "ArrowRight", "ArrowDown"].includes(event.key)) {
+                        event.preventDefault();
+                        moveMediaByOffset(id, event.key === "ArrowLeft" || event.key === "ArrowUp" ? -1 : 1);
+                      }
+                    }}
                     data-media-id={id}
                     key={id}
                   >
@@ -633,29 +606,6 @@ export function PostEditPage() {
                     <span className="selected-file-info" title={filename}>
                       {filename}
                     </span>
-                    <button
-                      className="media-drag-handle"
-                      type="button"
-                      aria-label={`${filename}を並び替え`}
-                      disabled={saving || importingPlayback}
-                      draggable={false}
-                      onPointerDown={(event) => {
-                        event.preventDefault();
-                        startMediaDrag(id);
-                      }}
-                      onKeyDown={(event) => {
-                        if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
-                          event.preventDefault();
-                          moveMediaByOffset(id, -1);
-                        }
-                        if (event.key === "ArrowRight" || event.key === "ArrowDown") {
-                          event.preventDefault();
-                          moveMediaByOffset(id, 1);
-                        }
-                      }}
-                    >
-                      <GripVertical />
-                    </button>
                   </div>
                 );
               })}
@@ -673,6 +623,12 @@ export function PostEditPage() {
                 </label>
               )}
             </div>
+            <p className="muted media-reorder-hint">
+              写真・動画を長押しして並び替え。キーボードでは画像を選んで矢印キー。
+            </p>
+            <span className="media-reorder-status" role="status">
+              {announcement}
+            </span>
             <p className="selection-count">
               {[photoCount ? `写真${photoCount}枚` : "", videoCount ? `動画${videoCount}本` : ""]
                 .filter(Boolean)

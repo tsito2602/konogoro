@@ -19,6 +19,10 @@ export const mainNavigationItems = [
 ] as const;
 
 const viewerPattern = /^\/posts\/[^/]+\/media\//;
+export function outletKey(pathname: string, locationKey: string): string {
+  return viewerPattern.test(pathname) ? "media-viewer" : locationKey;
+}
+
 export function canAccessPath(user: CurrentUser, pathname: string): boolean {
   if (/^\/posts\/(new|[^/]+\/edit)$/.test(pathname)) return canCreatePost(user);
   if (/^\/events\/new$/.test(pathname) || /^\/events\/[^/]+\/edit$/.test(pathname)) return canManageEvent(user);
@@ -45,7 +49,9 @@ export function AppLayout() {
   const [authError, setAuthError] = useState("");
   const [addMenuOpen, setAddMenuOpen] = useState(false);
   const outlet = useOutlet(currentUser);
-  const routedContent = <Fragment key={`${location.key}:${currentUser?.id}:${currentUser?.role}`}>{outlet}</Fragment>;
+  const routedContent = (
+    <Fragment key={`${outletKey(pathname, location.key)}:${currentUser?.id}:${currentUser?.role}`}>{outlet}</Fragment>
+  );
   const postPageNavigation = Boolean((location.state as { postPage?: boolean } | null)?.postPage);
   const showPostPage = /^\/posts\/[^/]+$/.test(pathname) && postPageNavigation;
   const sessionIdentity = `${currentUser?.id ?? ""}:${currentUser?.role ?? ""}`;

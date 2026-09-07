@@ -94,3 +94,42 @@ it("uses the post when a detail photo is outside the originating album month", (
     { ...second, postId: "p" },
   ]);
 });
+
+it("keeps viewer controls and album selection rendered while another post is loading", async () => {
+  const { createElement } = await import("react");
+  const { renderToStaticMarkup } = await import("react-dom/server");
+  const { MemoryRouter, Routes, Route } = await import("react-router-dom");
+  const { MediaViewerPage } = await import("./MediaViewerPage");
+  const html = renderToStaticMarkup(
+    createElement(
+      MemoryRouter,
+      {
+        initialEntries: [
+          {
+            pathname: "/posts/p2/media/m2",
+            state: {
+              albumMedia: [
+                { id: "m1", postId: "p1", kind: "image", thumbnailUrl: "/1" },
+                { id: "m2", postId: "p2", kind: "image", thumbnailUrl: "/2" },
+              ],
+            },
+          },
+        ],
+      },
+      createElement(
+        Routes,
+        null,
+        createElement(Route, {
+          path: "/posts/:postId/media/:mediaId",
+          element: createElement(MediaViewerPage),
+        }),
+      ),
+    ),
+  );
+  expect(html).toContain("2 / 2");
+  expect(html).toContain('aria-label="閉じる"');
+  expect(html).toContain('aria-label="前の写真・動画"');
+  expect(html).toContain('aria-current="true"');
+  expect(html).toContain('role="status"');
+  expect(html).not.toContain("skeleton-viewer");
+});

@@ -3538,37 +3538,36 @@ textarea:focus {
   height: 100%;
   object-fit: cover;
 }
-.selected-photo.dragging {
-  opacity: 0.58;
-  transform: scale(0.96);
-}
-.media-drag-handle {
-  position: absolute;
-  z-index: 3;
-  right: 5px;
-  bottom: 5px;
-  width: 34px;
-  height: 34px;
-  padding: 0;
-  display: grid;
-  place-items: center;
-  border: 0;
-  border-radius: 50%;
-  color: #fff;
-  background: rgba(0, 0, 0, 0.62);
+.selected-photo[data-media-id] {
   cursor: grab;
-  touch-action: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
-.media-drag-handle:active {
+.media-reordering .selected-photo {
+  transition: transform 160ms ease;
+}
+.media-drag-placeholder {
+  outline: 2px dashed var(--ash);
+  outline-offset: -3px;
+  background: var(--surface);
+}
+.media-drag-placeholder > * {
+  visibility: hidden;
+}
+.media-drag-preview {
+  position: fixed;
+  z-index: 1000;
+  pointer-events: none;
+  box-shadow: 0 12px 32px rgb(0 0 0 / 25%);
   cursor: grabbing;
 }
-.media-drag-handle:disabled {
-  opacity: 0.5;
-  cursor: default;
+.media-reorder-hint {
+  padding: 0 16px;
 }
-.media-drag-handle svg {
-  width: 19px;
-  height: 19px;
+@media (prefers-reduced-motion: reduce) {
+  .media-reordering .selected-photo {
+    transition: none;
+  }
 }
 .selected-photo .remove-selected-photo {
   position: absolute;
@@ -4762,9 +4761,12 @@ textarea:focus {
   padding: 0;
 }
 
-.scene-editor-deletable {
-  grid-template-columns: minmax(0, 1fr) auto 44px;
-}
-.scene-order-buttons {
-  display: flex;
+.media-reorder-status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }

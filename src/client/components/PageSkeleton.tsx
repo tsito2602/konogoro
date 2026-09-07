@@ -296,6 +296,9 @@ function skeletonContent(variant: SkeletonVariant, currentUser?: CurrentUser): R
           <div className="form-stack post-edit-form">
             <section className="photo-picker">
               <div className="selected-photos">{tiles(5)}</div>
+              <div className="media-reorder-hint">
+                <div className="skeleton-line" />
+              </div>
             </section>
             {field()}
             {/* 見出しはイベント選択の取得後に表示するため、取得前には行を作らない。 */}

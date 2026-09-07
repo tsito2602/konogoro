@@ -22,6 +22,7 @@ function pressTarget(target: EventTarget | null): HTMLElement | null {
 
 /** One delegated listener set also covers menus/portals and newly loaded cards. */
 export function initializeInteractionFeedback() {
+  document.documentElement.setAttribute("data-input-method", "pointer");
   let pressed: HTMLElement | null = null;
   let pointer: { id: number; x: number; y: number; bounds: DOMRect } | null = null;
   let key: string | null = null;
@@ -32,6 +33,7 @@ export function initializeInteractionFeedback() {
     key = null;
   };
   const down = (event: PointerEvent) => {
+    document.documentElement.setAttribute("data-input-method", "pointer");
     reset();
     if (!event.isPrimary || event.button !== 0) return;
     pressed = pressTarget(event.target);
@@ -56,6 +58,8 @@ export function initializeInteractionFeedback() {
     if (pointer?.id === event.pointerId) reset();
   };
   const keyDown = (event: KeyboardEvent) => {
+    if (!event.altKey && !event.ctrlKey && !event.metaKey && !["Shift", "Control", "Alt", "Meta"].includes(event.key))
+      document.documentElement.setAttribute("data-input-method", "keyboard");
     if (event.key === "Escape") return reset();
     if (event.repeat || event.altKey || event.ctrlKey || event.metaKey || !["Enter", " "].includes(event.key)) return;
     const target = pressTarget(event.target);
@@ -83,6 +87,7 @@ export function initializeInteractionFeedback() {
   document.addEventListener("visibilitychange", reset);
   window.addEventListener("blur", reset);
   return () => {
+    document.documentElement.removeAttribute("data-input-method");
     reset();
     document.removeEventListener("pointerdown", down, true);
     document.removeEventListener("pointermove", move, true);

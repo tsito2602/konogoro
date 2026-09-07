@@ -201,11 +201,11 @@ img {
 @keyframes toast-in {
   from {
     opacity: 0;
-    transform: translate(-50%, 10px) scale(0.97);
+    transform: translateX(-50%) scale(0.97);
   }
   to {
     opacity: 1;
-    transform: translate(-50%, 0) scale(1);
+    transform: translateX(-50%) scale(1);
   }
 }
 .page-header {
@@ -2812,11 +2812,11 @@ textarea:focus {
 @keyframes guide-page-in {
   from {
     opacity: 0;
-    transform: translateX(18px);
+    transform: scale(0.99);
   }
   to {
     opacity: 1;
-    transform: translateX(0);
+    transform: scale(1);
   }
 }
 @media (min-width: 760px) {
@@ -2894,12 +2894,14 @@ textarea:focus {
 }
 @keyframes event-filter-in {
   from {
-    transform: translate3d(0, 100%, 0);
+    opacity: 0;
+    transform: scale(0.98);
   }
 }
 @keyframes event-filter-out {
   to {
-    transform: translate3d(0, 100%, 0);
+    opacity: 0;
+    transform: scale(0.98);
   }
 }
 .event-filter-modal > header {
@@ -3387,13 +3389,12 @@ textarea:focus {
   box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.08);
   backdrop-filter: blur(20px) saturate(180%);
   opacity: 0;
-  transform: translateY(calc(100% + 12px));
+  transform: none;
   visibility: hidden;
   pointer-events: none;
   transition:
     opacity 180ms ease,
-    transform 260ms cubic-bezier(0.2, 0.8, 0.2, 1),
-    visibility 0s linear 260ms;
+    visibility 0s linear 180ms;
 }
 .change-save-bar.visible {
   opacity: 1;
@@ -4003,12 +4004,12 @@ textarea:focus {
 }
 @keyframes post-page-in {
   from {
-    transform: translate3d(100%, 0, 0);
+    opacity: 0;
   }
 }
 @keyframes post-page-out {
   to {
-    transform: translate3d(100%, 0, 0);
+    opacity: 0;
   }
 }
 .post-page-header {

@@ -16,14 +16,14 @@ export type SkeletonVariant =
   | "members"
   | "viewer";
 
-type SkeletonProps = { variant: SkeletonVariant; currentUser?: CurrentUser };
+type SkeletonProps = { variant: SkeletonVariant; currentUser?: CurrentUser; previewUrls?: string[] };
 
-export function PageSkeleton({ variant, currentUser }: SkeletonProps) {
+export function PageSkeleton({ variant, currentUser, previewUrls }: SkeletonProps) {
   return (
     <div className={`page-skeleton skeleton-${variant}`} role="status" aria-busy="true">
       <span className="visually-hidden">読み込み中</span>
       <div className="skeleton-content" aria-hidden>
-        {skeletonContent(variant, currentUser)}
+        {skeletonContent(variant, currentUser, previewUrls)}
       </div>
     </div>
   );
@@ -36,7 +36,12 @@ export function AlbumContentSkeleton({ allYear = false }: { allYear?: boolean })
   return (
     <div className="page-skeleton" role="status" aria-busy="true">
       <span className="visually-hidden">写真・動画を読み込み中</span>
-      <section className="album-month" aria-hidden>
+      <section className={allYear ? "album-year" : "album-month"} aria-hidden>
+        {allYear && (
+          <div className="album-month-heading">
+            <span className="skeleton-line short" />
+          </div>
+        )}
         {!allYear && <div className="album-cover skeleton-tile" />}
         <div className="album-grid skeleton-album-grid">{tiles(9)}</div>
       </section>
@@ -58,6 +63,7 @@ export function CommentComposerSkeleton() {
 export function UnreadSummarySkeleton() {
   return (
     <div className="unread-summary skeleton-unread-summary" role="status" aria-busy="true">
+      <div className="unread-summary-art skeleton-tile" aria-hidden="true" />
       <span className="visually-hidden">新着件数を読み込み中</span>
       <div aria-hidden>
         {line("short")}
@@ -146,18 +152,29 @@ function roleChoices() {
   );
 }
 
-function skeletonContent(variant: SkeletonVariant, currentUser?: CurrentUser): React.ReactNode {
+function skeletonContent(variant: SkeletonVariant, currentUser?: CurrentUser, previewUrls?: string[]): React.ReactNode {
   switch (variant) {
     case "timeline":
       return (
-        <>
-          <div className="timeline-month-heading">{line("short")}</div>
+        <section className="timeline-month-group">
+          <div className="timeline-month-heading">
+            <span className="timeline-year">{line("short")}</span>
+            <span className="timeline-month">{line("short")}</span>
+          </div>
           {postSkeleton()}
+          {postSkeleton()}
+        </section>
+      );
+    case "unread":
+      return (
+        <>
+          <div className="unread-progress skeleton-copy">
+            {line("medium")}
+            {line("short")}
+          </div>
           {postSkeleton()}
         </>
       );
-    case "unread":
-      return postSkeleton();
     case "activity":
       return (
         <>
@@ -178,7 +195,7 @@ function skeletonContent(variant: SkeletonVariant, currentUser?: CurrentUser): R
           <div className="activity-list skeleton-rows">
             {Array.from({ length: 5 }, (_, i) => (
               <div className="activity-row" key={i}>
-                <span className="activity-icon skeleton-circle" />
+                <span className="activity-person skeleton-circle" />
                 <span className="activity-copy skeleton-copy">
                   {line()}
                   {line("medium")}
@@ -195,13 +212,13 @@ function skeletonContent(variant: SkeletonVariant, currentUser?: CurrentUser): R
         <section className="event-list-section">
           <h2 className="event-list-section-title">{line("short")}</h2>
           {Array.from({ length: 4 }, (_, i) => (
-            <div className="event-card" key={i}>
-              <div className="event-card-image skeleton-tile" />
-              <div className="event-card-copy skeleton-copy">
-                {line("medium")}
-                <div className="event-card-meta">
-                  {line("short")}
-                  {line("short")}
+            <div className="event-card-stack" key={i}>
+              <div className="event-card">
+                <div className="event-card-image skeleton-tile" />
+                <div className="event-card-copy skeleton-copy">
+                  <p className="event-card-date">{line("short")}</p>
+                  <h3>{line("medium")}</h3>
+                  <div className="event-card-meta">{line("short")}</div>
                 </div>
               </div>
             </div>
@@ -250,8 +267,14 @@ function skeletonContent(variant: SkeletonVariant, currentUser?: CurrentUser): R
             </div>
             {line("medium")}
           </div>
-          <div className="detail-media-grid media-grid skeleton-media-grid" data-count="4">
-            {tiles(4)}
+          <div className="detail-media-grid media-grid skeleton-media-grid" data-count={previewUrls?.length || 4}>
+            {previewUrls?.length
+              ? previewUrls.map((url, index) => (
+                  <div className="media-cell" key={index}>
+                    <img src={url} alt="" />
+                  </div>
+                ))
+              : tiles(4)}
           </div>
           <div className="post-detail-copy skeleton-copy">
             {line()}
@@ -267,6 +290,7 @@ function skeletonContent(variant: SkeletonVariant, currentUser?: CurrentUser): R
     case "event-edit":
       return (
         <div className="form-page page-content event-edit">
+          <div className="event-draft-preview skeleton-tile" />
           <div className="form-stack">
             {field()}
             <div className="date-row">
@@ -305,10 +329,12 @@ function skeletonContent(variant: SkeletonVariant, currentUser?: CurrentUser): R
                 <div className="skeleton-line" />
               </div>
             </section>
-            {field()}
-            {/* 見出しはイベント選択の取得後に表示するため、取得前には行を作らない。 */}
-            {field(true)}
-            <div className="skeleton-field" />
+            <section className="post-edit-details">
+              {field()}
+              {/* 見出しはイベント選択の取得後に表示するため、取得前には行を作らない。 */}
+              {field(true)}
+              <div className="skeleton-field" />
+            </section>
           </div>
         </div>
       );
@@ -316,7 +342,12 @@ function skeletonContent(variant: SkeletonVariant, currentUser?: CurrentUser): R
       return (
         <div className="settings-page skeleton-settings-layout">
           <div className="settings-form">
-            {settingsSection(field())}
+            {settingsSection(
+              <div className="settings-profile">
+                <span className="settings-profile-avatar skeleton-circle" />
+                {field()}
+              </div>,
+            )}
             {settingsSection(
               <>
                 <div className="notification-toggle">
@@ -408,4 +439,16 @@ function skeletonContent(variant: SkeletonVariant, currentUser?: CurrentUser): R
         </div>
       );
   }
+}
+
+export function EventPostsSkeleton() {
+  return (
+    <div className="page-skeleton" role="status" aria-busy="true">
+      <span className="visually-hidden">投稿を読み込み中</span>
+      <div aria-hidden="true">
+        <div className="event-detail-counts">{line("medium")}</div>
+        {postSkeleton(false)}
+      </div>
+    </div>
+  );
 }

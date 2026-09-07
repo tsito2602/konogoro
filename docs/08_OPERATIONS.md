@@ -16,7 +16,7 @@ Cloudflare Dashboardの「Workers & Pages」→`konogoro`→「Observability」�
 
 ログにはsecret、LINE user ID、セッションtoken、コメントや投稿本文を含めない。障害調査時はエラー種別、`requestId`、発生時刻、対象IDを使う。
 
-リリース後は次を手動確認する。
+リリース後の確認範囲は [AGENTS.md](../AGENTS.md) の「差分に応じた検証」に従う。デプロイ成功と変更箇所の代表動作を確認し、以下は関連する変更がある場合だけ選ぶ。文書のみの変更で実機操作・通知送信を行わない。
 
 1. ログインとタイムライン表示
 2. 画像1枚の投稿と表示

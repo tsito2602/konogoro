@@ -1,0 +1,215 @@
+/* Crop only the tray thumbnails; uploaded originals retain their aspect ratios. */
+.post-create-form .photo-picker,
+.post-edit-form .photo-picker {
+  margin: 0;
+  padding: 12px;
+  min-width: 0;
+  border-radius: 22px;
+  background: var(--surface-muted);
+}
+.post-create-form .selected-photos,
+.post-edit-form .selected-photos {
+  padding: 0;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.post-create-form .selected-photo,
+.post-edit-form .selected-photo,
+.media-drag-preview {
+  border-radius: 12px;
+  border: 0;
+  background: var(--placeholder);
+}
+.post-create-form .photo-add,
+.post-edit-form .photo-add {
+  border-radius: 12px;
+  border: 1px dashed var(--ash);
+  background: var(--surface);
+  transition:
+    background 160ms ease,
+    border-color 160ms ease;
+}
+.post-create-form .photo-add.drag-active {
+  background: color-mix(in srgb, var(--accent) 14%, var(--surface));
+  border-color: var(--accent-ink);
+}
+.post-create-form .media-reorder-hint,
+.post-edit-form .media-reorder-hint {
+  margin: 14px 0 0;
+  padding: 0;
+  font-size: 0.75rem;
+}
+.post-edit-details {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 0;
+}
+.post-edit-details .management-section {
+  margin: 0;
+  padding: 14px;
+  border: 0;
+  background: var(--surface-muted);
+}
+.post-create-form .media-processing-status,
+.post-edit-form .media-processing-status {
+  border-radius: 16px;
+  border: 1px solid var(--separator);
+}
+.post-create-form .selected-upload-status,
+.post-edit-form .selected-upload-status {
+  border-radius: 6px;
+}
+.selected-photo.uploaded .selected-upload-status {
+  background: var(--accent-ink);
+  color: var(--surface);
+}
+.event-draft-preview {
+  position: relative;
+  margin: 0 0 24px;
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: 20px;
+  aspect-ratio: 16 / 9;
+  min-height: min-content;
+  background: var(--surface-muted);
+}
+.event-draft-preview > img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: -2;
+}
+.event-draft-preview.has-cover::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(180deg, rgb(0 0 0 / 10%), rgb(0 0 0 / 70%));
+}
+.event-draft-preview.has-cover {
+  color: white;
+}
+.event-draft-preview figcaption {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  padding: 24px;
+  box-sizing: border-box;
+}
+.event-draft-kicker {
+  font-size: 0.6875rem;
+  letter-spacing: 0.12em;
+  margin-bottom: auto;
+}
+.event-draft-preview p {
+  font-size: 0.75rem;
+  margin: 28px 0 8px;
+}
+.event-draft-preview strong {
+  font-size: clamp(1.6rem, 4vw, 2.6rem);
+  font-weight: 750;
+  line-height: 1.18;
+  letter-spacing: -0.035em;
+  overflow-wrap: anywhere;
+  padding-right: 24px;
+}
+.event-draft-preview svg {
+  position: absolute;
+  bottom: 24px;
+  right: 20px;
+  width: 20px;
+}
+.event-edit .scene-editor,
+.post-edit-details .scene-editor {
+  border-radius: 12px;
+  background: var(--surface);
+}
+@media (min-width: 960px) {
+  .form-page.page-content:has(.post-edit-form),
+  .form-page.page-content.event-create {
+    max-width: 1180px;
+  }
+  .form-page.page-content > .post-edit-form {
+    display: grid;
+    grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.75fr);
+    align-items: start;
+    gap: 28px 32px;
+    padding: 0;
+    border: 0;
+    background: none;
+  }
+  .post-edit-form > .media-processing-status {
+    grid-column: 1 / -1;
+  }
+  .form-page.page-content > .post-edit-form .media-processing-status {
+    margin: 0;
+  }
+  .post-create-form .photo-picker,
+  .post-edit-form .photo-picker {
+    padding: 16px;
+  }
+  .post-create-form .selected-photos,
+  .post-edit-form .selected-photos {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .post-create-form .media-drop-zone {
+    order: 0;
+    grid-column: auto;
+    aspect-ratio: 1;
+    min-height: 0;
+    font-size: 0.75rem;
+  }
+  .post-create-form .media-drop-zone .drop-zone-help {
+    display: none;
+  }
+  .post-create-form .media-drop-zone:only-child {
+    grid-column: 1 / -1;
+    aspect-ratio: auto;
+    min-height: 240px;
+  }
+  .post-create-form .media-drop-zone:only-child .drop-zone-help {
+    display: inline;
+  }
+  .post-create-form .post-create-details,
+  .post-edit-form .post-edit-details {
+    padding: 24px;
+    border: 0;
+    border-radius: 20px;
+    background: var(--surface);
+  }
+  .event-create {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 32px;
+    align-items: start;
+  }
+  .event-edit > .event-draft-preview {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .event-edit > #event-edit-form,
+  .skeleton-event-edit .event-edit > .form-stack {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .event-draft-preview {
+    margin: 0;
+  }
+}
+@media (max-width: 380px) {
+  .event-create .date-row,
+  .event-edit .date-row {
+    grid-template-columns: 1fr;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .post-create-form .photo-add,
+  .post-edit-form .photo-add {
+    transition: none;
+  }
+}

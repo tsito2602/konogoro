@@ -1,0 +1,184 @@
+.settings-page .settings-profile {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+  padding: 18px;
+}
+.settings-profile .settings-field {
+  padding: 0;
+}
+.settings-profile-avatar {
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+  overflow: hidden;
+  background: var(--surface-muted);
+  color: var(--ash);
+  font-size: 1.5rem;
+}
+.settings-profile-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.settings-page .settings-card {
+  border: 0;
+  border-radius: 20px;
+}
+.settings-page .settings-section > h2 {
+  letter-spacing: 0.05em;
+  margin-bottom: 12px;
+}
+.settings-page .notification-toggle {
+  padding: 18px;
+}
+.settings-page .notification-toggle-icon {
+  border-radius: 14px;
+}
+.settings-page .notification-toggle.enabled .notification-toggle-icon {
+  transform: none;
+}
+.settings-page .notification-toggle.enabled.touched:not(.unavailable) .notification-bell-on {
+  animation: settings-bell 360ms ease-out;
+}
+@keyframes settings-bell {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  25% {
+    transform: rotate(-12deg);
+  }
+  60% {
+    transform: rotate(8deg);
+  }
+}
+.settings-page .notification-switch {
+  border-width: 0;
+  background: var(--surface-muted);
+  width: 58px;
+}
+.settings-page .notification-switch > span {
+  top: 5px;
+  left: 5px;
+  width: 26px;
+  height: 26px;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 16%);
+  transition:
+    transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    color 180ms ease;
+}
+.settings-page .notification-toggle.enabled .notification-switch {
+  background: var(--accent);
+}
+.settings-page .notification-toggle.unavailable {
+  opacity: 0.7;
+}
+.settings-page .setting-status > span {
+  font-size: 0.75rem;
+  padding: 4px 9px;
+  border-radius: 8px;
+  background: var(--surface-muted);
+}
+.settings-page .setting-status > .linked {
+  background: color-mix(in srgb, var(--success) 10%, var(--surface));
+}
+.settings-page .theme-setting {
+  padding: 0;
+  background: transparent;
+}
+.settings-page .theme-setting > div {
+  gap: 10px;
+}
+.settings-page .theme-setting label {
+  border: 0;
+  padding: 8px 8px 14px;
+  gap: 8px;
+  background: var(--surface);
+  border-radius: 16px;
+}
+.settings-page .theme-setting label.selected {
+  background: color-mix(in srgb, var(--accent) 15%, var(--surface));
+  box-shadow: inset 0 0 0 2px var(--accent-ink);
+}
+.settings-page .theme-setting label > svg {
+  width: 18px;
+  height: 18px;
+}
+.settings-page .theme-setting .theme-preview {
+  --sample-paper: #f7f7f5;
+  --sample-surface: #fff;
+  --sample-muted: #d5d5cf;
+  display: grid;
+  grid-template-rows: 9px 40px 4px 9px;
+  gap: 6px;
+  width: 100%;
+  padding: 8px;
+  border-radius: 10px;
+  background: var(--sample-paper);
+  overflow: hidden;
+}
+.theme-preview i {
+  display: block;
+  border-radius: 3px;
+}
+.theme-preview-header,
+.theme-preview-nav {
+  background: var(--sample-surface);
+}
+.theme-preview-photo {
+  background: linear-gradient(150deg, #adbbab, #637e71);
+}
+.theme-preview-caption {
+  width: 65%;
+  background: var(--sample-muted);
+}
+.settings-page .theme-preview[data-sample="dark"] {
+  --sample-paper: #141416;
+  --sample-surface: #202023;
+  --sample-muted: #747477;
+}
+@media (prefers-color-scheme: dark) {
+  .settings-page .theme-preview[data-sample="system"] {
+    --sample-paper: #141416;
+    --sample-surface: #202023;
+    --sample-muted: #747477;
+  }
+}
+.settings-page .settings-menu-row {
+  padding: 18px;
+}
+.settings-page .settings-menu-row > svg:first-child {
+  border-radius: 13px;
+}
+.settings-page .role-guide > label {
+  border-radius: 14px;
+}
+.settings-page .settings-app-info {
+  gap: 4px;
+  padding-top: 12px;
+}
+.settings-page .skeleton-theme-options > span {
+  min-height: 165px;
+  border-radius: 16px;
+}
+@media (max-width: 360px) {
+  .settings-page .notification-toggle {
+    padding: 14px 10px;
+    gap: 8px;
+  }
+  .settings-page .theme-setting > div {
+    gap: 6px;
+  }
+  .settings-page .theme-setting label {
+    padding-inline: 5px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .settings-page .notification-toggle.enabled.touched .notification-bell-on {
+    animation: none;
+  }
+}

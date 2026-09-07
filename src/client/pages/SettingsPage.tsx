@@ -85,6 +85,7 @@ export function SettingsPage() {
   const [members, setMembers] = useState<FamilyMember[] | null>(null);
   const [displayName, setDisplayName] = useState("");
   const [notificationEnabled, setNotificationEnabled] = useState(false);
+  const [notificationTouched, setNotificationTouched] = useState(false);
   const [error, setError] = useState("");
   const [familyError, setFamilyError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -188,7 +189,10 @@ export function SettingsPage() {
             <form id="settings-save-form" className="settings-form" onSubmit={save}>
               <section className="settings-section">
                 <h2>プロフィール</h2>
-                <div className="settings-card">
+                <div className="settings-card settings-profile">
+                  <span className="settings-profile-avatar" aria-hidden="true">
+                    {user.avatarUrl ? <img src={user.avatarUrl} alt="" /> : user.displayName.slice(0, 1)}
+                  </span>
                   <label className="settings-field">
                     <span>表示名</span>
                     <input
@@ -206,13 +210,16 @@ export function SettingsPage() {
                 <h2>LINE</h2>
                 <div className="settings-card">
                   <label
-                    className={`notification-toggle${notificationEnabled ? " enabled" : ""}${!user.lineFriend ? " unavailable" : ""}`}
+                    className={`notification-toggle${notificationEnabled ? " enabled" : ""}${!user.lineFriend ? " unavailable" : ""}${notificationTouched ? " touched" : ""}`}
                   >
                     <input
                       className="notification-toggle-input"
                       type="checkbox"
                       checked={notificationEnabled}
-                      onChange={(event) => setNotificationEnabled(event.target.checked)}
+                      onChange={(event) => {
+                        setNotificationTouched(true);
+                        setNotificationEnabled(event.target.checked);
+                      }}
                       disabled={busy || !user.lineFriend}
                     />
                     <span className="notification-toggle-icon" aria-hidden>
@@ -221,7 +228,13 @@ export function SettingsPage() {
                     </span>
                     <span className="notification-toggle-copy">
                       <strong>
-                        LINE通知 <small>{!user.lineFriend ? "利用不可" : notificationEnabled ? "オン" : "オフ"}</small>
+                        LINE通知{" "}
+                        <small>
+                          {!user.lineFriend ? "利用不可" : notificationEnabled ? "オン" : "オフ"}
+                          {user.lineFriend && notificationEnabled !== (user.notificationEnabled ?? false)
+                            ? " · 未保存"
+                            : ""}
+                        </small>
                       </strong>
                       <span>
                         {!user.lineFriend
@@ -290,6 +303,7 @@ export function SettingsPage() {
 
             <section className="settings-section">
               <h2>表示</h2>
+              <p className="settings-hint">テーマは選ぶとすぐに反映されます。</p>
               <fieldset className="settings-card theme-setting">
                 <legend className="visually-hidden">テーマ</legend>
                 <div>
@@ -305,6 +319,12 @@ export function SettingsPage() {
                           setThemePreference(value);
                         }}
                       />
+                      <span className="theme-preview" data-sample={value} aria-hidden="true">
+                        <i className="theme-preview-header" />
+                        <i className="theme-preview-photo" />
+                        <i className="theme-preview-caption" />
+                        <i className="theme-preview-nav" />
+                      </span>
                       <Icon aria-hidden />
                       <span>
                         <strong>{label}</strong>

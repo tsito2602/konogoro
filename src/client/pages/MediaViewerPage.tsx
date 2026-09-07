@@ -16,8 +16,59 @@ import {
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import type { AlbumMedia, Media, Post } from "../../shared/types";
 import { api, formatDate } from "../api";
-import { ViewerImage } from "../components/ViewerImage";
+import { ViewerImage, type ViewerImageTransform } from "../components/ViewerImage";
 import { ErrorState, Loading } from "../components/AsyncState";
+
+const MIN_IMAGE_SCALE = 1;
+const MAX_IMAGE_SCALE = 4;
+const DEFAULT_IMAGE_TRANSFORM: ViewerImageTransform = { scale: MIN_IMAGE_SCALE, x: 0, y: 0 };
+
+type Point = { x: number; y: number };
+
+export function clampImageScale(scale: number) {
+  return Math.min(MAX_IMAGE_SCALE, Math.max(MIN_IMAGE_SCALE, scale));
+}
+
+export function pointDistance(first: Point, second: Point) {
+  return Math.hypot(second.x - first.x, second.y - first.y);
+}
+
+export function pointCenter(first: Point, second: Point): Point {
+  return { x: (first.x + second.x) / 2, y: (first.y + second.y) / 2 };
+}
+
+export function pinchImageTransform(
+  start: ViewerImageTransform,
+  startCenter: Point,
+  nextCenter: Point,
+  viewportCenter: Point,
+  nextScale: number,
+): ViewerImageTransform {
+  const scale = clampImageScale(nextScale);
+  const focalX = (startCenter.x - viewportCenter.x - start.x) / start.scale;
+  const focalY = (startCenter.y - viewportCenter.y - start.y) / start.scale;
+  return {
+    scale,
+    x: nextCenter.x - viewportCenter.x - focalX * scale,
+    y: nextCenter.y - viewportCenter.y - focalY * scale,
+  };
+}
+
+export function clampImageTranslation(
+  transform: ViewerImageTransform,
+  imageSize: { width: number; height: number },
+  viewportSize: { width: number; height: number },
+): ViewerImageTransform {
+  const scale = clampImageScale(transform.scale);
+  if (scale === MIN_IMAGE_SCALE) return DEFAULT_IMAGE_TRANSFORM;
+  const maxX = Math.max(0, (imageSize.width * scale - viewportSize.width) / 2);
+  const maxY = Math.max(0, (imageSize.height * scale - viewportSize.height) / 2);
+  return {
+    scale,
+    x: Math.min(maxX, Math.max(-maxX, transform.x)),
+    y: Math.min(maxY, Math.max(-maxY, transform.y)),
+  };
+}
 
 export function swipeDirection(deltaX: number, deltaY: number): "previous" | "next" | null {
   if (Math.abs(deltaX) < 50 || Math.abs(deltaX) <= Math.abs(deltaY) * 1.2) return null;
@@ -90,10 +141,25 @@ export function MediaViewerPage() {
   const canPrepare = useVideoPreparation();
   const [dragOffset, setDragOffset] = useState(0);
   const [dragging, setDragging] = useState(false);
+  const [imageTransform, setImageTransform] = useState<ViewerImageTransform>(DEFAULT_IMAGE_TRANSFORM);
+  const imageTransformRef = useRef<ViewerImageTransform>(DEFAULT_IMAGE_TRANSFORM);
+  const [imageGestureActive, setImageGestureActive] = useState(false);
   const stageRef = useRef<HTMLDivElement>(null);
   const thumbnailStripRef = useRef<HTMLDivElement>(null);
   const swipeStart = useRef<{ x: number; y: number; pointerId: number } | null>(null);
   const swipeAnimation = useRef<number | null>(null);
+  const imagePointers = useRef(new Map<number, Point>());
+  const pinchStart = useRef<{
+    pointerIds: [number, number];
+    distance: number;
+    center: Point;
+    transform: ViewerImageTransform;
+  } | null>(null);
+  const panStart = useRef<{
+    pointerId: number;
+    point: Point;
+    transform: ViewerImageTransform;
+  } | null>(null);
   const load = () => {
     setFailure(null);
     postCache.current.delete(postId);
@@ -132,6 +198,32 @@ export function MediaViewerPage() {
     [post, postId, viewerState?.albumMedia, mediaId],
   );
   const index = navigationItems.findIndex((item) => item.id === mediaId && item.postId === postId);
+  const constrainImageTransform = useCallback((next: ViewerImageTransform) => {
+    const stage = stageRef.current;
+    const image = stage?.querySelector<HTMLImageElement>(".viewer-image > img");
+    if (!stage || !image) return { ...DEFAULT_IMAGE_TRANSFORM, scale: clampImageScale(next.scale) };
+    return clampImageTranslation(
+      next,
+      { width: image.offsetWidth, height: image.offsetHeight },
+      { width: stage.clientWidth, height: stage.clientHeight },
+    );
+  }, []);
+  const applyImageTransform = useCallback(
+    (next: ViewerImageTransform) => {
+      const constrained = constrainImageTransform(next);
+      imageTransformRef.current = constrained;
+      setImageTransform(constrained);
+    },
+    [constrainImageTransform],
+  );
+  const resetImageTransform = useCallback(() => {
+    imagePointers.current.clear();
+    pinchStart.current = null;
+    panStart.current = null;
+    imageTransformRef.current = DEFAULT_IMAGE_TRANSFORM;
+    setImageTransform(DEFAULT_IMAGE_TRANSFORM);
+    setImageGestureActive(false);
+  }, []);
   useLayoutEffect(() => {
     const strip = thumbnailStripRef.current;
     const selected = strip?.querySelector<HTMLElement>('[aria-current="true"]');
@@ -192,6 +284,7 @@ export function MediaViewerPage() {
       }
       setDragOffset(0);
       setDragging(false);
+      resetImageTransform();
       setCommentsOpen(false);
       navigate(`/posts/${target.postId}/media/${target.id}`, {
         replace: true,
@@ -202,7 +295,7 @@ export function MediaViewerPage() {
         },
       });
     },
-    [location.state, navigate, navigationItems],
+    [location.state, navigate, navigationItems, resetImageTransform],
   );
   const animateToMedia = useCallback(
     (targetIndex: number, direction: "previous" | "next") => {
@@ -243,13 +336,83 @@ export function MediaViewerPage() {
     window.addEventListener("keydown", keydown);
     return () => window.removeEventListener("keydown", keydown);
   }, [animateToMedia, closeViewer, commentsOpen, index, post]);
-  const startSwipe = (event: ReactPointerEvent<HTMLDivElement>) => {
+  const cancelSwipe = () => {
+    swipeStart.current = null;
+    setDragging(false);
+    setDragOffset(0);
+  };
+  const startGesture = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (swipeAnimation.current !== null) return;
-    if (!event.isPrimary || (event.pointerType === "mouse" && event.button !== 0)) return;
+    if (event.pointerType === "mouse" && event.button !== 0) return;
     if (event.target instanceof Element && event.target.closest("video, button, a")) return;
+    const onImage =
+      current?.kind === "image" && event.target instanceof Element && event.target.closest(".viewer-image");
+    if (onImage) {
+      const point = { x: event.clientX, y: event.clientY };
+      imagePointers.current.set(event.pointerId, point);
+      event.currentTarget.setPointerCapture(event.pointerId);
+      if (imagePointers.current.size >= 2) {
+        const [first, second] = Array.from(imagePointers.current.entries()).slice(0, 2);
+        const distance = pointDistance(first[1], second[1]);
+        if (distance > 0) {
+          pinchStart.current = {
+            pointerIds: [first[0], second[0]],
+            distance,
+            center: pointCenter(first[1], second[1]),
+            transform: imageTransformRef.current,
+          };
+          panStart.current = null;
+          cancelSwipe();
+          setImageGestureActive(true);
+          event.preventDefault();
+        }
+        return;
+      }
+      if (imageTransformRef.current.scale > MIN_IMAGE_SCALE) {
+        panStart.current = { pointerId: event.pointerId, point, transform: imageTransformRef.current };
+        cancelSwipe();
+        setImageGestureActive(true);
+        event.preventDefault();
+        return;
+      }
+    }
+    if (!event.isPrimary) return;
     swipeStart.current = { x: event.clientX, y: event.clientY, pointerId: event.pointerId };
   };
-  const moveSwipe = (event: ReactPointerEvent<HTMLDivElement>) => {
+  const moveGesture = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (imagePointers.current.has(event.pointerId)) {
+      imagePointers.current.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    }
+    const pinch = pinchStart.current;
+    if (pinch) {
+      const first = imagePointers.current.get(pinch.pointerIds[0]);
+      const second = imagePointers.current.get(pinch.pointerIds[1]);
+      const stage = stageRef.current;
+      if (!first || !second || !stage) return;
+      const center = pointCenter(first, second);
+      const rect = stage.getBoundingClientRect();
+      applyImageTransform(
+        pinchImageTransform(
+          pinch.transform,
+          pinch.center,
+          center,
+          { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 },
+          pinch.transform.scale * (pointDistance(first, second) / pinch.distance),
+        ),
+      );
+      event.preventDefault();
+      return;
+    }
+    const pan = panStart.current;
+    if (pan?.pointerId === event.pointerId) {
+      applyImageTransform({
+        ...pan.transform,
+        x: pan.transform.x + event.clientX - pan.point.x,
+        y: pan.transform.y + event.clientY - pan.point.y,
+      });
+      event.preventDefault();
+      return;
+    }
     const start = swipeStart.current;
     if (!start || start.pointerId !== event.pointerId) return;
     const deltaX = event.clientX - start.x;
@@ -260,7 +423,35 @@ export function MediaViewerPage() {
     setDragging(true);
     setDragOffset(swipeDragOffset(deltaX, index > 0, index < navigationItems.length - 1));
   };
-  const finishSwipe = (event: ReactPointerEvent<HTMLDivElement>) => {
+  const finishGesture = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const wasImagePointer = imagePointers.current.delete(event.pointerId);
+    if (pinchStart.current) {
+      pinchStart.current = null;
+      const remaining = Array.from(imagePointers.current.entries())[0];
+      if (remaining && imageTransformRef.current.scale > MIN_IMAGE_SCALE) {
+        panStart.current = {
+          pointerId: remaining[0],
+          point: remaining[1],
+          transform: imageTransformRef.current,
+        };
+      } else {
+        panStart.current = null;
+        setImageGestureActive(false);
+      }
+      event.preventDefault();
+      return;
+    }
+    if (panStart.current?.pointerId === event.pointerId) {
+      panStart.current = null;
+      setImageGestureActive(false);
+      event.preventDefault();
+      return;
+    }
+    if (wasImagePointer && imageTransformRef.current.scale > MIN_IMAGE_SCALE) {
+      setImageGestureActive(false);
+      event.preventDefault();
+      return;
+    }
     const start = swipeStart.current;
     swipeStart.current = null;
     if (!start || start.pointerId !== event.pointerId) return;
@@ -273,10 +464,12 @@ export function MediaViewerPage() {
     setDragging(false);
     setDragOffset(0);
   };
-  const cancelSwipe = () => {
-    swipeStart.current = null;
-    setDragging(false);
-    setDragOffset(0);
+  const cancelGesture = () => {
+    imagePointers.current.clear();
+    pinchStart.current = null;
+    panStart.current = null;
+    setImageGestureActive(false);
+    cancelSwipe();
   };
   return (
     <main className={`media-viewer video-viewer${commentsOpen ? " comments-open" : ""}`}>
@@ -291,11 +484,11 @@ export function MediaViewerPage() {
       </header>
       <div
         ref={stageRef}
-        className="viewer-stage"
-        onPointerDown={startSwipe}
-        onPointerMove={moveSwipe}
-        onPointerUp={finishSwipe}
-        onPointerCancel={cancelSwipe}
+        className={`viewer-stage${current?.kind === "image" ? " image-stage" : ""}`}
+        onPointerDown={startGesture}
+        onPointerMove={moveGesture}
+        onPointerUp={finishGesture}
+        onPointerCancel={cancelGesture}
       >
         <div
           key={current?.id ?? `${postId}/${mediaId}`}
@@ -324,7 +517,12 @@ export function MediaViewerPage() {
               }}
             />
           ) : (
-            <ViewerImage src={current.contentUrl} alt={`投稿の写真 ${index + 1}`} />
+            <ViewerImage
+              src={current.contentUrl}
+              alt={`投稿の写真 ${index + 1}`}
+              transform={imageTransform}
+              interacting={imageGestureActive}
+            />
           )}
         </div>
       </div>

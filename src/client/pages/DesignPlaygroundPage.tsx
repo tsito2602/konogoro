@@ -172,6 +172,16 @@ function Playground() {
             <span>ひらく</span>
           </div>
           <div className="tactile-book-stack">
+            {photos.slice(1).map((photo) => (
+              <img
+                key={photo.id}
+                className="tactile-book-peek"
+                src={photo.image}
+                alt=""
+                aria-hidden="true"
+                draggable={false}
+              />
+            ))}
             <button
               type="button"
               className="tactile-book"
@@ -223,10 +233,7 @@ function Playground() {
                     }}
                   >
                     <img src={photo.image} alt={photo.name} draggable={false} />
-                    <span>
-                      <span>0{index + 1}</span>
-                      {photo.name}
-                    </span>
+                    <span aria-hidden="true">0{index + 1}</span>
                   </div>
                 );
               })}

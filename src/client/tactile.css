@@ -154,19 +154,31 @@
   padding: 42px 0 30px;
   perspective: 900px;
 }
-.tactile-book-stack::before,
-.tactile-book-stack::after {
-  content: "";
+.tactile-book-peek {
   position: absolute;
-  inset: 45px 0 29px;
-  background: var(--tactile-canvas);
-  border: 1px solid var(--tactile-line);
-  border-radius: 14px;
-  transform: rotate(-4deg);
+  inset: 42px 0 30px;
+  width: 100%;
+  height: calc(100% - 72px);
+  object-fit: cover;
+  border-radius: 12px;
+  box-shadow: var(--tactile-shadow-rest);
+  pointer-events: none;
+  opacity: 0;
+  transform: scale(0.94);
+  transition:
+    transform var(--tactile-open) var(--tactile-settle),
+    opacity var(--tactile-short);
 }
-.tactile-book-stack::after {
-  transform: rotate(3deg);
-  background: var(--tactile-paper);
+.tactile-book-peek:first-child {
+  --peek-transform: translate(-10px, -16px) rotate(-5deg);
+}
+.tactile-book-peek:nth-child(2) {
+  --peek-transform: translate(10px, -10px) rotate(5deg);
+}
+.tactile-book-stack:has(> .tactile-book:active) .tactile-book-peek,
+.tactile-book-stack:has(> .tactile-book:focus-visible) .tactile-book-peek {
+  opacity: 1;
+  transform: var(--peek-transform);
 }
 .tactile-book {
   position: relative;
@@ -243,35 +255,29 @@
 }
 .tactile-print.selected-photo {
   position: relative;
-  aspect-ratio: auto;
-  overflow: visible;
-  padding: 6px 6px 0;
-  border: 1px solid #dedfd5;
-  border-radius: 4px;
-  color: #50594f;
-  background: #fffefb;
+  aspect-ratio: 1;
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  color: white;
+  background: #577164;
   box-shadow: var(--tactile-shadow-rest);
   outline-offset: 4px;
 }
 .tactile-print img {
   display: block;
-  aspect-ratio: 0.9;
   width: 100%;
-  height: auto;
+  height: 100%;
   object-fit: cover;
-  border-radius: 2px;
 }
 .tactile-print > span {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  font-size: 9px;
-  white-space: nowrap;
-  padding: 12px 2px;
-}
-.tactile-print > span > span {
-  color: #909786;
-  font-size: 8px;
+  position: absolute;
+  inset: auto 0 0;
+  padding: 18px 10px 8px;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  background: linear-gradient(transparent, #10231ab3);
 }
 .tactile-photo-tray.media-reordering .tactile-print {
   transition: transform 220ms var(--tactile-settle);
@@ -563,8 +569,9 @@
   }
 }
 @media (hover: hover) and (pointer: fine) {
-  .tactile-book:hover {
-    transform: translateY(-5px) rotate(-1deg);
+  .tactile-book-stack:has(> .tactile-book:hover) .tactile-book-peek {
+    opacity: 1;
+    transform: var(--peek-transform);
   }
 }
 @media (max-width: 760px) {
@@ -595,9 +602,9 @@
   .tactile-book-stack {
     padding: 30px 0 24px;
   }
-  .tactile-book-stack::before,
-  .tactile-book-stack::after {
-    inset: 32px 0 24px;
+  .tactile-book-peek {
+    inset: 30px 0 24px;
+    height: calc(100% - 54px);
   }
   .tactile-book {
     aspect-ratio: 16/9;
@@ -636,9 +643,6 @@
   animation: none !important;
   transition: none !important;
 }
-[data-reduce-motion="true"] .tactile-book:hover {
-  transform: none;
-}
 .tactile-print[data-reduce-motion="true"].media-drag-preview {
   rotate: none;
 }
@@ -647,9 +651,6 @@
   .tactile-print {
     animation: none !important;
     transition: none !important;
-  }
-  .tactile-book:hover {
-    transform: none;
   }
   .tactile-print.media-drag-preview {
     rotate: none;

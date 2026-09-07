@@ -371,13 +371,15 @@ function PostPage({
   return (
     <div className={`post-page-layer${closing ? " closing" : ""}`}>
       <header className="page-header post-page-header">
-        <div className="header-side">
-          <button className="icon-button" type="button" onClick={close} aria-label="戻る">
-            <ChevronLeft />
-          </button>
+        <div className="page-header-inner">
+          <div className="header-side">
+            <button className="icon-button" type="button" onClick={close} aria-label="戻る">
+              <ChevronLeft />
+            </button>
+          </div>
+          <span aria-hidden />
+          <div className="header-side header-action">{action}</div>
         </div>
-        <span aria-hidden />
-        <div className="header-side header-action">{action}</div>
       </header>
       <div className="post-page-scroll">{children}</div>
       {footer}

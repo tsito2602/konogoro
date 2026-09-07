@@ -1,12 +1,13 @@
 import { useReadingState } from "../reading-context";
 import { ListFilter, X } from "lucide-react";
-import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useRef, useState } from "react";
+import { Link, useNavigationType, useViewTransitionState } from "react-router-dom";
 import type { EventSummary } from "../../shared/types";
 import { api, eventDate } from "../api";
 import { EmptyState, ErrorState } from "../components/AsyncState";
 import { PageHeader } from "../components/PageHeader";
 import { PageSkeleton } from "../components/PageSkeleton";
+import "../event-material.css";
 import { eventTiming, type EventTiming } from "../../shared/event-timing";
 
 export type EventFilters = {
@@ -20,6 +21,8 @@ const emptyFilters: EventFilters = { keyword: "", from: "", to: "", status: "all
 
 export function EventsPage() {
   const [events, setEvents] = useReadingState<EventSummary[] | null>("events", null);
+  const navigationType = useNavigationType();
+  const [lastEvent, setLastEvent] = useReadingState<string | null>("lastEvent", null);
   const [error, setError] = useState("");
   const [filters, setFilters] = useReadingState<EventFilters>("filters", emptyFilters);
   const [draftFilters, setDraftFilters] = useState<EventFilters>(emptyFilters);
@@ -89,7 +92,12 @@ export function EventsPage() {
               {group.title}
             </h2>
             {group.events.map((event) => (
-              <EventCard event={event} key={event.id} />
+              <TransitionEventCard
+                event={event}
+                key={event.id}
+                onOpen={() => setLastEvent(event.id)}
+                returnFocus={navigationType === "POP" && lastEvent === event.id}
+              />
             ))}
           </section>
         ))}
@@ -191,28 +199,84 @@ export function EventsPage() {
   );
 }
 
-export function EventCard({ event }: { event: EventSummary }) {
+function TransitionEventCard(props: { event: EventSummary; onOpen: () => void; returnFocus: boolean }) {
+  const transitioning = useViewTransitionState(`/events/${props.event.id}`);
+  return <EventCard {...props} transitioning={transitioning} />;
+}
+
+export function EventCard({
+  event,
+  transitioning = false,
+  onOpen,
+  returnFocus = false,
+}: {
+  event: EventSummary;
+  transitioning?: boolean;
+  onOpen?: () => void;
+  returnFocus?: boolean;
+}) {
+  const [peekLoaded, setPeekLoaded] = useState(false);
+  const [coverLoaded, setCoverLoaded] = useState(false);
+  const linkRef = useRef<HTMLAnchorElement>(null);
+  useEffect(() => {
+    if (returnFocus) linkRef.current?.focus({ preventScroll: true });
+  }, [returnFocus]);
+  const reveal = () => setPeekLoaded(true);
   return (
-    <Link data-reading-item={`event-${event.id}`} className="event-card" to={`/events/${event.id}`}>
-      <div className={`event-card-image${event.coverUrl ? "" : " no-cover"}`}>
-        {event.coverUrl && (
+    <div className="event-card-stack">
+      {peekLoaded &&
+        event.coverUrl &&
+        (event.previewMediaUrls ?? []).slice(0, 2).map((url) => (
           <img
-            src={event.coverUrl}
+            className="event-card-peek"
+            key={url}
+            src={url}
             alt=""
-            loading="lazy"
-            style={{ objectPosition: `${event.coverPosition?.x ?? 50}% ${event.coverPosition?.y ?? 50}%` }}
+            aria-hidden="true"
+            draggable={false}
+            onLoad={(e) => {
+              e.currentTarget.dataset.ready = "true";
+            }}
+            onError={(e) => {
+              e.currentTarget.hidden = true;
+            }}
           />
-        )}
-        <div className="event-card-badges">{eventStatusLabel(event.startDate, event.endDate)}</div>
-      </div>
-      <div className="event-card-copy">
-        <h3>{event.title}</h3>
-        <div className="event-card-meta">
-          <p>{eventDate(event.startDate, event.endDate)}</p>
-          <p className="event-media-count">{mediaCounts(event.photoCount, event.videoCount)}</p>
+        ))}
+      <Link
+        ref={linkRef}
+        data-reading-item={`event-${event.id}`}
+        className="event-card"
+        to={`/events/${event.id}`}
+        state={{ eventPreview: event }}
+        onClick={onOpen}
+        onPointerEnter={reveal}
+        onPointerDown={reveal}
+        onFocus={reveal}
+        viewTransition={coverLoaded && !window.matchMedia("(prefers-reduced-motion: reduce)").matches}
+        style={{ viewTransitionName: transitioning ? "event-surface" : undefined }}
+      >
+        <div className={`event-card-image${event.coverUrl ? "" : " no-cover"}`}>
+          {event.coverUrl && (
+            <img
+              src={event.coverUrl}
+              alt=""
+              loading="lazy"
+              onLoad={() => setCoverLoaded(true)}
+              onError={() => setCoverLoaded(false)}
+              style={{ objectPosition: `${event.coverPosition?.x ?? 50}% ${event.coverPosition?.y ?? 50}%` }}
+            />
+          )}
+          <div className="event-card-badges">{eventStatusLabel(event.startDate, event.endDate)}</div>
         </div>
-      </div>
-    </Link>
+        <div className="event-card-copy">
+          <h3 style={{ viewTransitionName: transitioning ? "event-title" : undefined }}>{event.title}</h3>
+          <div className="event-card-meta">
+            <p>{eventDate(event.startDate, event.endDate)}</p>
+            <p className="event-media-count">{mediaCounts(event.photoCount, event.videoCount)}</p>
+          </div>
+        </div>
+      </Link>
+    </div>
   );
 }
 

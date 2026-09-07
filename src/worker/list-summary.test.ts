@@ -4,7 +4,7 @@ import { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
 import { loadPosts, postSelect, type PostRow } from "./db";
 import { app } from "./index";
-import type { Post, User } from "../shared/types";
+import type { EventSummary, Post, User } from "../shared/types";
 
 const user: User = { id: "01JDEVUSER0000000000000000", displayName: "Fixture", role: "owner" };
 function fixture() {
@@ -97,6 +97,47 @@ describe("一覧と詳細の取得契約", () => {
         LINE_CHANNEL_SECRET: "configured",
       });
       expect(unauthorized.status).toBe(401);
+    } finally {
+      sql.close();
+    }
+  });
+});
+
+describe("イベント表紙の奥のサムネイル", () => {
+  it("同じイベントの公開済み・アップロード済みから表紙以外を2件だけ返す", async () => {
+    const { sql, env } = fixture();
+    try {
+      sql
+        .prepare(
+          "INSERT INTO events (id, title, created_by, created_at, updated_at) VALUES ('trip', 'Trip', ?, '2026-09-06', '2026-09-06')",
+        )
+        .run(user.id);
+      sql.exec(
+        "UPDATE posts SET event_id = 'trip' WHERE id IN ('post', 'draft'); UPDATE events SET cover_media_id = 'm-0' WHERE id = 'trip'; UPDATE media SET position = 31 WHERE id = 'm-0'; UPDATE media SET position = 0 WHERE id = 'pending';",
+      );
+      // Move existing rows into the draft so they would rank first if its status were ignored.
+      sql.exec("UPDATE media SET post_id = 'draft' WHERE id IN ('m-1', 'm-2');");
+      const response = await app.request("/api/events", undefined, env);
+      expect(response.status).toBe(200);
+      const body = await response.json<{ events: EventSummary[] }>();
+      const trip = body.events.find((e) => e.id === "trip")!;
+      expect(trip.previewMediaUrls).toEqual([
+        "/api/media/m-3/content?variant=thumbnail",
+        "/api/media/m-4/content?variant=thumbnail",
+      ]);
+      expect(trip.photoCount + trip.videoCount).toBe(28);
+      sql.exec("UPDATE posts SET event_id = NULL WHERE id = 'post';");
+      const empty = await app.request("/api/events", undefined, env);
+      expect(
+        (await empty.json<{ events: EventSummary[] }>()).events.find((e) => e.id === "trip")?.previewMediaUrls,
+      ).toEqual([]);
+      const denied = await app.request("/api/events", undefined, {
+        ...env,
+        APP_ORIGIN: "https://example.test",
+        LINE_CHANNEL_ID: "configured",
+        LINE_CHANNEL_SECRET: "configured",
+      });
+      expect(denied.status).toBe(401);
     } finally {
       sql.close();
     }

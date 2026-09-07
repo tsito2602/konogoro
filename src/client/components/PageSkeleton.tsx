@@ -195,13 +195,15 @@ function skeletonContent(variant: SkeletonVariant, currentUser?: CurrentUser): R
         <section className="event-list-section">
           <h2 className="event-list-section-title">{line("short")}</h2>
           {Array.from({ length: 4 }, (_, i) => (
-            <div className="event-card" key={i}>
-              <div className="event-card-image skeleton-tile" />
-              <div className="event-card-copy skeleton-copy">
-                {line("medium")}
-                <div className="event-card-meta">
-                  {line("short")}
-                  {line("short")}
+            <div className="event-card-stack" key={i}>
+              <div className="event-card">
+                <div className="event-card-image skeleton-tile" />
+                <div className="event-card-copy skeleton-copy">
+                  {line("medium")}
+                  <div className="event-card-meta">
+                    {line("short")}
+                    {line("short")}
+                  </div>
                 </div>
               </div>
             </div>
@@ -389,4 +391,16 @@ function skeletonContent(variant: SkeletonVariant, currentUser?: CurrentUser): R
         </div>
       );
   }
+}
+
+export function EventPostsSkeleton() {
+  return (
+    <div className="page-skeleton" role="status" aria-busy="true">
+      <span className="visually-hidden">投稿を読み込み中</span>
+      <div aria-hidden="true">
+        <div className="event-detail-counts">{line("medium")}</div>
+        {postSkeleton(false)}
+      </div>
+    </div>
+  );
 }

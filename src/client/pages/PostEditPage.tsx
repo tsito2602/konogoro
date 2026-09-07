@@ -1,5 +1,4 @@
-import { SceneOrderButtons, moveScene } from "../components/SceneOrderButtons";
-import { useMediaReorder } from "../hooks/useMediaReorder";
+import { moveItemByOffset, useMediaReorder, useSceneReorder } from "../hooks/useMediaReorder";
 import { PreparedVideoImport } from "../components/PreparedVideoImport";
 import { uploadPreparedPlayback, type PreparedPlayback } from "../video-playback";
 import { abortMultipartUpload } from "../multipart-upload";
@@ -62,6 +61,17 @@ export function PostEditPage() {
   const [progress, setProgress] = useState(0);
   const [importingPlayback, setImportingPlayback] = useState(false);
   const { gridRef, announcement } = useMediaReorder(mediaOrder, setMediaOrder, saving || importingPlayback);
+  const { gridRef: sceneListRef, announcement: sceneAnnouncement } = useSceneReorder(
+    scenes.map((scene) => scene.id),
+    (order) =>
+      setScenes((current) =>
+        order.flatMap((id) => {
+          const scene = current.find((item) => item.id === id);
+          return scene ? [scene] : [];
+        }),
+      ),
+    saving || importingPlayback || scenesUnavailable,
+  );
   const activeUploadRef = useRef<AbortController | null>(null);
   const [caption, setCaption] = useState<string | null>(null);
   const markSaved = useUnsavedChanges(
@@ -250,20 +260,13 @@ export function PostEditPage() {
     });
   };
 
-  const createScene = async () => {
-    if (!eventId || !newScene.trim()) return;
-    try {
-      const scene = await api<EventScene>(`/events/${eventId}/scenes`, {
-        method: "POST",
-        body: JSON.stringify({ title: newScene }),
-      });
-      setScenes((current) => [...current, scene]);
-      setSceneId(scene.id);
-      setNewScene("");
-      setShowSceneForm(false);
-    } catch (reason) {
-      setError((reason as Error).message);
-    }
+  const createScene = () => {
+    if (!eventId || !newScene.trim() || scenesUnavailable || scenes.length >= 100) return;
+    const id = crypto.randomUUID();
+    setScenes((current) => [...current, { id, title: newScene.trim(), sortOrder: current.length, isNew: true }]);
+    setSceneId(id);
+    setNewScene("");
+    setShowSceneForm(false);
   };
 
   const uploadEntries = async (entries: Array<{ item: SelectedMediaFile; index: number; target: UploadTarget }>) => {
@@ -704,28 +707,48 @@ export function PostEditPage() {
               ) : scenesLoading ? (
                 <p role="status">見出しを読み込み中…</p>
               ) : (
-                scenes.map((scene, index) => (
-                  <div className="scene-editor" key={scene.id}>
-                    <input
-                      aria-label={`見出し${index + 1}の名前`}
-                      value={scene.title}
-                      maxLength={100}
-                      disabled={saving || importingPlayback}
-                      onChange={(event) =>
-                        setScenes((current) =>
-                          current.map((item) => (item.id === scene.id ? { ...item, title: event.target.value } : item)),
-                        )
-                      }
-                    />
-                    <SceneOrderButtons
-                      title={scene.title}
-                      index={index}
-                      count={scenes.length}
-                      disabled={saving || importingPlayback}
-                      onMove={(offset) => setScenes((current) => moveScene(current, index, offset))}
-                    />
+                <>
+                  <div className="scene-list" ref={sceneListRef}>
+                    {scenes.map((scene, index) => (
+                      <div
+                        className="scene-editor"
+                        data-scene-id={scene.id}
+                        key={scene.id}
+                        tabIndex={saving || importingPlayback ? -1 : 0}
+                        aria-label={`見出し「${scene.title}」。長押し、または上下矢印キーで並び替え`}
+                        onKeyDown={(event) => {
+                          if (
+                            event.target !== event.currentTarget ||
+                            (event.key !== "ArrowUp" && event.key !== "ArrowDown")
+                          )
+                            return;
+                          event.preventDefault();
+                          setScenes((current) => moveItemByOffset(current, index, event.key === "ArrowUp" ? -1 : 1));
+                        }}
+                      >
+                        <input
+                          aria-label={`見出し${index + 1}の名前`}
+                          value={scene.title}
+                          maxLength={100}
+                          disabled={saving || importingPlayback}
+                          onChange={(event) =>
+                            setScenes((current) =>
+                              current.map((item) =>
+                                item.id === scene.id ? { ...item, title: event.target.value } : item,
+                              ),
+                            )
+                          }
+                        />
+                      </div>
+                    ))}
                   </div>
-                ))
+                  <p className="muted scene-reorder-hint">
+                    見出しを長押しして並び替え。キーボードでは見出しを選んで上下矢印キー。
+                  </p>
+                  <span className="media-reorder-status" role="status" aria-live="polite">
+                    {sceneAnnouncement}
+                  </span>
+                </>
               )}
             </section>
           )}

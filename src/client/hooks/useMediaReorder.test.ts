@@ -8,10 +8,10 @@ vi.mock("react", () => ({
     state.dispose = effect();
   },
 }));
-import { useMediaReorder } from "./useMediaReorder";
+import { moveItemByOffset, useMediaReorder, useSceneReorder } from "./useMediaReorder";
 
 class Card extends EventTarget {
-  dataset: { mediaId?: string };
+  dataset: { mediaId?: string; sceneId?: string };
   style = {
     transform: "",
     removeProperty: (name: string) => {
@@ -26,10 +26,13 @@ class Card extends EventTarget {
     public interactive = false,
   ) {
     super();
-    this.dataset = { mediaId: id };
+    this.dataset = { mediaId: id, sceneId: id };
   }
   closest(selector: string) {
-    return selector === "[data-media-id]" || this.interactive ? this : null;
+    return selector === "[data-media-id]" || selector === "[data-scene-id]" || this.interactive ? this : null;
+  }
+  contains() {
+    return false;
   }
   getBoundingClientRect() {
     return { left: this.index * 100, top: 100, width: 90, height: 90 };
@@ -79,9 +82,19 @@ describe("長押しメディア並び替え", () => {
     view = new EventTarget();
     overlays = [];
     change = vi.fn();
-    Object.assign(view, { setTimeout, scrollY: 0, innerHeight: 800, scrollBy: vi.fn() });
+    Object.assign(view, {
+      setTimeout,
+      scrollY: 0,
+      innerHeight: 800,
+      scrollBy: vi.fn(),
+      getSelection: () => ({ removeAllRanges: vi.fn() }),
+    });
     vi.stubGlobal("window", view);
-    vi.stubGlobal("document", { body: { append: (card: Card) => overlays.push(card) } });
+    vi.stubGlobal("document", {
+      activeElement: null,
+      body: { append: (card: Card) => overlays.push(card) },
+      getSelection: () => ({ removeAllRanges: vi.fn() }),
+    });
     vi.stubGlobal("requestAnimationFrame", (callback: () => void) => setTimeout(callback, 16));
     vi.stubGlobal("cancelAnimationFrame", clearTimeout);
     state.grid = grid;
@@ -141,5 +154,21 @@ describe("長押しメディア並び替え", () => {
     pointer(grid, "pointerdown", 45, new Card("a", 0, true));
     vi.advanceTimersByTime(500);
     expect(overlays).toHaveLength(0);
+  });
+  it("見出しも同じ長押し操作で並び替える", () => {
+    state.dispose?.();
+    useSceneReorder(["a", "b", "c"], change, false);
+    pointer(grid, "pointerdown", 45, grid.cards[0]);
+    vi.advanceTimersByTime(350);
+    expect(grid.cards[0].classList.add).toHaveBeenCalledWith("scene-drag-placeholder");
+    expect(grid.classList.add).toHaveBeenCalledWith("scene-reordering");
+    pointer(view, "pointermove", 245);
+    vi.advanceTimersByTime(16);
+    pointer(view, "pointerup", 245);
+    expect(change).toHaveBeenCalledWith(["b", "c", "a"]);
+  });
+  it("キーボード操作用の移動は範囲外を無視する", () => {
+    expect(moveItemByOffset(["a", "b", "c"], 1, -1)).toEqual(["b", "a", "c"]);
+    expect(moveItemByOffset(["a", "b", "c"], 0, -1)).toEqual(["a", "b", "c"]);
   });
 });

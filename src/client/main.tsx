@@ -1,3 +1,4 @@
+import { DesignPlaygroundPage } from "./pages/DesignPlaygroundPage";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { createBrowserRouter, Navigate, RouterProvider } from "react-router-dom";
@@ -55,6 +56,7 @@ const router = createBrowserRouter([
       { path: "/family", element: <Navigate to="/settings" replace /> },
       { path: "/invite/:token", element: <InvitePage /> },
       { path: "/settings", element: <SettingsPage /> },
+      { path: "/settings/design", element: <DesignPlaygroundPage /> },
       { path: "/settings/family", element: <FamilySettingsPage /> },
     ],
   },

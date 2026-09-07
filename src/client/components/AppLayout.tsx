@@ -26,6 +26,7 @@ export function outletKey(pathname: string, locationKey: string): string {
 export function canAccessPath(user: CurrentUser, pathname: string): boolean {
   if (/^\/posts\/(new|[^/]+\/edit)$/.test(pathname)) return canCreatePost(user);
   if (/^\/events\/new$/.test(pathname) || /^\/events\/[^/]+\/edit$/.test(pathname)) return canManageEvent(user);
+  if (pathname === "/settings/design") return Boolean(user.isStaging);
   if (pathname === "/settings/family") return canInviteFamily(user);
   return true;
 }
@@ -70,6 +71,7 @@ export function AppLayout() {
   const addPostPath = postCreatePath(pathname);
   const addingToEvent = addPostPath !== "/posts/new";
   const hideAddButton =
+    pathname === "/settings/design" ||
     /^\/posts\/[^/]+$/.test(pathname) ||
     pathname === "/posts/new" ||
     /^\/posts\/[^/]+\/edit$/.test(pathname) ||

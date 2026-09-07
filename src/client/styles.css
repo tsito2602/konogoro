@@ -4457,7 +4457,7 @@ textarea:focus {
     max-width: 1040px;
   }
   .post-page-header .page-header-inner {
-    max-width: 1040px;
+    max-width: none;
   }
   .form-page:has(.post-create-form) {
     max-width: 1180px;

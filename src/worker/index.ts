@@ -8,6 +8,7 @@ import { ZodError } from "zod";
 import {
   eventInputSchema,
   eventManagementInputSchema,
+  postEditInputSchema,
   eventCoverInputSchema,
   editUploadFilesSchema,
   commentInputSchema,
@@ -1096,13 +1097,32 @@ app.put("/posts/:postId", async (c) => {
     .bind(postId)
     .first<{ event_id: string | null }>();
   if (!post) return c.json({ error: "投稿が見つかりません" }, 404);
-  const input = postInputSchema.parse(await c.req.json());
+  const input = postEditInputSchema.parse(await c.req.json());
   if (input.sceneId && !input.eventId) return c.json({ error: "見出しにはイベントが必要です" }, 400);
   if (input.eventId) {
     const event = await c.env.DB.prepare("SELECT id FROM events WHERE id = ?").bind(input.eventId).first();
     if (!event) return c.json({ error: "イベントが見つかりません" }, 400);
   }
-  if (input.sceneId) {
+  const currentSceneIds = new Set<string>();
+  if (input.scenes) {
+    if (!input.eventId) return c.json({ error: "見出しにはイベントが必要です" }, 400);
+    const current = await c.env.DB.prepare("SELECT id FROM event_scenes WHERE event_id = ?")
+      .bind(input.eventId)
+      .all<{ id: string }>();
+    current.results.forEach(({ id }) => currentSceneIds.add(id));
+    if (current.results.some(({ id }) => !input.scenes!.some((scene) => scene.id === id)))
+      return c.json({ error: "見出しが更新されています。画面を開き直してください" }, 409);
+    for (const scene of input.scenes) {
+      if (currentSceneIds.has(scene.id)) continue;
+      if (!scene.isNew || !/^[0-9a-f-]{36}$/i.test(scene.id))
+        return c.json({ error: "見出しがイベントと一致しません" }, 400);
+      const existing = await c.env.DB.prepare("SELECT id FROM event_scenes WHERE id = ?").bind(scene.id).first();
+      if (existing) return c.json({ error: "見出しがイベントと一致しません" }, 400);
+    }
+  }
+  if (input.sceneId && input.scenes && !input.scenes.some((scene) => scene.id === input.sceneId))
+    return c.json({ error: "見出しがイベントと一致しません" }, 400);
+  if (input.sceneId && !input.scenes) {
     const scene = await c.env.DB.prepare("SELECT id FROM event_scenes WHERE id = ? AND event_id = ?")
       .bind(input.sceneId, input.eventId)
       .first();
@@ -1120,7 +1140,17 @@ app.put("/posts/:postId", async (c) => {
     mediaPositionOffset = Math.max(...media.results.map(({ position }) => position), -1) + 1;
   }
   const now = new Date().toISOString();
+  const sceneStatements = (input.scenes ?? []).map((scene, index) =>
+    currentSceneIds.has(scene.id)
+      ? c.env.DB.prepare(
+          "UPDATE event_scenes SET title = ?, sort_order = ?, updated_at = ? WHERE id = ? AND event_id = ?",
+        ).bind(scene.title, index, now, scene.id, input.eventId)
+      : c.env.DB.prepare(
+          "INSERT INTO event_scenes (id, event_id, title, sort_order, created_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        ).bind(scene.id, input.eventId, scene.title, index, c.var.currentUser.id, now, now),
+  );
   const statements = [
+    ...sceneStatements,
     c.env.DB.prepare(
       "UPDATE posts SET event_id = ?, scene_id = ?, caption = ?, updated_at = ? WHERE id = ? AND status = 'published'",
     ).bind(input.eventId, input.sceneId, input.caption, now, postId),

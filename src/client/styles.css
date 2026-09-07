@@ -1937,7 +1937,7 @@ textarea:focus {
 }
 .scene-editor {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 44px;
+  grid-template-columns: minmax(0, 1fr) auto;
   gap: 6px;
   margin-bottom: 8px;
 }
@@ -4760,4 +4760,11 @@ textarea:focus {
 }
 .album-load-more:empty {
   padding: 0;
+}
+
+.scene-editor-deletable {
+  grid-template-columns: minmax(0, 1fr) auto 44px;
+}
+.scene-order-buttons {
+  display: flex;
 }

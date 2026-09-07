@@ -1,3 +1,4 @@
+import { SceneOrderButtons, moveScene } from "../components/SceneOrderButtons";
 import { Plus, Trash2, Video } from "lucide-react";
 import { useCallback, useEffect, useState, useRef, type FormEvent } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
@@ -188,8 +189,8 @@ export function EventEditPage() {
 
         <section className="management-section">
           <h2>見出し</h2>
-          {scenes.map((scene) => (
-            <div className="scene-editor" key={scene.key}>
+          {scenes.map((scene, index) => (
+            <div className="scene-editor scene-editor-deletable" key={scene.key}>
               <input
                 aria-label={`見出し「${scene.title}」の名前`}
                 value={scene.title}
@@ -200,6 +201,13 @@ export function EventEditPage() {
                 }
                 maxLength={100}
                 disabled={saving}
+              />
+              <SceneOrderButtons
+                title={scene.title}
+                index={index}
+                count={scenes.length}
+                disabled={saving}
+                onMove={(offset) => setScenes((current) => moveScene(current, index, offset))}
               />
               <button
                 className="icon-button"

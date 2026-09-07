@@ -81,8 +81,8 @@ export function PostCard({
           <Link
             className="media-cell"
             key={media.id}
-            to={`/posts/${post.id}`}
-            state={postPageState}
+            to={`/posts/${post.id}/media/${media.id}`}
+            state={{ returnToPrevious: true, playVideo: media.kind === "video" }}
             aria-label={`${viewed ? "" : "未閲覧の"}投稿の${media.kind === "video" ? "動画" : "写真"} ${index + 1}/${mediaCount}を開く`}
           >
             <img src={media.thumbnailUrl} alt="" loading="lazy" />

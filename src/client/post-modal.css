@@ -48,3 +48,9 @@
     padding-top: 0;
   }
 }
+
+.viewer-shell .media-viewer {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+}

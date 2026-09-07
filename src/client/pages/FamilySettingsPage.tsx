@@ -320,7 +320,7 @@ export function FamilySettingsPage() {
             <section className="family-section">
               <h2>権限設定</h2>
               {members.length === 0 ? (
-                <EmptyState title="メンバーはいません" body="招待URLを発行してメンバーを招待できます。" />
+                <EmptyState kind="people" title="メンバーはいません" body="招待URLを発行してメンバーを招待できます。" />
               ) : (
                 <div className="member-list">
                   {members.map((member) => (

@@ -211,7 +211,7 @@ function AlbumPeriod({ period, count }: { period: string; count: number }) {
         />
       )}
       {media?.length === 0 && (
-        <EmptyState title="この期間の写真はありません" body="別の月や年を選んで思い出を探せます。" />
+        <EmptyState kind="search" title="この期間の写真はありません" body="別の月や年を選んで思い出を探せます。" />
       )}
       {media && media.length > 0 && (
         <section className="album-month" aria-label={label}>

@@ -1,8 +1,12 @@
+import { CircleAlert, Image, LogIn, MessageCircle, Search, Users } from "lucide-react";
+
 export function Loading() {
   return (
-    <div className="state-message" role="status">
-      <span className="spinner" />
-      読み込み中
+    <div className="state-message loading-state" role="status">
+      <span className="loading-label">
+        <span className="spinner" aria-hidden />
+        読み込み中
+      </span>
     </div>
   );
 }
@@ -19,7 +23,10 @@ export function loginUrl(returnTo?: string): string {
 export function ErrorState({ message, retry, returnTo }: { message: string; retry?: () => void; returnTo?: string }) {
   const loginRequired = message === "ログインが必要です";
   return (
-    <div className="state-message error-state">
+    <div className="state-message error-state" role="alert">
+      <span className="state-symbol" aria-hidden>
+        {loginRequired ? <LogIn /> : <CircleAlert />}
+      </span>
       <p>{message}</p>
       {loginRequired ? (
         <a className="line-login-button" href={loginUrl(returnTo)}>
@@ -27,7 +34,7 @@ export function ErrorState({ message, retry, returnTo }: { message: string; retr
         </a>
       ) : (
         retry && (
-          <button className="outline-button" onClick={retry}>
+          <button className="outline-button" type="button" onClick={retry}>
             再読み込み
           </button>
         )
@@ -36,9 +43,25 @@ export function ErrorState({ message, retry, returnTo }: { message: string; retr
   );
 }
 
-export function EmptyState({ title, body, action }: { title: string; body: string; action?: React.ReactNode }) {
+const stateIcons = { photos: Image, search: Search, people: Users, activity: MessageCircle };
+
+export function EmptyState({
+  title,
+  body,
+  action,
+  kind = "photos",
+}: {
+  title: string;
+  body: string;
+  action?: React.ReactNode;
+  kind?: keyof typeof stateIcons;
+}) {
+  const Icon = stateIcons[kind];
   return (
     <div className="empty-state">
+      <span className={`empty-state-art ${kind}`} aria-hidden>
+        <Icon />
+      </span>
       <h2>{title}</h2>
       <p>{body}</p>
       {action}

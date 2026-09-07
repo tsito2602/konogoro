@@ -78,6 +78,7 @@ let dispose: (() => void) | undefined;
 beforeEach(async () => {
   vi.resetModules();
   doc = new EventBus();
+  Object.defineProperty(doc, "documentElement", { value: new Control("html") });
   view = new EventBus();
   vi.stubGlobal("window", view);
   vi.stubGlobal("document", doc);
@@ -179,4 +180,18 @@ describe("委譲された押下フィードバック", () => {
     pointer(doc, "pointerdown", button);
     expect(button.attributes.has("data-feedback-pressed")).toBe(false);
   });
+});
+
+it("クリック後の復元フォーカスは枠なし、Tab操作へ戻ると識別できる", () => {
+  dispose = feedback.initializeInteractionFeedback();
+  const root = (doc as EventTarget & { documentElement: Control }).documentElement;
+  expect(root.attributes.get("data-input-method")).toBe("pointer");
+  emit(doc, "keydown", new Control(), { key: "Tab" });
+  expect(root.attributes.get("data-input-method")).toBe("keyboard");
+  pointer(doc, "pointerdown", new Control("div"));
+  expect(root.attributes.get("data-input-method")).toBe("pointer");
+  emit(doc, "keydown", new Control(), { key: "Shift" });
+  expect(root.attributes.get("data-input-method")).toBe("pointer");
+  emit(doc, "keydown", new Control(), { key: "Enter" });
+  expect(root.attributes.get("data-input-method")).toBe("keyboard");
 });

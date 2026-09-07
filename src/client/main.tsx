@@ -1,3 +1,4 @@
+import { DesignPlaygroundPage } from "./pages/DesignPlaygroundPage";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { createBrowserRouter, Navigate, RouterProvider } from "react-router-dom";
@@ -24,6 +25,10 @@ import "./media-status.css";
 import "./video-experience.css";
 import "./interaction-feedback.css";
 import "./accessibility.css";
+import "./editor-material.css";
+import "./post-modal.css";
+import "./timeline-material.css";
+import "./album-material.css";
 import "./glass-navigation.css";
 import { initializeInteractionFeedback } from "./interaction-feedback";
 
@@ -55,6 +60,7 @@ const router = createBrowserRouter([
       { path: "/family", element: <Navigate to="/settings" replace /> },
       { path: "/invite/:token", element: <InvitePage /> },
       { path: "/settings", element: <SettingsPage /> },
+      { path: "/settings/design", element: <DesignPlaygroundPage /> },
       { path: "/settings/family", element: <FamilySettingsPage /> },
     ],
   },

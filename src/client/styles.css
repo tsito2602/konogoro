@@ -1465,6 +1465,13 @@ a.icon-button {
   font-size: 1rem;
   font-weight: 600;
 }
+.skeleton-viewers .member-last-viewed-avatar {
+  flex: 0 0 52px;
+  aspect-ratio: 1;
+  background: linear-gradient(100deg, var(--placeholder) 25%, var(--surface-muted) 45%, var(--placeholder) 65%);
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+}
 .member-last-viewed-avatar.color-1 {
   background: #84c767;
 }

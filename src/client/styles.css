@@ -287,12 +287,6 @@ a.icon-button {
   width: 22px;
   height: 22px;
 }
-.icon-button:active,
-.tab-item:active,
-.primary-button:active,
-.outline-button:active {
-  transform: scale(0.96);
-}
 
 .tab-bar {
   position: fixed;
@@ -399,7 +393,7 @@ a.icon-button {
   align-items: center;
   border-radius: 11px;
 }
-.add-menu a:active {
+.add-menu a[data-feedback-pressed] {
   background: var(--surface-muted);
 }
 .add-menu svg {
@@ -2091,8 +2085,8 @@ textarea:focus {
 .post-action-menu button {
   color: var(--danger);
 }
-.post-action-menu a:active,
-.post-action-menu button:active {
+.post-action-menu a[data-feedback-pressed],
+.post-action-menu button[data-feedback-pressed] {
   background: var(--surface-muted);
 }
 .post-action-menu svg {
@@ -4273,9 +4267,6 @@ textarea:focus {
   }
   .desktop-add-button:hover {
     filter: brightness(0.97);
-  }
-  .desktop-add-button:active {
-    transform: scale(0.98);
   }
   .desktop-add-button svg {
     width: 25px;

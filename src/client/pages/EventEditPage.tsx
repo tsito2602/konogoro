@@ -1,3 +1,4 @@
+import { hapticFeedback } from "../interaction-feedback";
 import { Plus, Video } from "lucide-react";
 import { useCallback, useEffect, useState, useRef, type FormEvent } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
@@ -103,7 +104,7 @@ export function EventEditPage() {
           coverPosition,
         }),
       });
-      showToast("イベントを更新しました");
+      showToast("イベントを更新しました", { success: true });
       if ((location.state as { returnToDetail?: boolean } | null)?.returnToDetail) navigate(-1);
       else navigate(`/events/${eventId}`, { replace: true });
     } catch (reason) {
@@ -224,6 +225,7 @@ export function EventEditPage() {
               className={`text-button${coverMediaId === null ? " selected" : ""}`}
               type="button"
               onClick={() => {
+                if (coverMediaId !== null) hapticFeedback("selection");
                 setCoverMediaId(null);
                 setCoverPosition({ x: 50, y: 50 });
               }}
@@ -242,6 +244,7 @@ export function EventEditPage() {
                   type="button"
                   key={item.id}
                   onClick={() => {
+                    if (coverMediaId !== item.id) hapticFeedback("selection");
                     setCoverMediaId(item.id);
                     setCoverPosition({ x: 50, y: 50 });
                   }}

@@ -333,7 +333,7 @@ export function PostCreatePage() {
     }
     await api(`/posts/${postId}/publish`, { method: "POST" });
     markSaved();
-    showToast("投稿しました");
+    showToast("投稿しました", { success: true });
     navigate(`/posts/${postId}`, { replace: true });
   };
 
@@ -438,7 +438,7 @@ export function PostCreatePage() {
     try {
       await api(`/posts/${draftPostId}/publish`, { method: "POST" });
       markSaved();
-      showToast("投稿しました");
+      showToast("投稿しました", { success: true });
       navigate(`/posts/${draftPostId}`, { replace: true });
     } catch (reason) {
       setError((reason as Error).message);

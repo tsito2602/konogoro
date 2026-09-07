@@ -22,13 +22,17 @@ import { initializeTheme } from "./theme";
 import "./styles.css";
 import "./media-status.css";
 import "./video-experience.css";
+import "./interaction-feedback.css";
 import "./accessibility.css";
+import { initializeInteractionFeedback } from "./interaction-feedback";
 
 const stopInstallPromptCapture = installPromptStore.start(window);
 const hotModule = (import.meta as ImportMeta & { hot?: { dispose: (callback: () => void) => void } }).hot;
 hotModule?.dispose(stopInstallPromptCapture);
 
 initializeTheme();
+const stopInteractionFeedback = initializeInteractionFeedback();
+hotModule?.dispose(stopInteractionFeedback);
 
 const router = createBrowserRouter([
   {

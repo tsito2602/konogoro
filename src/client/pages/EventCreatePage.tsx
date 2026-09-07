@@ -24,7 +24,7 @@ export function EventCreatePage() {
           endDate: data.get("endDate") || null,
         }),
       });
-      showToast("イベントを作成しました");
+      showToast("イベントを作成しました", { success: true });
       navigate(`/events/${result.id}`, { replace: true });
     } catch (reason) {
       setError((reason as Error).message);

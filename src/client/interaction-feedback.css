@@ -1,0 +1,129 @@
+/* Shared press feedback. Individual scale preserves existing translate/rotate transforms. */
+:root {
+  --feedback-press: 100ms;
+  --feedback-release: 160ms;
+  --feedback-scale: 0.97;
+}
+:is(button, a[href], label, summary, [role="button"], [role="tab"]) {
+  transition:
+    scale var(--feedback-release) ease-out,
+    opacity var(--feedback-release) ease-out,
+    background-color var(--feedback-release) ease-out,
+    border-color var(--feedback-release) ease-out,
+    color var(--feedback-release) ease-out;
+}
+:where(
+  .event-card,
+  .media-cell,
+  .album-grid a,
+  .album-cover,
+  .thumbnail-strip a,
+  .thumbnail-strip button,
+  .post-head,
+  .post-caption,
+  .post-comment-preview,
+  .settings-menu-row,
+  .photo-add
+) {
+  --feedback-scale: 0.985;
+}
+[data-feedback-pressed]:where(:not(:disabled, [aria-disabled="true"], [aria-busy="true"])) {
+  scale: var(--feedback-scale);
+  opacity: 0.88;
+  transition-duration: var(--feedback-press);
+}
+/* Photography stays clear; large forms and inline text keep their geometry. */
+:where(
+  .event-card,
+  .media-cell,
+  .album-grid a,
+  .album-cover,
+  .thumbnail-strip a,
+  .thumbnail-strip button
+)[data-feedback-pressed] {
+  opacity: 1;
+}
+:where(
+  .notification-toggle,
+  .feedback-setting label,
+  .theme-setting label,
+  .role-guide label,
+  .text-button,
+  .more-comments-link,
+  .comment-count-link,
+  p a
+)[data-feedback-pressed] {
+  scale: 1;
+}
+:where(.theme-setting label, .role-guide label)[data-feedback-pressed] {
+  background-color: var(--surface-muted);
+}
+:where(.album-month-picker button)::after {
+  transition: background-color var(--feedback-release) ease-out;
+}
+@media (hover: hover) and (pointer: fine) {
+  :where(.event-card, .media-cell, .album-grid a, .album-cover):hover {
+    outline: 1px solid var(--separator);
+    outline-offset: -1px;
+  }
+}
+.toast-success svg {
+  animation: feedback-confirm 180ms ease-out;
+}
+@keyframes feedback-confirm {
+  from {
+    scale: 0.8;
+  }
+  to {
+    scale: 1;
+  }
+}
+.feedback-setting {
+  padding: 16px;
+}
+.feedback-setting label {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.feedback-setting input {
+  width: 22px;
+  height: 22px;
+  accent-color: var(--accent-ink);
+}
+.feedback-setting p {
+  color: var(--ash);
+  margin: 8px 0 0;
+  font-size: 0.875rem;
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-feedback-pressed] {
+    scale: 1 !important;
+  }
+  .toast-success svg {
+    animation: none;
+  }
+}
+
+/* Preserve readable text and all suppressed/native gesture states. */
+:is(.post-caption, .post-comment-preview)[data-feedback-pressed] {
+  scale: 1;
+}
+:is([aria-busy="true"], [aria-disabled="true"], [inert], fieldset:disabled) [data-feedback-pressed] {
+  scale: 1;
+  opacity: 1;
+}
+.cover-grid button {
+  --feedback-scale: 0.985;
+}
+.cover-grid button[data-feedback-pressed] {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-feedback-pressed]:where(:not(:disabled, [aria-disabled="true"], [aria-busy="true"])) {
+    opacity: 0.88;
+  }
+}

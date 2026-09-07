@@ -334,6 +334,18 @@ function skeletonContent(variant: SkeletonVariant, currentUser?: CurrentUser): R
           </div>
           {currentUser?.isStaging && settingsSection(roleChoices(), "skeleton-staging-section")}
           {settingsSection(<div className="skeleton-theme-options">{tiles(3)}</div>)}
+          {settingsSection(
+            <div className="feedback-setting">
+              <label>
+                {line("medium")}
+                <span className="skeleton-tile" style={{ width: 22, height: 22 }} />
+              </label>
+              <p>
+                {line()}
+                {line("medium")}
+              </p>
+            </div>,
+          )}
           {settingsSection(menuRows(2))}
           {currentUser &&
             canInviteFamily(currentUser) &&

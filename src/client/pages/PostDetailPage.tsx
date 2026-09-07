@@ -1,4 +1,3 @@
-import { hapticFeedback } from "../interaction-feedback";
 import { VideoBadge } from "../components/VideoBadge";
 import { commentIntent } from "../comment-navigation";
 import { canReturnInApp, removeReadingPost, restorePanelPosition, updateReadingPost } from "../reading-context";
@@ -214,7 +213,6 @@ export function PostDetailPage() {
                 });
                 setPost((current) => (current ? { ...current, comments: [...current.comments, comment] } : current));
                 form.reset();
-                hapticFeedback("success");
               } catch (reason) {
                 setCommentError((reason as Error).message);
               } finally {

@@ -1,8 +1,6 @@
 import { Check } from "lucide-react";
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 
-import { hapticFeedback } from "../interaction-feedback";
-
 type ToastOptions = { success?: boolean };
 const ToastContext = createContext<((message: string, options?: ToastOptions) => void) | null>(null);
 
@@ -14,7 +12,6 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const showToast = useCallback((message: string, options?: ToastOptions) => {
     if (timer.current !== null) window.clearTimeout(timer.current);
     setToast({ id: nextId.current++, message, success: options?.success ?? false });
-    if (options?.success) hapticFeedback("success");
     timer.current = window.setTimeout(() => {
       setToast(null);
       timer.current = null;

@@ -415,7 +415,7 @@ export function PostEditPage() {
     markSaved();
     showToast("投稿を更新しました", { success: true });
     if ((location.state as { returnToDetail?: boolean } | null)?.returnToDetail) navigate(-1);
-    else navigate(`/posts/${post.id}`, { replace: true, state: location.state });
+    else navigate(`/posts/${post.id}`, { replace: true, state: location.state, viewTransition: true });
   };
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
@@ -510,17 +510,6 @@ export function PostEditPage() {
       <main className="form-page page-content">
         <form className="form-stack post-edit-form" onSubmit={submit}>
           <MediaProcessingStatus files={files} uploading={saving && files.length > 0} uploadProgress={progress} />
-          <PreparedVideoImport
-            files={files}
-            disabled={saving || preparing}
-            onImport={importPlayback}
-            onBusy={setImportingPlayback}
-          />
-          {saving && files.some((item) => item.status === "uploading") && (
-            <button type="button" className="outline-button" onClick={() => activeUploadRef.current?.abort()}>
-              送信を中断
-            </button>
-          )}
           <section className="photo-picker">
             <div className="selected-photos" ref={gridRef}>
               {orderedMedia.map((entry) => {
@@ -633,161 +622,176 @@ export function PostEditPage() {
                 .filter(Boolean)
                 .join(" · ")}
             </p>
+            <PreparedVideoImport
+              files={files}
+              disabled={saving || preparing}
+              onImport={importPlayback}
+              onBusy={setImportingPlayback}
+            />
+            {saving && files.some((item) => item.status === "uploading") && (
+              <button type="button" className="outline-button" onClick={() => activeUploadRef.current?.abort()}>
+                送信を中断
+              </button>
+            )}
           </section>
-          <label>
-            イベント
-            <select
-              value={eventId}
-              onChange={(event) => {
-                if (
-                  (scenesChanged || !!newScene.trim()) &&
-                  !confirm("見出しの未保存の変更を破棄してイベントを変更しますか？")
-                )
-                  return;
-                setEventId(event.target.value);
-                setSceneId("");
-                setScenes([]);
-                setOriginalScenes([]);
-                setNewScene("");
-                setScenesLoading(!!event.target.value);
-                setScenesError("");
-                setShowSceneForm(false);
-              }}
-              disabled={saving || importingPlayback}
-            >
-              <option value="">イベントなし</option>
-              {events.map((item) => (
-                <option value={item.id} key={item.id}>
-                  {item.title}
-                </option>
-              ))}
-            </select>
-          </label>
-          {eventId && (
+          <section className="post-edit-details" aria-label="投稿内容">
             <label>
-              見出し
+              イベント
               <select
-                value={sceneId}
-                onChange={(event) => setSceneId(event.target.value)}
+                value={eventId}
+                onChange={(event) => {
+                  if (
+                    (scenesChanged || !!newScene.trim()) &&
+                    !confirm("見出しの未保存の変更を破棄してイベントを変更しますか？")
+                  )
+                    return;
+                  setEventId(event.target.value);
+                  setSceneId("");
+                  setScenes([]);
+                  setOriginalScenes([]);
+                  setNewScene("");
+                  setScenesLoading(!!event.target.value);
+                  setScenesError("");
+                  setShowSceneForm(false);
+                }}
                 disabled={saving || importingPlayback}
               >
-                <option value="">見出しなし</option>
-                {scenes.map((item) => (
+                <option value="">イベントなし</option>
+                {events.map((item) => (
                   <option value={item.id} key={item.id}>
                     {item.title}
                   </option>
                 ))}
               </select>
             </label>
-          )}
-          {eventId && (
-            <section className="management-section">
-              <p className="muted">名前と順序は同じイベントの投稿にも反映されます。変更は保存するまで確定しません。</p>
-              {scenesError ? (
-                <div role="alert">
-                  <p className="form-error">{scenesError}</p>
+            {eventId && (
+              <label>
+                見出し
+                <select
+                  value={sceneId}
+                  onChange={(event) => setSceneId(event.target.value)}
+                  disabled={saving || importingPlayback}
+                >
+                  <option value="">見出しなし</option>
+                  {scenes.map((item) => (
+                    <option value={item.id} key={item.id}>
+                      {item.title}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            {eventId && (
+              <section className="management-section">
+                <p className="muted">
+                  名前と順序は同じイベントの投稿にも反映されます。変更は保存するまで確定しません。
+                </p>
+                {scenesError ? (
+                  <div role="alert">
+                    <p className="form-error">{scenesError}</p>
+                    <button
+                      type="button"
+                      className="outline-button"
+                      onClick={() => {
+                        setScenesError("");
+                        setScenesLoading(true);
+                        setSceneLoadAttempt((current) => current + 1);
+                      }}
+                    >
+                      見出しの読み込みを再試行
+                    </button>
+                  </div>
+                ) : scenesLoading ? (
+                  <p role="status">見出しを読み込み中…</p>
+                ) : (
+                  <SceneEditorList
+                    key={eventId}
+                    scenes={scenes}
+                    disabled={saving || importingPlayback}
+                    onOrder={(ids) =>
+                      setScenes((current) => ids.flatMap((id) => current.filter((scene) => scene.id === id)))
+                    }
+                    onTitle={(id, title) =>
+                      setScenes((current) => current.map((scene) => (scene.id === id ? { ...scene, title } : scene)))
+                    }
+                    onDelete={(id) => {
+                      if (
+                        !confirm(
+                          "この見出しを削除しますか？関連する投稿は見出しなしになります。保存するまで削除は確定しません。",
+                        )
+                      )
+                        return;
+                      setScenes((current) => current.filter((scene) => scene.id !== id));
+                      if (sceneId === id) setSceneId("");
+                    }}
+                  />
+                )}
+              </section>
+            )}
+            {eventId &&
+              (!showSceneForm ? (
+                <button
+                  className="text-button inline-action"
+                  type="button"
+                  disabled={saving || importingPlayback || scenesUnavailable || scenes.length >= 100}
+                  onClick={() => setShowSceneForm(true)}
+                >
+                  <Plus />
+                  新しい見出し
+                </button>
+              ) : (
+                <div className="inline-form">
+                  <input
+                    value={newScene}
+                    onChange={(event) => setNewScene(event.target.value)}
+                    placeholder="例: 2日目 午前（午後）"
+                    maxLength={100}
+                  />
                   <button
                     type="button"
                     className="outline-button"
-                    onClick={() => {
-                      setScenesError("");
-                      setScenesLoading(true);
-                      setSceneLoadAttempt((current) => current + 1);
-                    }}
+                    disabled={saving || importingPlayback || scenesUnavailable || !newScene.trim()}
+                    onClick={createScene}
                   >
-                    見出しの読み込みを再試行
+                    作成
                   </button>
                 </div>
-              ) : scenesLoading ? (
-                <p role="status">見出しを読み込み中…</p>
-              ) : (
-                <SceneEditorList
-                  key={eventId}
-                  scenes={scenes}
-                  disabled={saving || importingPlayback}
-                  onOrder={(ids) =>
-                    setScenes((current) => ids.flatMap((id) => current.filter((scene) => scene.id === id)))
-                  }
-                  onTitle={(id, title) =>
-                    setScenes((current) => current.map((scene) => (scene.id === id ? { ...scene, title } : scene)))
-                  }
-                  onDelete={(id) => {
-                    if (
-                      !confirm(
-                        "この見出しを削除しますか？関連する投稿は見出しなしになります。保存するまで削除は確定しません。",
-                      )
-                    )
-                      return;
-                    setScenes((current) => current.filter((scene) => scene.id !== id));
-                    if (sceneId === id) setSceneId("");
-                  }}
-                />
-              )}
-            </section>
-          )}
-          {eventId &&
-            (!showSceneForm ? (
-              <button
-                className="text-button inline-action"
-                type="button"
-                disabled={saving || importingPlayback || scenesUnavailable || scenes.length >= 100}
-                onClick={() => setShowSceneForm(true)}
-              >
-                <Plus />
-                新しい見出し
-              </button>
-            ) : (
-              <div className="inline-form">
-                <input
-                  value={newScene}
-                  onChange={(event) => setNewScene(event.target.value)}
-                  placeholder="例: 2日目 午前（午後）"
-                  maxLength={100}
-                />
-                <button
-                  type="button"
-                  className="outline-button"
-                  disabled={saving || importingPlayback || scenesUnavailable || !newScene.trim()}
-                  onClick={createScene}
-                >
-                  作成
-                </button>
-              </div>
-            ))}
-          <label>
-            ひとこと（任意）
-            <textarea
-              name="caption"
-              placeholder="行った場所、やったことなど"
-              rows={4}
-              maxLength={2000}
-              value={caption ?? post.caption}
-              onChange={(event) => setCaption(event.target.value)}
-              disabled={saving || importingPlayback}
-            />
-          </label>
-          {error && (
-            <p className="form-error" role="alert">
-              {error}
-            </p>
-          )}
-          <button
-            className={files.some((item) => item.status === "failed") ? "outline-button wide" : "primary-button wide"}
-            disabled={
-              saving ||
-              preparing ||
-              hasPreparationFailure ||
-              (eventId !== "" && scenesUnavailable) ||
-              scenes.some((scene) => !scene.title.trim())
-            }
-          >
-            {files.some((item) => item.status === "failed") && <RotateCcw />}
-            {saving
-              ? "保存中…"
-              : files.some((item) => item.status === "failed")
-                ? "失敗した項目を再試行"
-                : "変更を保存"}
-          </button>
+              ))}
+            <label>
+              ひとこと（任意）
+              <textarea
+                name="caption"
+                placeholder="行った場所、やったことなど"
+                rows={4}
+                maxLength={2000}
+                value={caption ?? post.caption}
+                onChange={(event) => setCaption(event.target.value)}
+                disabled={saving || importingPlayback}
+              />
+            </label>
+            {error && (
+              <p className="form-error" role="alert">
+                {error}
+              </p>
+            )}
+            <button
+              className={files.some((item) => item.status === "failed") ? "outline-button wide" : "primary-button wide"}
+              disabled={
+                saving ||
+                preparing ||
+                hasPreparationFailure ||
+                (eventId !== "" && scenesUnavailable) ||
+                scenes.some((scene) => !scene.title.trim())
+              }
+            >
+              {files.some((item) => item.status === "failed") && <RotateCcw />}
+              {saving
+                ? "保存中…"
+                : files.some((item) => item.status === "failed")
+                  ? "失敗した項目を再試行"
+                  : "変更を保存"}
+            </button>
+          </section>
         </form>
       </main>
     </>

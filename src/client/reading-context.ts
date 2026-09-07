@@ -89,6 +89,7 @@ export function rememberAlbumMedia(key: string | undefined, mediaId: string, ind
   if (!key) return;
   const saved = entry(key);
   saved.position = { y: saved.position?.y ?? 0, item: `media-${mediaId}`, offset: 100, index };
+  saved.values.set("albumLastMedia", mediaId);
 }
 
 export function removeReadingPost(postId: string) {
@@ -147,9 +148,16 @@ export function ReadingPosition() {
       if (!restoring) return;
       const all = items();
       const maximum = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
-      const y = position
+      const albumHeader = position?.item?.startsWith("media-")
+        ? document.querySelector<HTMLElement>(".album-picker-header")
+        : null;
+      const anchorPosition =
+        position && albumHeader
+          ? { ...position, offset: Math.max(position.offset ?? 0, albumHeader.getBoundingClientRect().bottom + 16) }
+          : position;
+      const y = anchorPosition
         ? restoredY(
-            position,
+            anchorPosition,
             all.map((item) => ({
               id: item.dataset.readingItem!,
               top: item.getBoundingClientRect().top + window.scrollY,

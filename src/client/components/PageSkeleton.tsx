@@ -36,7 +36,12 @@ export function AlbumContentSkeleton({ allYear = false }: { allYear?: boolean })
   return (
     <div className="page-skeleton" role="status" aria-busy="true">
       <span className="visually-hidden">写真・動画を読み込み中</span>
-      <section className="album-month" aria-hidden>
+      <section className={allYear ? "album-year" : "album-month"} aria-hidden>
+        {allYear && (
+          <div className="album-month-heading">
+            <span className="skeleton-line short" />
+          </div>
+        )}
         {!allYear && <div className="album-cover skeleton-tile" />}
         <div className="album-grid skeleton-album-grid">{tiles(9)}</div>
       </section>

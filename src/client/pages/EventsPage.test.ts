@@ -104,18 +104,20 @@ describe("event groups", () => {
 });
 
 describe("event card", () => {
-  it("イベントのメモをカードに表示する", () => {
-    const html = renderToStaticMarkup(
-      createElement(MemoryRouter, null, createElement(EventCard, { event: events[0] })),
-    );
-    expect(html).toContain('class="event-card-description"');
-    expect(html).toContain("京都の思い出");
+  it("イベント名、期間、メディア件数を表示し、メモは表示しない", () => {
+    const target = { ...events[0], photoCount: 51, videoCount: 2 };
+    const html = renderToStaticMarkup(createElement(MemoryRouter, null, createElement(EventCard, { event: target })));
+    expect(html).toContain("家族旅行");
+    expect(html).toContain("2026年9月1日 – 9月3日");
+    expect(html).toContain("写真51枚 · 動画2本");
+    expect(html).toContain('class="event-card-meta"');
+    expect(html).not.toContain("京都の思い出");
   });
 
-  it("メモが空ならメモ用の領域を表示しない", () => {
+  it("メディアが0件でも補助情報を表示する", () => {
     const html = renderToStaticMarkup(
       createElement(MemoryRouter, null, createElement(EventCard, { event: event("empty", "日常", null, null) })),
     );
-    expect(html).not.toContain("event-card-description");
+    expect(html).toContain("メディア0件");
   });
 });

@@ -192,7 +192,6 @@ export function EventsPage() {
 }
 
 export function EventCard({ event }: { event: EventSummary }) {
-  const description = event.description.trim();
   return (
     <Link data-reading-item={`event-${event.id}`} className="event-card" to={`/events/${event.id}`}>
       <div className={`event-card-image${event.coverUrl ? "" : " no-cover"}`}>
@@ -208,9 +207,10 @@ export function EventCard({ event }: { event: EventSummary }) {
       </div>
       <div className="event-card-copy">
         <h3>{event.title}</h3>
-        <p>{eventDate(event.startDate, event.endDate)}</p>
-        {description && <p className="event-card-description">{description}</p>}
-        <p className="event-media-count">{mediaCounts(event.photoCount, event.videoCount)}</p>
+        <div className="event-card-meta">
+          <p>{eventDate(event.startDate, event.endDate)}</p>
+          <p className="event-media-count">{mediaCounts(event.photoCount, event.videoCount)}</p>
+        </div>
       </div>
     </Link>
   );

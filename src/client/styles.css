@@ -678,11 +678,13 @@ a.icon-button {
   gap: 8px;
 }
 .skeleton-events .event-card-copy {
-  min-height: 164px;
-  background: none;
+  min-height: 0;
 }
 .skeleton-events .event-card-copy .skeleton-line {
   background: var(--surface);
+}
+.skeleton-events .event-card-meta .skeleton-line {
+  width: 30%;
 }
 .skeleton-year-picker > .skeleton-line {
   justify-self: center;
@@ -1576,7 +1578,6 @@ a.icon-button {
 .event-card {
   position: relative;
   display: grid;
-  min-height: 240px;
   align-self: start;
   min-width: 0;
   overflow: hidden;
@@ -1588,6 +1589,13 @@ a.icon-button {
   content: "";
   grid-area: 1 / 1;
   aspect-ratio: 16 / 9;
+}
+.event-card::after {
+  content: "";
+  position: absolute;
+  inset: 48% 0 0;
+  background: linear-gradient(transparent, rgb(0 0 0 / 74%));
+  pointer-events: none;
 }
 .event-card-image {
   position: absolute;
@@ -1609,7 +1617,7 @@ a.icon-button {
   inset: 12px 12px auto;
   display: flex;
   gap: 8px;
-  z-index: 1;
+  z-index: 2;
 }
 .event-card-badges .event-status {
   padding: 6px 9px;
@@ -1628,10 +1636,10 @@ a.icon-button {
   position: relative;
   grid-area: 1 / 1;
   align-self: end;
-  margin-top: 56px;
-  padding: 56px 16px 16px;
-  background: linear-gradient(transparent, rgb(0 0 0 / 78%) 56px, rgb(0 0 0 / 86%));
+  z-index: 1;
+  padding: 14px 16px;
   overflow-wrap: anywhere;
+  text-shadow: 0 1px 3px rgb(0 0 0 / 60%);
 }
 .event-card-copy p {
   margin: 0;
@@ -1640,25 +1648,27 @@ a.icon-button {
   color: #fff;
 }
 .event-card-copy h3 {
-  margin: 0 0 8px;
-  font-size: 1.25rem;
-  font-weight: 600;
-  line-height: 1.45;
-  letter-spacing: normal;
-}
-.event-card-copy .event-card-description {
-  margin-top: 12px;
+  margin: 0 0 6px;
   display: -webkit-box;
   overflow: hidden;
-  color: #fff;
-  font-size: 1rem;
-  line-height: 1.6;
-  white-space: pre-line;
+  font-size: 1.125rem;
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: normal;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
+.event-card-meta {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px 12px;
+  flex-wrap: wrap;
+}
 .event-card-copy .event-media-count {
-  margin-top: 12px;
+  margin-left: auto;
+  white-space: nowrap;
 }
 .event-detail-counts {
   margin: 0;
@@ -4128,9 +4138,6 @@ textarea:focus {
 }
 
 @media (max-width: 390px) {
-  .event-card-copy .event-card-description {
-    -webkit-line-clamp: 1;
-  }
   .date-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;

@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="940" viewBox="0 0 760 940">
+  <defs>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="5" stdDeviation="14" flood-color="#1f2733" flood-opacity=".08"/>
+    </filter>
+    <style>
+      text { font-family: -apple-system, BlinkMacSystemFont, "Noto Sans JP", "Yu Gothic", sans-serif; fill: #1f2733; }
+      .muted { fill: #62625f; }
+      .small { font-size: 13px; }
+      .body { font-size: 14px; }
+      .button { font-size: 14px; font-weight: 700; }
+      .icon { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    </style>
+  </defs>
+
+  <rect width="760" height="940" fill="#f7f7f5"/>
+  <rect width="760" height="64" fill="#ffffff" opacity=".96"/>
+  <path d="M33 32h17m-17 0 7-7m-7 7 7 7" fill="none" stroke="#1f2733" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="380" y="39" text-anchor="middle" font-size="23" font-weight="650">メンバーの管理</text>
+
+  <rect x="28" y="88" width="704" height="380" rx="18" fill="#ffffff" filter="url(#shadow)"/>
+  <text x="54" y="126" font-size="20" font-weight="700">閲覧リクエスト</text>
+  <text x="54" y="151" class="muted body">名前を確認し、このごろを見られる人だけ承認してください。</text>
+  <rect x="655" y="110" width="50" height="28" rx="14" fill="#fff3cc"/>
+  <text x="680" y="129" text-anchor="middle" font-size="12" font-weight="700" fill="#6b4b00">2件</text>
+
+  <rect x="54" y="178" width="650" height="72" rx="12" fill="#fffaf0" stroke="#6b4b00"/>
+  <circle cx="88" cy="214" r="21" fill="#e8e3da"/>
+  <text x="88" y="220" text-anchor="middle" font-size="16" font-weight="700">A</text>
+  <text x="124" y="208" font-size="15" font-weight="700">サンプル家族 A</text>
+  <text x="124" y="229" class="muted small">閲覧をリクエスト</text>
+  <circle cx="671" cy="214" r="13" fill="#6b4b00"/>
+  <path d="m665 214 4 4 8-9" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <rect x="54" y="260" width="650" height="72" rx="12" fill="#fffaf0" stroke="#6b4b00"/>
+  <circle cx="88" cy="296" r="21" fill="#dfe8e7"/>
+  <text x="88" y="302" text-anchor="middle" font-size="16" font-weight="700">B</text>
+  <text x="124" y="290" font-size="15" font-weight="700">サンプル家族 B</text>
+  <text x="124" y="311" class="muted small">閲覧をリクエスト</text>
+  <circle cx="671" cy="296" r="13" fill="#6b4b00"/>
+  <path d="m665 296 4 4 8-9" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <rect x="445" y="355" width="117" height="44" rx="12" fill="#ffffff" stroke="#cbc9c2"/>
+  <path d="m466 372 14 14m0-14-14 14" fill="none" stroke="#62625f" stroke-width="2" stroke-linecap="round"/>
+  <text x="516" y="382" text-anchor="middle" class="button">承認しない</text>
+  <rect x="572" y="355" width="132" height="44" rx="12" fill="#ffd166"/>
+  <path d="m590 377 4 4 8-9" fill="none" stroke="#1f2733" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="649" y="382" text-anchor="middle" class="button">2人を承認</text>
+  <text x="54" y="438" class="muted small">承認すると、申請した家族へLINEでお知らせします。</text>
+
+  <rect x="28" y="492" width="704" height="406" rx="18" fill="#ffffff" filter="url(#shadow)"/>
+  <text x="54" y="532" font-size="20" font-weight="700">家族を招待</text>
+  <text x="54" y="558" class="muted body">共通URLを家族のグループLINEへ一度送れば、</text>
+  <text x="54" y="580" class="muted body">複数人から閲覧リクエストを受け取れます。</text>
+  <rect x="642" y="515" width="63" height="28" rx="14" fill="#fff3cc"/>
+  <text x="673.5" y="534" text-anchor="middle" font-size="12" font-weight="700" fill="#6b4b00">受付中</text>
+
+  <rect x="54" y="611" width="650" height="92" rx="12" fill="#f7f7f5"/>
+  <g transform="translate(76 634)" style="color:#6b4b00">
+    <path class="icon" d="M9 15l-2 2a4 4 0 0 1-6-6l4-4a4 4 0 0 1 6 0m-2 2 2-2a4 4 0 0 1 6 6l-4 4a4 4 0 0 1-6 0"/>
+  </g>
+  <text x="112" y="644" font-size="15" font-weight="700">家族共通の招待URLを発行しました</text>
+  <text x="112" y="670" class="muted small">URLを知っているだけでは写真や動画は見られません。</text>
+  <text x="112" y="690" class="muted small">管理者の承認が必要です。</text>
+
+  <rect x="54" y="719" width="650" height="48" rx="10" fill="#ffffff" stroke="#cbc9c2"/>
+  <text x="72" y="749" class="muted small">https://konogoro.example/invite/••••••••••••</text>
+
+  <rect x="54" y="783" width="118" height="46" rx="12" fill="#ffffff" stroke="#cbc9c2"/>
+  <g transform="translate(72 798)" style="color:#62625f">
+    <rect class="icon" x="5" y="5" width="12" height="12" rx="2"/>
+    <path class="icon" d="M3 13H2a2 2 0 0 1-2-2V2a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+  </g>
+  <text x="130" y="812" text-anchor="middle" class="button">コピー</text>
+  <rect x="182" y="783" width="151" height="46" rx="12" fill="#ffd166"/>
+  <path d="M206 805h16m0 0-6-6m6 6-6 6" fill="none" stroke="#1f2733" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="270" y="812" text-anchor="middle" class="button">LINEで送る</text>
+  <text x="54" y="867" fill="#b14343" font-size="14" font-weight="600">このURLの受付を終了</text>
+
+  <text x="716" y="923" text-anchor="end" font-size="11" class="muted">Issue #107 — sample data</text>
+</svg>

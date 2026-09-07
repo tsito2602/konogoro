@@ -117,6 +117,17 @@ export const inviteInputSchema = z.object({
   maxUses: z.number().int().min(1).max(100).default(1),
 });
 
+export const inviteRequestReviewSchema = z.object({
+  requestIds: z
+    .array(z.string().min(1))
+    .min(1)
+    .max(100)
+    .refine((ids) => new Set(ids).size === ids.length, {
+      message: "同じ閲覧リクエストが重複しています",
+    }),
+  decision: z.enum(["approved", "rejected"]),
+});
+
 export const memberRoleInputSchema = z.object({
   role: z.enum(["owner", "uploader", "viewer"]),
 });

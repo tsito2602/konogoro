@@ -13,6 +13,7 @@ Phase 1で想定する主要テーブル:
 Phase 2以降:
 
 - invites
+- invite_requests
 - notification_batches
 
 IDはULIDを優先。
@@ -142,9 +143,30 @@ role
 expires_at
 max_uses
 use_count
+approval_required
+closed_at nullable
 created_by
 created_at
 ```
+
+新規に発行する家族共通URLは`role = viewer`、`approval_required = 1`とする。既存の個別招待は`approval_required = 0`として従来のログイン時付与を維持する。
+
+## invite_requests
+
+家族共通URLから送られた閲覧リクエストと審査状態を保持する。申請中ユーザーは`users.is_active = 0`のため、招待画面と申請API以外の非公開データへアクセスできない。
+
+```text
+id
+invite_id
+user_id
+status: pending | approved | rejected
+requested_at
+reviewed_by nullable
+reviewed_at nullable
+notification_error nullable
+```
+
+`UNIQUE(invite_id, user_id)`で同じURLからの重複申請を防ぐ。承認時にユーザーをviewerとして有効化し、招待の`use_count`を増やす。
 
 ## sessions
 

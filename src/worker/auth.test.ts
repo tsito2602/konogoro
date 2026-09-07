@@ -3,6 +3,7 @@ import {
   createSession,
   getCurrentUser,
   getLineFriendship,
+  getSessionUser,
   hashToken,
   pkceChallenge,
   randomToken,
@@ -84,6 +85,28 @@ describe("auth helpers", () => {
 
     expect(await getCurrentUser(db, "session-token", false)).toBeNull();
     expect(query).toContain("u.is_active = 1");
+  });
+  it("閲覧リクエスト中の無効ユーザーを招待画面用sessionから取得する", async () => {
+    const db = {
+      prepare: () => ({
+        bind: () => ({
+          first: async () => ({
+            id: "pending-1",
+            display_name: "母",
+            role: "viewer",
+            avatar_url: null,
+            is_active: 0,
+          }),
+        }),
+      }),
+    } as unknown as D1Database;
+
+    expect(await getSessionUser(db, "session-token")).toMatchObject({
+      id: "pending-1",
+      displayName: "母",
+      role: "viewer",
+      isActive: false,
+    });
   });
   it("LINE公式アカウントの友だち状態を取得する", async () => {
     const fetcher = async (input: string | URL | Request, init?: RequestInit) => {

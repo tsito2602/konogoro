@@ -44,6 +44,33 @@ export async function getCurrentUser(
   return user ? { id: user.id, displayName: user.display_name, role: user.role, avatarUrl: user.avatar_url } : null;
 }
 
+export async function getSessionUser(
+  db: D1Database,
+  sessionToken: string,
+): Promise<(User & { isActive: boolean }) | null> {
+  const user = await db
+    .prepare(
+      "SELECT u.id, u.display_name, u.role, u.avatar_url, u.is_active FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ? AND s.expires_at > ?",
+    )
+    .bind(await hashToken(sessionToken), new Date().toISOString())
+    .first<{
+      id: string;
+      display_name: string;
+      role: User["role"];
+      avatar_url: string | null;
+      is_active: number;
+    }>();
+  return user
+    ? {
+        id: user.id,
+        displayName: user.display_name,
+        role: user.role,
+        avatarUrl: user.avatar_url,
+        isActive: Boolean(user.is_active),
+      }
+    : null;
+}
+
 export async function createSession(db: D1Database, userId: string, now = new Date()): Promise<string> {
   const session = randomToken();
   await db

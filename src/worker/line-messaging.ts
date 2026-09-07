@@ -29,6 +29,11 @@ type LineNotification = {
   fetcher?: typeof fetch;
 };
 
+type LineActionNotification = LineNotification & {
+  actionLabel: string;
+  actionUrl: string;
+};
+
 export async function sendLineNotification(notification: LineNotification): Promise<void> {
   const fetcher = notification.fetcher ?? fetch;
   const response = await fetcher(LINE_PUSH_ENDPOINT, {
@@ -47,4 +52,31 @@ export async function sendLineNotification(notification: LineNotification): Prom
   if (!response.ok) {
     throw new Error(`LINE Messaging API request failed (status: ${response.status})`);
   }
+}
+
+export async function sendLineActionNotification(notification: LineActionNotification): Promise<void> {
+  const fetcher = notification.fetcher ?? fetch;
+  const response = await fetcher(LINE_PUSH_ENDPOINT, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${notification.channelAccessToken}`,
+      "Content-Type": "application/json",
+      "X-Line-Retry-Key": notification.retryKey,
+    },
+    body: JSON.stringify({
+      to: notification.to,
+      messages: [
+        {
+          type: "template",
+          altText: notification.text,
+          template: {
+            type: "buttons",
+            text: notification.text,
+            actions: [{ type: "uri", label: notification.actionLabel, uri: notification.actionUrl }],
+          },
+        },
+      ],
+    }),
+  });
+  if (!response.ok) throw new Error(`LINE Messaging API request failed (status: ${response.status})`);
 }

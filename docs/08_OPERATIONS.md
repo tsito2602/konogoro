@@ -10,6 +10,8 @@ Cloudflare Dashboardの「Workers & Pages」→`konogoro`→「Observability」�
 - `event = api_error`のAPIエラー
 - `event = r2_delete_error`のR2削除失敗
 - `event = notification_batch_failed`のLINE通知失敗
+- `event = invite_request_notification_failed`の閲覧リクエスト通知失敗
+- `event = invite_approval_notification_failed`の承認結果通知失敗
 - `event = notification_cron_completed`の`failedCount`と実行数
 
 ログにはsecret、LINE user ID、セッションtoken、コメントや投稿本文を含めない。障害調査時はエラー種別、`requestId`、発生時刻、対象IDを使う。
@@ -20,6 +22,7 @@ Cloudflare Dashboardの「Workers & Pages」→`konogoro`→「Observability」�
 2. 画像1枚の投稿と表示
 3. Cron実行後の`notification_cron_completed`
 4. LINE通知の受信
+5. 共通招待URLからの閲覧リクエスト、管理者の承認、承認後の閲覧
 
 ## LINE Webhook
 

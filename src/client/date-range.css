@@ -112,6 +112,8 @@
   font-weight: 600;
 }
 .date-range-grid {
+  position: relative;
+  isolation: isolate;
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   grid-template-rows: 34px repeat(6, 46px);
@@ -124,7 +126,7 @@
 }
 .date-range-day {
   position: relative;
-  isolation: isolate;
+  z-index: 1;
   min-width: 0;
   height: 46px;
   padding: 0;
@@ -134,26 +136,39 @@
   color: var(--carbon);
   cursor: pointer;
 }
-.date-range-day::before {
-  content: "";
+.date-range-highlights {
   position: absolute;
-  z-index: -1;
-  inset: 5px 0;
+  inset: 0;
+  pointer-events: none;
 }
-.date-range-day.in-range::before {
+.date-range-band {
+  position: absolute;
+  height: 36px;
+  border-radius: 999px;
   background: color-mix(in srgb, var(--accent) 25%, transparent);
+  transition:
+    left 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    width 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 160ms ease;
 }
-.date-range-day.range-start::before {
-  left: 50%;
-}
-.date-range-day.range-end::before {
-  right: 50%;
-}
-.date-range-day:nth-child(7n + 1)::before {
-  border-radius: 18px 0 0 18px;
-}
-.date-range-day:nth-child(7n)::before {
-  border-radius: 0 18px 18px 0;
+.date-range-marker {
+  position: absolute;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-contrast);
+  font-size: 0.875rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  opacity: 0;
+  transition:
+    left 260ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    top 260ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    opacity 160ms ease;
 }
 .date-range-day > span {
   display: grid;
@@ -170,12 +185,10 @@
   text-underline-offset: 5px;
 }
 .date-range-day[aria-pressed="true"] > span {
-  background: var(--accent);
-  color: var(--accent-contrast);
-  font-weight: 700;
+  opacity: 0;
 }
 .date-range-day:focus-visible {
-  z-index: 1;
+  z-index: 3;
   outline-offset: -2px;
   border-radius: 12px;
 }
@@ -219,19 +232,23 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
+  .date-range-band,
+  .date-range-marker {
+    transition: none !important;
+  }
   .date-range-dialog[open] {
     animation: none;
   }
 }
 @media (forced-colors: active) {
-  .date-range-day.in-range::before {
-    background: Highlight;
+  .date-range-band {
+    background: Canvas;
+    border: 1px solid GrayText;
     forced-color-adjust: none;
   }
-  .date-range-day.in-range {
+  .date-range-marker {
+    background: Highlight;
     color: HighlightText;
-  }
-  .date-range-day[aria-pressed="true"] > span {
-    outline: 2px solid ButtonText;
+    forced-color-adjust: none;
   }
 }

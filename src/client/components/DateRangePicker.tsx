@@ -1,7 +1,8 @@
 import { CalendarDays, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { useLayoutEffect, useRef, useState, type KeyboardEvent } from "react";
 import { createPortal } from "react-dom";
-import { calendarDate, displayDate, monthDays, selectRangeDate, type DateRange } from "../date-range";
+import { calendarDate, displayDate, monthDays, previewRange, selectRangeDate, type DateRange } from "../date-range";
+import { DateRangeHighlight } from "./DateRangeHighlight";
 import "../date-range.css";
 
 type Props = DateRange & { disabled?: boolean; onChange: (range: DateRange) => void };
@@ -46,6 +47,7 @@ function DateRangeDialog({ startDate, endDate, close, onChange }: Props & { clos
   const todayValue = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
   const initial = startDate || endDate || todayValue;
   const [range, setRange] = useState<DateRange>({ startDate, endDate });
+  const [anchorDate, setAnchorDate] = useState(startDate);
   const [phase, setPhase] = useState<"start" | "end">(startDate && !endDate ? "end" : "start");
   const [month, setMonth] = useState(initial.slice(0, 7));
   const [cursor, setCursor] = useState(initial);
@@ -57,7 +59,7 @@ function DateRangeDialog({ startDate, endDate, close, onChange }: Props & { clos
   const days = monthDays(year, monthIndex);
   const minYear = Math.min(1900, year);
   const maxYear = Math.max(today.getFullYear() + 10, year);
-  const previewEnd = phase === "end" && hover >= range.startDate ? hover : range.endDate;
+  const preview = previewRange(range, phase, hover);
 
   useLayoutEffect(() => {
     const dialog = ref.current!;
@@ -85,6 +87,7 @@ function DateRangeDialog({ startDate, endDate, close, onChange }: Props & { clos
   };
   const choose = (date: string) => {
     const next = selectRangeDate(range, phase, date);
+    if (!next.endDate) setAnchorDate(next.startDate);
     setRange(next);
     setPhase(next.endDate ? "start" : "end");
     setCursor(date);
@@ -190,6 +193,7 @@ function DateRangeDialog({ startDate, endDate, close, onChange }: Props & { clos
         aria-label={`${year}年${monthIndex + 1}月の日付。矢印キーで移動できます`}
         onMouseLeave={() => setHover("")}
       >
+        <DateRangeHighlight key={month} days={days} range={range} preview={preview} anchorDate={anchorDate} />
         {["日", "月", "火", "水", "木", "金", "土"].map((day) => (
           <span className="date-range-weekday" key={day} aria-hidden>
             {day}
@@ -199,13 +203,12 @@ function DateRangeDialog({ startDate, endDate, close, onChange }: Props & { clos
           if (!date) return <span key={i} />;
           const start = date === range.startDate;
           const end = date === range.endDate;
-          const inRange = !!range.startDate && !!previewEnd && date >= range.startDate && date <= previewEnd;
           return (
             <button
               key={date}
               type="button"
               data-day={date}
-              className={`date-range-day${inRange ? " in-range" : ""}${start ? " range-start" : ""}${date === previewEnd ? " range-end" : ""}`}
+              className="date-range-day"
               tabIndex={date === cursor ? 0 : -1}
               aria-label={`${displayDate(date)}${start ? "、開始日" : ""}${end ? "、終了日" : ""}`}
               aria-pressed={start || end}

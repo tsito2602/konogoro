@@ -15,8 +15,23 @@ export function monthDays(year: number, month: number): (string | null)[] {
 }
 
 export function selectRangeDate(range: DateRange, phase: "start" | "end", date: string): DateRange {
-  if (phase === "start" || !range.startDate || date < range.startDate) return { startDate: date, endDate: "" };
+  if (phase === "start" || !range.startDate) return { startDate: date, endDate: "" };
+  if (date < range.startDate) return { startDate: date, endDate: range.startDate };
   return { startDate: range.startDate, endDate: date };
+}
+
+export function previewRange(range: DateRange, phase: "start" | "end", hover: string): DateRange {
+  return phase === "end" && range.startDate && hover ? selectRangeDate(range, phase, hover) : range;
+}
+
+export function rangeRows(days: (string | null)[], range: DateRange) {
+  return Array.from({ length: 6 }, (_, row) => {
+    const columns = Array.from({ length: 7 }, (_, col) => col).filter((col) => {
+      const date = days[row * 7 + col];
+      return date && range.startDate && range.endDate && date >= range.startDate && date <= range.endDate;
+    });
+    return columns.length ? { first: columns[0], last: columns[columns.length - 1] } : null;
+  });
 }
 
 export function displayDate(value: string): string {

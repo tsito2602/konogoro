@@ -1,4 +1,5 @@
 import { EventDraftPreview } from "../components/EventDraftPreview";
+import { DateRangePicker } from "../components/DateRangePicker";
 import { useUnsavedChanges } from "../hooks/useUnsavedChanges";
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
@@ -54,28 +55,12 @@ export function EventCreatePage() {
               autoFocus
             />
           </label>
-          <div className="date-row">
-            <label>
-              開始日
-              <input
-                name="startDate"
-                value={draft.startDate}
-                disabled={saving}
-                onChange={(event) => setDraft((current) => ({ ...current, startDate: event.target.value }))}
-                type="date"
-              />
-            </label>
-            <label>
-              終了日
-              <input
-                name="endDate"
-                value={draft.endDate}
-                disabled={saving}
-                onChange={(event) => setDraft((current) => ({ ...current, endDate: event.target.value }))}
-                type="date"
-              />
-            </label>
-          </div>
+          <DateRangePicker
+            startDate={draft.startDate}
+            endDate={draft.endDate}
+            disabled={saving}
+            onChange={(range) => setDraft((current) => ({ ...current, ...range }))}
+          />
           <label>
             メモ
             <textarea

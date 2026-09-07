@@ -1,4 +1,5 @@
-import { moveItemByOffset, useMediaReorder, useSceneReorder } from "../hooks/useMediaReorder";
+import { useMediaReorder } from "../hooks/useMediaReorder";
+import { SceneEditorList } from "../components/SceneEditorList";
 import { PreparedVideoImport } from "../components/PreparedVideoImport";
 import { uploadPreparedPlayback, type PreparedPlayback } from "../video-playback";
 import { abortMultipartUpload } from "../multipart-upload";
@@ -60,18 +61,7 @@ export function PostEditPage() {
   const [saving, setSaving] = useState(false);
   const [progress, setProgress] = useState(0);
   const [importingPlayback, setImportingPlayback] = useState(false);
-  const { gridRef, announcement } = useMediaReorder(mediaOrder, setMediaOrder, saving || importingPlayback);
-  const { gridRef: sceneListRef, announcement: sceneAnnouncement } = useSceneReorder(
-    scenes.map((scene) => scene.id),
-    (order) =>
-      setScenes((current) =>
-        order.flatMap((id) => {
-          const scene = current.find((item) => item.id === id);
-          return scene ? [scene] : [];
-        }),
-      ),
-    saving || importingPlayback || scenesUnavailable,
-  );
+  const { gridRef, announcement } = useMediaReorder(mediaOrder, setMediaOrder, !post || saving || importingPlayback);
   const activeUploadRef = useRef<AbortController | null>(null);
   const [caption, setCaption] = useState<string | null>(null);
   const markSaved = useUnsavedChanges(
@@ -407,7 +397,14 @@ export function PostEditPage() {
         eventId: eventId || null,
         sceneId: sceneId || null,
         mediaIds,
-        ...(eventId && scenesChanged ? { scenes: scenes.map(({ id, title, isNew }) => ({ id, title, isNew })) } : {}),
+        ...(eventId && scenesChanged
+          ? {
+              scenes: scenes.map(({ id, title, isNew }) => ({ id, title, isNew })),
+              deletedSceneIds: originalScenes
+                .filter((original) => !scenes.some((scene) => scene.id === original.id))
+                .map((scene) => scene.id),
+            }
+          : {}),
       }),
     });
     await removeMediaWithReconciliation(
@@ -627,9 +624,7 @@ export function PostEditPage() {
                 </label>
               )}
             </div>
-            <p className="muted media-reorder-hint">
-              写真・動画を長押しして並び替え。キーボードでは画像を選んで矢印キー。
-            </p>
+            <p className="muted media-reorder-hint">写真・動画を長押しして並び替え。</p>
             <span className="media-reorder-status" role="status">
               {announcement}
             </span>
@@ -687,7 +682,6 @@ export function PostEditPage() {
           )}
           {eventId && (
             <section className="management-section">
-              <h2>イベントの見出しを編集</h2>
               <p className="muted">名前と順序は同じイベントの投稿にも反映されます。変更は保存するまで確定しません。</p>
               {scenesError ? (
                 <div role="alert">
@@ -707,48 +701,27 @@ export function PostEditPage() {
               ) : scenesLoading ? (
                 <p role="status">見出しを読み込み中…</p>
               ) : (
-                <>
-                  <div className="scene-list" ref={sceneListRef}>
-                    {scenes.map((scene, index) => (
-                      <div
-                        className="scene-editor"
-                        data-scene-id={scene.id}
-                        key={scene.id}
-                        tabIndex={saving || importingPlayback ? -1 : 0}
-                        aria-label={`見出し「${scene.title}」。長押し、または上下矢印キーで並び替え`}
-                        onKeyDown={(event) => {
-                          if (
-                            event.target !== event.currentTarget ||
-                            (event.key !== "ArrowUp" && event.key !== "ArrowDown")
-                          )
-                            return;
-                          event.preventDefault();
-                          setScenes((current) => moveItemByOffset(current, index, event.key === "ArrowUp" ? -1 : 1));
-                        }}
-                      >
-                        <input
-                          aria-label={`見出し${index + 1}の名前`}
-                          value={scene.title}
-                          maxLength={100}
-                          disabled={saving || importingPlayback}
-                          onChange={(event) =>
-                            setScenes((current) =>
-                              current.map((item) =>
-                                item.id === scene.id ? { ...item, title: event.target.value } : item,
-                              ),
-                            )
-                          }
-                        />
-                      </div>
-                    ))}
-                  </div>
-                  <p className="muted scene-reorder-hint">
-                    見出しを長押しして並び替え。キーボードでは見出しを選んで上下矢印キー。
-                  </p>
-                  <span className="media-reorder-status" role="status" aria-live="polite">
-                    {sceneAnnouncement}
-                  </span>
-                </>
+                <SceneEditorList
+                  key={eventId}
+                  scenes={scenes}
+                  disabled={saving || importingPlayback}
+                  onOrder={(ids) =>
+                    setScenes((current) => ids.flatMap((id) => current.filter((scene) => scene.id === id)))
+                  }
+                  onTitle={(id, title) =>
+                    setScenes((current) => current.map((scene) => (scene.id === id ? { ...scene, title } : scene)))
+                  }
+                  onDelete={(id) => {
+                    if (
+                      !confirm(
+                        "この見出しを削除しますか？関連する投稿は見出しなしになります。保存するまで削除は確定しません。",
+                      )
+                    )
+                      return;
+                    setScenes((current) => current.filter((scene) => scene.id !== id));
+                    if (sceneId === id) setSceneId("");
+                  }}
+                />
               )}
             </section>
           )}

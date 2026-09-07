@@ -22,7 +22,8 @@ export function useSceneReorder(order: string[], onChange: (order: string[]) => 
     reorderingClass: "scene-reordering",
     placeholderClass: "scene-drag-placeholder",
     previewClass: "scene-drag-preview",
-    interactiveSelector: "button, a, label",
+    interactiveSelector: "input, a, label",
+    handleSelector: "[data-scene-handle]",
   });
 }
 
@@ -42,6 +43,7 @@ type ReorderConfig = {
   placeholderClass: string;
   previewClass: string;
   interactiveSelector: string;
+  handleSelector?: string;
 };
 
 function useLongPressReorder(
@@ -65,7 +67,9 @@ function useLongPressReorder(
     const start = (event: PointerEvent) => {
       if (!event.isPrimary || event.button !== 0 || cleanupGesture) return;
       const target = event.target as HTMLElement;
+      if (config.handleSelector && !target.closest(config.handleSelector)) return;
       if (target.closest(config.interactiveSelector)) return;
+      if (config.handleSelector) event.preventDefault();
       const source = target.closest<HTMLElement>(config.itemSelector);
       const sourceId = source?.dataset[config.dataKey];
       if (!source || !sourceId) return;
@@ -112,7 +116,7 @@ function useLongPressReorder(
         if (speed) window.scrollBy(0, Math.max(-16, Math.min(16, speed)));
         frame = requestAnimationFrame(update);
       };
-      const timer = window.setTimeout(() => {
+      const activate = () => {
         overlay = source.cloneNode(true) as HTMLElement;
         overlay.removeAttribute(config.dataAttribute);
         overlay.removeAttribute("tabindex");
@@ -132,7 +136,8 @@ function useLongPressReorder(
         source.setPointerCapture(event.pointerId);
         setAnnouncement("移動中。指を離すと並び替え、Escapeでキャンセルできます。");
         update();
-      }, 350);
+      };
+      const timer = config.handleSelector ? undefined : window.setTimeout(activate, 350);
       const finish = (commit: boolean) => {
         const active = !!overlay;
         cleanupGesture?.();
@@ -191,6 +196,7 @@ function useLongPressReorder(
         window.removeEventListener("keydown", key);
         grid.removeEventListener("touchmove", touch);
       };
+      if (config.handleSelector) activate();
     };
     const context = (event: Event) => {
       if ((event.target as HTMLElement).closest(config.itemSelector)) event.preventDefault();
@@ -211,6 +217,7 @@ function useLongPressReorder(
     config.placeholderClass,
     config.previewClass,
     config.interactiveSelector,
+    config.handleSelector,
   ]);
   return { gridRef, announcement };
 }

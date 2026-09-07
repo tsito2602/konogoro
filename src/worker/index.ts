@@ -1104,13 +1104,17 @@ app.put("/posts/:postId", async (c) => {
     if (!event) return c.json({ error: "イベントが見つかりません" }, 400);
   }
   const currentSceneIds = new Set<string>();
+  const deletedSceneIds = new Set(input.deletedSceneIds ?? []);
+  if (deletedSceneIds.size && !input.scenes) return c.json({ error: "削除には見出し一覧が必要です" }, 400);
   if (input.scenes) {
     if (!input.eventId) return c.json({ error: "見出しにはイベントが必要です" }, 400);
     const current = await c.env.DB.prepare("SELECT id FROM event_scenes WHERE event_id = ?")
       .bind(input.eventId)
       .all<{ id: string }>();
     current.results.forEach(({ id }) => currentSceneIds.add(id));
-    if (current.results.some(({ id }) => !input.scenes!.some((scene) => scene.id === id)))
+    if ([...deletedSceneIds].some((id) => !currentSceneIds.has(id) || input.scenes!.some((scene) => scene.id === id)))
+      return c.json({ error: "削除する見出しがイベントと一致しません" }, 400);
+    if (current.results.some(({ id }) => !deletedSceneIds.has(id) && !input.scenes!.some((scene) => scene.id === id)))
       return c.json({ error: "見出しが更新されています。画面を開き直してください" }, 409);
     for (const scene of input.scenes) {
       if (currentSceneIds.has(scene.id)) continue;
@@ -1150,6 +1154,10 @@ app.put("/posts/:postId", async (c) => {
         ).bind(scene.id, input.eventId, scene.title, index, c.var.currentUser.id, now, now),
   );
   const statements = [
+    ...[...deletedSceneIds].flatMap((id) => [
+      c.env.DB.prepare("UPDATE posts SET scene_id = NULL WHERE scene_id = ? AND event_id = ?").bind(id, input.eventId),
+      c.env.DB.prepare("DELETE FROM event_scenes WHERE id = ? AND event_id = ?").bind(id, input.eventId),
+    ]),
     ...sceneStatements,
     c.env.DB.prepare(
       "UPDATE posts SET event_id = ?, scene_id = ?, caption = ?, updated_at = ? WHERE id = ? AND status = 'published'",

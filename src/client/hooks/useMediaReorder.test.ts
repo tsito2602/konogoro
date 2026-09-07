@@ -24,11 +24,13 @@ class Card extends EventTarget {
     id: string,
     public index: number,
     public interactive = false,
+    public handle = false,
   ) {
     super();
     this.dataset = { mediaId: id, sceneId: id };
   }
   closest(selector: string) {
+    if (selector === "[data-scene-handle]") return this.handle ? this : null;
     return selector === "[data-media-id]" || selector === "[data-scene-id]" || this.interactive ? this : null;
   }
   contains() {
@@ -155,17 +157,41 @@ describe("長押しメディア並び替え", () => {
     vi.advanceTimersByTime(500);
     expect(overlays).toHaveLength(0);
   });
-  it("見出しも同じ長押し操作で並び替える", () => {
+  it("見出しはハンドルから待たずに追従して並び替える", () => {
     state.dispose?.();
     useSceneReorder(["a", "b", "c"], change, false);
+    grid.cards[0].handle = true;
     pointer(grid, "pointerdown", 45, grid.cards[0]);
-    vi.advanceTimersByTime(350);
+    expect(overlays).toHaveLength(1);
     expect(grid.cards[0].classList.add).toHaveBeenCalledWith("scene-drag-placeholder");
     expect(grid.classList.add).toHaveBeenCalledWith("scene-reordering");
     pointer(view, "pointermove", 245);
     vi.advanceTimersByTime(16);
     pointer(view, "pointerup", 245);
     expect(change).toHaveBeenCalledWith(["b", "c", "a"]);
+  });
+  it("見出しの本文・入力・削除ボタンではドラッグしない", () => {
+    state.dispose?.();
+    useSceneReorder(["a", "b", "c"], change, false);
+    for (const target of [grid.cards[0], new Card("a", 0, true)]) {
+      pointer(grid, "pointerdown", 45, target);
+      vi.advanceTimersByTime(500);
+      pointer(view, "pointerup", 245);
+    }
+    expect(overlays).toHaveLength(0);
+    expect(change).not.toHaveBeenCalled();
+  });
+  it("編集モード終了で進行中のドラッグを破棄する", () => {
+    state.dispose?.();
+    useSceneReorder(["a", "b", "c"], change, false);
+    grid.cards[0].handle = true;
+    pointer(grid, "pointerdown", 45, grid.cards[0]);
+    pointer(view, "pointermove", 245);
+    state.dispose?.();
+    useSceneReorder(["a", "b", "c"], change, true);
+    pointer(view, "pointerup", 245);
+    expect(change).not.toHaveBeenCalled();
+    expect(overlays[0].removed).toBe(true);
   });
   it("キーボード操作用の移動は範囲外を無視する", () => {
     expect(moveItemByOffset(["a", "b", "c"], 1, -1)).toEqual(["b", "a", "c"]);

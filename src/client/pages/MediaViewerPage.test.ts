@@ -1,11 +1,63 @@
 import { describe, expect, it } from "vitest";
 import {
+  clampImageScale,
+  clampImageTranslation,
+  isImageTap,
+  isViewerOverlayVisible,
   mediaExitOffset,
+  pinchImageTransform,
+  pointCenter,
+  pointDistance,
   swipeDirection,
   swipeDragOffset,
   viewerCommentNavigation,
   viewerNavigationItems,
 } from "./MediaViewerPage";
+
+describe("image zoom", () => {
+  it("倍率を等倍から4倍の範囲に制限する", () => {
+    expect(clampImageScale(0.5)).toBe(1);
+    expect(clampImageScale(2.5)).toBe(2.5);
+    expect(clampImageScale(6)).toBe(4);
+  });
+
+  it("2点間の距離と中心を求める", () => {
+    expect(pointDistance({ x: 0, y: 0 }, { x: 3, y: 4 })).toBe(5);
+    expect(pointCenter({ x: 10, y: 20 }, { x: 30, y: 40 })).toEqual({ x: 20, y: 30 });
+  });
+
+  it("指の中心にあった画像位置を保って拡大する", () => {
+    expect(pinchImageTransform({ scale: 1, x: 0, y: 0 }, { x: 50, y: 0 }, { x: 50, y: 0 }, { x: 0, y: 0 }, 2)).toEqual({
+      scale: 2,
+      x: -50,
+      y: 0,
+    });
+  });
+
+  it("拡大画像を表示領域の外へ移動しすぎない", () => {
+    expect(
+      clampImageTranslation({ scale: 2, x: 300, y: -300 }, { width: 300, height: 200 }, { width: 300, height: 300 }),
+    ).toEqual({ scale: 2, x: 150, y: -50 });
+  });
+
+  it("等倍へ戻したときは位置も中央へ戻す", () => {
+    expect(
+      clampImageTranslation({ scale: 1, x: 100, y: -100 }, { width: 300, height: 200 }, { width: 300, height: 300 }),
+    ).toEqual({ scale: 1, x: 0, y: 0 });
+  });
+
+  it("短い指移動だけをオーバーレイ切替のタップとみなす", () => {
+    expect(isImageTap(3, -4)).toBe(true);
+    expect(isImageTap(8, 0)).toBe(false);
+    expect(isImageTap(0, -8)).toBe(false);
+  });
+
+  it("写真の表示設定を維持しつつ動画では操作を常に表示する", () => {
+    expect(isViewerOverlayVisible("image", false)).toBe(false);
+    expect(isViewerOverlayVisible("image", true)).toBe(true);
+    expect(isViewerOverlayVisible("video", false)).toBe(true);
+  });
+});
 
 describe("swipeDirection", () => {
   it("右へ十分に動かすと前のメディアへ移動する", () => {
@@ -131,5 +183,8 @@ it("keeps viewer controls and album selection rendered while another post is loa
   expect(html).toContain('aria-label="前の写真・動画"');
   expect(html).toContain('aria-current="true"');
   expect(html).toContain('role="status"');
+  expect(html).toContain('class="viewer-viewport overlay-visible"');
+  expect(html).toContain('class="viewer-header viewer-overlay"');
+  expect(html).toContain('class="viewer-info viewer-overlay"');
   expect(html).not.toContain("skeleton-viewer");
 });

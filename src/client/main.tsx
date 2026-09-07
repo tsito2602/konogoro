@@ -32,6 +32,7 @@ import "./album-material.css";
 import "./glass-navigation.css";
 import "./settings-material.css";
 import "./conversation-material.css";
+import "./invitation-material.css";
 import { initializeInteractionFeedback } from "./interaction-feedback";
 
 const stopInstallPromptCapture = installPromptStore.start(window);

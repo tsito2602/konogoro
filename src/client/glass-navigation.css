@@ -1,5 +1,5 @@
 @supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
-  :root :is(.page-header, .album-picker-header, .tab-bar) {
+  :root :is(.page-header, .album-picker-header, .timeline-month-heading, .tab-bar) {
     background: color-mix(in srgb, var(--surface) 45%, transparent);
     -webkit-backdrop-filter: blur(24px) saturate(150%);
     backdrop-filter: blur(24px) saturate(150%);
@@ -7,7 +7,7 @@
 }
 
 @media (prefers-reduced-transparency: reduce), (prefers-contrast: more), (forced-colors: active) {
-  :root :is(.page-header, .album-picker-header, .tab-bar) {
+  :root :is(.page-header, .album-picker-header, .timeline-month-heading, .tab-bar) {
     background: var(--surface);
     -webkit-backdrop-filter: none;
     backdrop-filter: none;

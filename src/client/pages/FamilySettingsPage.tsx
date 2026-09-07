@@ -1,5 +1,5 @@
 import { Check, Copy, ExternalLink, Link2, Trash2, UserRoundCheck, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { FamilyMember, InviteRequest, SharedInvite, User } from "../../shared/types";
 import { api } from "../api";
 import { useCurrentUser } from "../components/AppLayout";
@@ -7,6 +7,8 @@ import { EmptyState, ErrorState } from "../components/AsyncState";
 import { PageHeader } from "../components/PageHeader";
 import { PageSkeleton } from "../components/PageSkeleton";
 import { useToast } from "../components/Toast";
+import { InvitationMark } from "../components/InvitationMark";
+import { invitationReviewMessage } from "../invitation-result";
 
 const roleLabels: Record<User["role"], string> = {
   owner: "管理者",
@@ -31,14 +33,23 @@ export function FamilySettingsPage() {
   const [creatingInvite, setCreatingInvite] = useState(false);
   const [closingInvite, setClosingInvite] = useState(false);
   const [reviewing, setReviewing] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [reviewResult, setReviewResult] = useState("");
 
-  const load = () => {
+  const refreshFamily = useCallback(async () => {
+    const [family, inviteResult, requestResult] = await Promise.all([
+      api<{ members: FamilyMember[] }>("/family/members"),
+      api<{ invite: SharedInvite | null }>("/family/shared-invite"),
+      api<{ requests: InviteRequest[] }>("/family/invite-requests"),
+    ]);
+    setMembers(family.members);
+    setSharedInvite(inviteResult.invite);
+    setRequests(requestResult.requests);
+  }, []);
+  const load = useCallback(() => {
     setError("");
-    void api<{ members: FamilyMember[] }>("/family/members")
-      .then((family) => setMembers(family.members))
-      .catch((reason) => setError((reason as Error).message));
-  };
-
+    void refreshFamily().catch((reason: Error) => setError(reason.message));
+  }, [refreshFamily]);
   useEffect(() => {
     void Promise.all([
       api<{ members: FamilyMember[] }>("/family/members"),
@@ -50,7 +61,7 @@ export function FamilySettingsPage() {
         setSharedInvite(inviteResult.invite);
         setRequests(requestResult.requests);
       })
-      .catch((reason) => setError((reason as Error).message));
+      .catch((reason: Error) => setError(reason.message));
   }, []);
 
   const changeMemberRole = async (member: FamilyMember, role: User["role"]) => {
@@ -77,6 +88,7 @@ export function FamilySettingsPage() {
       const result = await api<SharedInvite>("/family/shared-invite", { method: "POST" });
       setSharedInvite(result);
       setInviteUrl(result.inviteUrl);
+      setCopied(false);
     } catch (reason) {
       setInviteError((reason as Error).message);
     } finally {
@@ -104,17 +116,19 @@ export function FamilySettingsPage() {
     if (selectedRequests.size === 0) return;
     setReviewing(true);
     setMemberError("");
+    setReviewResult("");
     try {
-      await api<{ reviewedCount: number }>("/family/invite-requests/review", {
+      const result = await api<{ reviewedCount: number }>("/family/invite-requests/review", {
         method: "POST",
         body: JSON.stringify({ requestIds: [...selectedRequests], decision }),
       });
-      setRequests((current) => current?.filter((request) => !selectedRequests.has(request.id)) ?? null);
+      setReviewResult(invitationReviewMessage(result.reviewedCount, selectedRequests.size, decision));
       setSelectedRequests(new Set());
-      if (decision === "approved") load();
-      showToast(decision === "approved" ? "閲覧リクエストを承認しました" : "閲覧リクエストを承認しませんでした", {
-        success: true,
-      });
+      try {
+        await refreshFamily();
+      } catch {
+        setError("処理結果は保存されましたが、最新の一覧を取得できませんでした。もう一度読み込んでください。");
+      }
     } catch (reason) {
       setMemberError((reason as Error).message);
     } finally {
@@ -141,6 +155,8 @@ export function FamilySettingsPage() {
   const copyInvite = async () => {
     try {
       await navigator.clipboard.writeText(inviteUrl);
+      setCopied(true);
+      setInviteError("");
       showToast("招待URLをコピーしました", { success: true });
     } catch {
       setInviteError("招待URLをコピーできませんでした");
@@ -151,6 +167,12 @@ export function FamilySettingsPage() {
     <>
       <PageHeader title="メンバーの管理" back />
       <main className="page-content family-page">
+        {reviewResult && (
+          <p className="invitation-receipt" role="status">
+            <Check aria-hidden />
+            {reviewResult}
+          </p>
+        )}
         {error ? (
           <ErrorState message={error} retry={load} />
         ) : members === null ? (
@@ -180,6 +202,7 @@ export function FamilySettingsPage() {
                           <input
                             type="checkbox"
                             checked={selected}
+                            disabled={reviewing}
                             onChange={() =>
                               setSelectedRequests((current) => {
                                 const next = new Set(current);
@@ -235,7 +258,8 @@ export function FamilySettingsPage() {
                 </p>
               )}
             </section>
-            <section className="family-section invite-section">
+            <section className="family-section invite-section invitation-paper">
+              <InvitationMark />
               <div className="family-section-heading">
                 <div>
                   <h2>家族を招待</h2>
@@ -255,8 +279,8 @@ export function FamilySettingsPage() {
                   <input value={inviteUrl} readOnly aria-label="家族共通の招待URL" />
                   <div>
                     <button className="outline-button" type="button" onClick={copyInvite}>
-                      <Copy />
-                      コピー
+                      {copied ? <Check aria-hidden /> : <Copy aria-hidden />}
+                      {copied ? "コピー済み" : "コピー"}
                     </button>
                     <a
                       className="primary-button"
@@ -301,6 +325,19 @@ export function FamilySettingsPage() {
                   </button>
                 </div>
               )}
+              {sharedInvite && (
+                <p className="invitation-expiry">
+                  有効期限{" "}
+                  <time dateTime={sharedInvite.expiresAt}>
+                    {new Intl.DateTimeFormat("ja-JP", {
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                      timeZone: "Asia/Tokyo",
+                    }).format(new Date(sharedInvite.expiresAt))}
+                  </time>
+                </p>
+              )}
               {sharedInvite && inviteUrl && (
                 <button
                   className="text-button danger-text"
@@ -318,7 +355,7 @@ export function FamilySettingsPage() {
               )}
             </section>
             <section className="family-section">
-              <h2>権限設定</h2>
+              <h2>メンバー</h2>
               {members.length === 0 ? (
                 <EmptyState kind="people" title="メンバーはいません" body="招待URLを発行してメンバーを招待できます。" />
               ) : (

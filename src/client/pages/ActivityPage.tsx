@@ -100,11 +100,20 @@ export function ActivityPage() {
                 className="activity-row"
                 to={`/posts/${activity.postId}`}
                 data-reading-item={`activity-${activity.id}`}
-                state={activity.kind === "comment" ? commentNavigationState("read") : postPageState}
+                state={
+                  activity.kind === "comment"
+                    ? commentNavigationState("read", {
+                        commentId: activity.id.startsWith("comment:") ? activity.id.slice(8) : undefined,
+                      })
+                    : postPageState
+                }
                 key={activity.id}
               >
-                <span className={`activity-icon ${activity.kind}`} aria-hidden>
-                  {activity.kind === "post" ? <Send /> : <MessageCircle />}
+                <span className="activity-person" aria-hidden>
+                  {activity.actorName.slice(0, 1)}
+                  <span className={`activity-kind ${activity.kind}`}>
+                    {activity.kind === "post" ? <Send /> : <MessageCircle />}
+                  </span>
                 </span>
                 <span className="activity-copy">
                   <span>{activityText(activity)}</span>

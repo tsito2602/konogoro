@@ -1,0 +1,121 @@
+.activity-page .activity-row {
+  grid-template-columns: 42px minmax(0, 1fr) 60px;
+  gap: 14px;
+  padding-block: 18px;
+  align-items: start;
+}
+.activity-person {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--surface-muted);
+  color: var(--carbon);
+  font-size: 1rem;
+  font-weight: 600;
+}
+.activity-kind {
+  position: absolute;
+  right: -3px;
+  bottom: -3px;
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--frost);
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-contrast);
+}
+.activity-kind svg {
+  width: 11px;
+  height: 11px;
+}
+.activity-page .activity-copy {
+  gap: 7px;
+  line-height: 1.6;
+}
+.activity-page .activity-copy small {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  color: var(--carbon);
+  font-size: 0.875rem;
+}
+.activity-page .activity-row > img,
+.activity-page .skeleton-activity-thumbnail {
+  width: 60px;
+  height: 60px;
+  border-radius: 12px;
+}
+.comment-list .comment {
+  padding-block: 16px;
+  border-bottom: 0;
+}
+.comment-meta {
+  flex-wrap: wrap;
+  gap: 2px 8px;
+}
+.comment-content {
+  overflow-wrap: anywhere;
+}
+.conversation h2 {
+  color: var(--ash);
+  font-size: 0.875rem;
+}
+.viewer-comment-list article {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+  padding-block: 16px;
+  border-bottom: 0;
+}
+.viewer-comment-list .comment-avatar {
+  color: #fff;
+  background: #393939;
+}
+.viewer-comment-copy {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.viewer-comment-copy time {
+  display: block;
+  margin: 3px 0 0;
+}
+.viewer-comment-input textarea {
+  border-radius: 16px;
+  border-color: #484848;
+}
+.comment-arrived {
+  border-radius: 12px;
+  animation: comment-arrival 900ms ease-out both;
+}
+@keyframes comment-arrival {
+  from {
+    background-color: rgb(255 209 102 / 22%);
+  }
+  to {
+    background-color: transparent;
+  }
+}
+@media (max-width: 360px) {
+  .activity-page .activity-row {
+    grid-template-columns: 40px minmax(0, 1fr) 52px;
+    gap: 10px;
+  }
+  .activity-page .activity-row > img,
+  .activity-page .skeleton-activity-thumbnail {
+    width: 52px;
+    height: 52px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .comment-arrived {
+    animation: none;
+  }
+}

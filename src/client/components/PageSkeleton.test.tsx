@@ -69,3 +69,10 @@ it("アルバムの期間切替中は年月操作を重ねず、年一覧には�
   expect(year).toContain("album-grid");
   expect(year).toContain('role="status"');
 });
+
+it("投稿の取得中は入口の既知の写真だけを残す", () => {
+  const html = renderToStaticMarkup(<PageSkeleton variant="post-detail" previewUrls={["/sample.jpg"]} />);
+  expect(html).toContain('data-count="1"');
+  expect(html).toContain('src="/sample.jpg"');
+  expect(html).not.toMatch(/<(a|button)\b/);
+});

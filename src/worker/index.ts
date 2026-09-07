@@ -17,6 +17,7 @@ import {
   sceneInputSchema,
   uploadFilesSchema,
   inviteInputSchema,
+  inviteRequestReviewSchema,
   memberRoleInputSchema,
   profileInputSchema,
 } from "../shared/schemas";
@@ -33,6 +34,7 @@ import type { User } from "../shared/types";
 import {
   createSession,
   getCurrentUser,
+  getSessionUser,
   getLineFriendship,
   hashToken,
   hasLineConfig,
@@ -51,6 +53,7 @@ import { createInviteToken } from "./invite-token";
 import { processNotificationBatches, type NotificationCronEnv } from "./notification-cron";
 import { addPostToNotificationBatch } from "./notification-batch";
 import { lineFriendshipStatements, verifyLineWebhookSignature, type LineWebhookSecrets } from "./line-webhook";
+import { sendLineActionNotification } from "./line-messaging";
 import {
   parseTimelineCursor,
   serializeTimelineCursor,
@@ -61,7 +64,10 @@ import {
   type TimelineOrderRow,
 } from "./timeline-order";
 
-type Bindings = Cloudflare.Env & R2Secrets & LineSecrets & LineWebhookSecrets & { STAGING?: string };
+type Bindings = Cloudflare.Env &
+  R2Secrets &
+  LineSecrets &
+  LineWebhookSecrets & { STAGING?: string; LINE_CHANNEL_ACCESS_TOKEN?: string };
 type EventRow = {
   id: string;
   title: string;
@@ -138,6 +144,8 @@ app.use("*", async (c, next) => {
     return;
   }
   const publicAuth = c.req.path === "/api/auth/line" || c.req.path === "/api/auth/line/callback";
+  const inviteAccess = c.req.method === "GET" && /^\/api\/family\/invites\/[^/]+\/access$/.test(c.req.path);
+  const inviteRequest = c.req.method === "POST" && /^\/api\/family\/invites\/[^/]+\/requests$/.test(c.req.path);
   const lineConfigured = hasLineConfig(c.env);
   const localDevelopment = !lineConfigured || new URL(c.env.APP_ORIGIN!).hostname === "localhost";
   let user = await getCurrentUser(
@@ -164,7 +172,12 @@ app.use("*", async (c, next) => {
       user = await getCurrentUser(c.env.DB, session, false);
     }
   }
-  if (!user && !publicAuth) return c.json({ error: "ログインが必要です" }, 401);
+  if (!user && (inviteAccess || inviteRequest)) {
+    const session = getCookie(c, "family_session");
+    const pendingUser = session ? await getSessionUser(c.env.DB, session) : null;
+    if (pendingUser) user = pendingUser;
+  }
+  if (!user && !publicAuth && !inviteAccess) return c.json({ error: "ログインが必要です" }, 401);
   const roleOverride = isStaging(c) ? stagingRole(getCookie(c, STAGING_ROLE_COOKIE)) : null;
   if (user && roleOverride) user = { ...user, role: roleOverride };
   if (user) c.set("currentUser", user);
@@ -388,26 +401,38 @@ app.get("/auth/line/callback", async (c) => {
   if (!user || !user.is_active) {
     if (!loginRequest.invite_token_hash) return c.json({ error: "有効な招待が必要です" }, 403);
     const invite = await c.env.DB.prepare(
-      "UPDATE invites SET use_count = use_count + 1 WHERE token_hash = ? AND expires_at > ? AND use_count < max_uses RETURNING role",
+      `SELECT id, role, approval_required
+         FROM invites
+        WHERE token_hash = ? AND expires_at > ? AND closed_at IS NULL AND use_count < max_uses`,
     )
       .bind(loginRequest.invite_token_hash, new Date().toISOString())
-      .first<{ role: User["role"] }>();
+      .first<{ id: string; role: User["role"]; approval_required: number }>();
     if (!invite) return c.json({ error: "招待URLが無効または期限切れです" }, 403);
     const now = new Date().toISOString();
+    const approvalRequired = Boolean(invite.approval_required);
+    if (!approvalRequired) {
+      const consumed = await c.env.DB.prepare(
+        "UPDATE invites SET use_count = use_count + 1 WHERE id = ? AND use_count < max_uses RETURNING id",
+      )
+        .bind(invite.id)
+        .first<{ id: string }>();
+      if (!consumed) return c.json({ error: "招待URLが無効または期限切れです" }, 403);
+    }
     if (user) {
       await c.env.DB.prepare(
         `
         UPDATE users
-           SET display_name = ?, avatar_url = ?, role = ?, notification_enabled = ?, line_friend_enabled = ?, is_active = 1, updated_at = ?
+           SET display_name = ?, avatar_url = ?, role = ?, notification_enabled = ?, line_friend_enabled = ?, is_active = ?, updated_at = ?
          WHERE id = ?
       `,
       )
         .bind(
           profile.name ?? "LINEユーザー",
           profile.picture ?? null,
-          invite.role,
+          approvalRequired ? "viewer" : invite.role,
           Number(lineFriend === true),
           Number(lineFriend === true),
+          Number(!approvalRequired),
           now,
           user.id,
         )
@@ -415,16 +440,17 @@ app.get("/auth/line/callback", async (c) => {
     } else {
       user = { id: ulid(), is_active: 1 };
       await c.env.DB.prepare(
-        "INSERT INTO users (id, line_user_id, display_name, avatar_url, role, notification_enabled, line_friend_enabled, is_active, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?, ?)",
+        "INSERT INTO users (id, line_user_id, display_name, avatar_url, role, notification_enabled, line_friend_enabled, is_active, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
       )
         .bind(
           user.id,
           profile.sub,
           profile.name ?? "LINEユーザー",
           profile.picture ?? null,
-          invite.role,
+          approvalRequired ? "viewer" : invite.role,
           Number(lineFriend === true),
           Number(lineFriend === true),
+          Number(!approvalRequired),
           now,
           now,
         )
@@ -578,6 +604,257 @@ app.delete("/family/members/:memberId", async (c) => {
     ),
   ]);
   return c.body(null, 204);
+});
+
+app.get("/family/shared-invite", async (c) => {
+  if (!canInviteFamily(c.var.currentUser)) return c.json({ error: "招待を確認する権限がありません" }, 403);
+  const now = new Date().toISOString();
+  const invite = await c.env.DB.prepare(
+    `SELECT i.id, i.expires_at, i.closed_at,
+            (SELECT COUNT(*) FROM invite_requests r WHERE r.invite_id = i.id) AS request_count
+       FROM invites i
+      WHERE i.approval_required = 1 AND i.closed_at IS NULL AND i.expires_at > ?
+      ORDER BY i.created_at DESC LIMIT 1`,
+  )
+    .bind(now)
+    .first<{ id: string; expires_at: string; closed_at: string | null; request_count: number }>();
+  return c.json(
+    invite
+      ? {
+          invite: {
+            id: invite.id,
+            inviteUrl: "",
+            expiresAt: invite.expires_at,
+            closedAt: invite.closed_at,
+            requestCount: Number(invite.request_count),
+          },
+        }
+      : { invite: null },
+  );
+});
+
+app.post("/family/shared-invite", async (c) => {
+  if (!canInviteFamily(c.var.currentUser)) return c.json({ error: "メンバーを招待する権限がありません" }, 403);
+  const { token, tokenHash } = await createInviteToken();
+  const id = ulid();
+  const now = new Date();
+  const nowIso = now.toISOString();
+  const expiresAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString();
+  await c.env.DB.batch([
+    c.env.DB.prepare(
+      "UPDATE invites SET closed_at = ? WHERE approval_required = 1 AND closed_at IS NULL AND expires_at > ?",
+    ).bind(nowIso, nowIso),
+    c.env.DB.prepare(
+      `INSERT INTO invites
+         (id, token_hash, role, expires_at, max_uses, use_count, created_by, created_at, approval_required, closed_at)
+       VALUES (?, ?, 'viewer', ?, 100, 0, ?, ?, 1, NULL)`,
+    ).bind(id, tokenHash, expiresAt, c.var.currentUser.id, nowIso),
+  ]);
+  const inviteUrl = new URL(`/invite/${token}`, c.env.APP_ORIGIN ?? c.req.url).toString();
+  return c.json({ id, inviteUrl, expiresAt, closedAt: null, requestCount: 0 }, 201);
+});
+
+app.delete("/family/shared-invite/:inviteId", async (c) => {
+  if (!canInviteFamily(c.var.currentUser)) return c.json({ error: "招待受付を終了する権限がありません" }, 403);
+  const result = await c.env.DB.prepare(
+    "UPDATE invites SET closed_at = ? WHERE id = ? AND approval_required = 1 AND closed_at IS NULL",
+  )
+    .bind(new Date().toISOString(), c.req.param("inviteId"))
+    .run();
+  if (result.meta.changes === 0) return c.json({ error: "受付中の招待が見つかりません" }, 404);
+  return c.body(null, 204);
+});
+
+app.get("/family/invites/:token/access", async (c) => {
+  const tokenHash = await hashToken(c.req.param("token"));
+  const invite = await c.env.DB.prepare(
+    "SELECT id, expires_at, max_uses, use_count, approval_required, closed_at FROM invites WHERE token_hash = ?",
+  )
+    .bind(tokenHash)
+    .first<{
+      id: string;
+      expires_at: string;
+      max_uses: number;
+      use_count: number;
+      approval_required: number;
+      closed_at: string | null;
+    }>();
+  const now = new Date().toISOString();
+  const reason = !invite
+    ? "invalid"
+    : invite.closed_at
+      ? "closed"
+      : invite.expires_at <= now
+        ? "expired"
+        : invite.use_count >= invite.max_uses
+          ? "full"
+          : "available";
+  const currentUser = (c.var as { currentUser?: User }).currentUser;
+  let member = false;
+  let requestStatus: "pending" | "approved" | "rejected" | null = null;
+  let lineFriend: boolean | null = null;
+  if (currentUser) {
+    const account = await c.env.DB.prepare(
+      `SELECT u.is_active, u.line_friend_enabled, r.status
+         FROM users u
+         LEFT JOIN invite_requests r ON r.user_id = u.id AND r.invite_id = ?
+        WHERE u.id = ?`,
+    )
+      .bind(invite?.id ?? "", currentUser.id)
+      .first<{ is_active: number; line_friend_enabled: number; status: typeof requestStatus }>();
+    member = Boolean(account?.is_active);
+    requestStatus = account?.status ?? null;
+    lineFriend = account ? Boolean(account.line_friend_enabled) : null;
+  }
+  return c.json({
+    available: reason === "available",
+    reason,
+    authenticated: Boolean(currentUser),
+    member,
+    requestStatus,
+    lineFriend,
+  });
+});
+
+app.post("/family/invites/:token/requests", async (c) => {
+  const currentUser = c.var.currentUser;
+  const now = new Date().toISOString();
+  const invite = await c.env.DB.prepare(
+    `SELECT id FROM invites
+      WHERE token_hash = ? AND approval_required = 1 AND closed_at IS NULL
+        AND expires_at > ? AND use_count < max_uses`,
+  )
+    .bind(await hashToken(c.req.param("token")), now)
+    .first<{ id: string }>();
+  if (!invite) return c.json({ error: "招待URLが無効、期限切れ、または受付終了しています" }, 410);
+  const account = await c.env.DB.prepare("SELECT is_active FROM users WHERE id = ?")
+    .bind(currentUser.id)
+    .first<{ is_active: number }>();
+  if (account?.is_active) return c.json({ status: "approved", member: true });
+
+  const requestId = ulid();
+  const inserted = await c.env.DB.prepare(
+    `INSERT OR IGNORE INTO invite_requests (id, invite_id, user_id, status, requested_at)
+     VALUES (?, ?, ?, 'pending', ?)`,
+  )
+    .bind(requestId, invite.id, currentUser.id, now)
+    .run();
+  const request = await c.env.DB.prepare("SELECT id, status FROM invite_requests WHERE invite_id = ? AND user_id = ?")
+    .bind(invite.id, currentUser.id)
+    .first<{ id: string; status: "pending" | "approved" | "rejected" }>();
+  if (!request) return c.json({ error: "閲覧リクエストを保存できませんでした" }, 500);
+
+  if (inserted.meta.changes > 0 && c.env.LINE_CHANNEL_ACCESS_TOKEN) {
+    const owners = await c.env.DB.prepare(
+      `SELECT id, line_user_id FROM users
+        WHERE role = 'owner' AND is_active = 1 AND line_friend_enabled = 1 AND line_user_id IS NOT NULL`,
+    ).all<{ id: string; line_user_id: string }>();
+    const actionUrl = new URL("/settings/family?section=requests", c.env.APP_ORIGIN ?? c.req.url).toString();
+    const results = await Promise.allSettled(
+      owners.results.map((owner) =>
+        sendLineActionNotification({
+          channelAccessToken: c.env.LINE_CHANNEL_ACCESS_TOKEN!,
+          to: owner.line_user_id,
+          text: `${currentUser.displayName}さんから閲覧リクエストが届きました`,
+          actionLabel: "確認する",
+          actionUrl,
+          retryKey: crypto.randomUUID(),
+        }),
+      ),
+    );
+    const failed = results.find((result) => result.status === "rejected");
+    if (failed) {
+      await c.env.DB.prepare("UPDATE invite_requests SET notification_error = ? WHERE id = ?")
+        .bind("管理者へのLINE通知に失敗しました", request.id)
+        .run();
+      console.error({ event: "invite_request_notification_failed", requestId: request.id });
+    }
+  }
+  return c.json({ status: request.status, member: false }, inserted.meta.changes > 0 ? 201 : 200);
+});
+
+app.get("/family/invite-requests", async (c) => {
+  if (!canInviteFamily(c.var.currentUser)) return c.json({ error: "閲覧リクエストを確認する権限がありません" }, 403);
+  const result = await c.env.DB.prepare(
+    `SELECT r.id, r.status, r.requested_at, u.display_name, u.avatar_url
+       FROM invite_requests r JOIN users u ON u.id = r.user_id
+      WHERE r.status = 'pending'
+      ORDER BY r.requested_at, r.id`,
+  ).all<{
+    id: string;
+    status: "pending";
+    requested_at: string;
+    display_name: string;
+    avatar_url: string | null;
+  }>();
+  return c.json({
+    requests: result.results.map((request) => ({
+      id: request.id,
+      status: request.status,
+      requestedAt: request.requested_at,
+      displayName: request.display_name,
+      avatarUrl: request.avatar_url,
+    })),
+  });
+});
+
+app.post("/family/invite-requests/review", async (c) => {
+  if (!canInviteFamily(c.var.currentUser)) return c.json({ error: "閲覧リクエストを承認する権限がありません" }, 403);
+  const input = inviteRequestReviewSchema.parse(await c.req.json());
+  const reviewedAt = new Date().toISOString();
+  let reviewedCount = 0;
+  for (const requestId of input.requestIds) {
+    const request = await c.env.DB.prepare(
+      `UPDATE invite_requests SET status = ?, reviewed_by = ?, reviewed_at = ?
+        WHERE id = ? AND status = 'pending'
+        RETURNING user_id, invite_id`,
+    )
+      .bind(input.decision, c.var.currentUser.id, reviewedAt, requestId)
+      .first<{ user_id: string; invite_id: string }>();
+    if (!request) continue;
+    reviewedCount += 1;
+    if (input.decision === "rejected") continue;
+    const capacity = await c.env.DB.prepare(
+      "UPDATE invites SET use_count = use_count + 1 WHERE id = ? AND use_count < max_uses RETURNING id",
+    )
+      .bind(request.invite_id)
+      .first<{ id: string }>();
+    if (!capacity) {
+      await c.env.DB.prepare(
+        "UPDATE invite_requests SET status = 'pending', reviewed_by = NULL, reviewed_at = NULL WHERE id = ?",
+      )
+        .bind(requestId)
+        .run();
+      reviewedCount -= 1;
+      continue;
+    }
+    await c.env.DB.prepare("UPDATE users SET role = 'viewer', is_active = 1, updated_at = ? WHERE id = ?")
+      .bind(reviewedAt, request.user_id)
+      .run();
+    if (c.env.LINE_CHANNEL_ACCESS_TOKEN) {
+      const recipient = await c.env.DB.prepare("SELECT line_user_id, line_friend_enabled FROM users WHERE id = ?")
+        .bind(request.user_id)
+        .first<{ line_user_id: string | null; line_friend_enabled: number }>();
+      if (recipient?.line_user_id && recipient.line_friend_enabled) {
+        try {
+          await sendLineActionNotification({
+            channelAccessToken: c.env.LINE_CHANNEL_ACCESS_TOKEN,
+            to: recipient.line_user_id,
+            text: "写真や動画を見られるようになりました",
+            actionLabel: "このごろを開く",
+            actionUrl: new URL("/", c.env.APP_ORIGIN ?? c.req.url).toString(),
+            retryKey: crypto.randomUUID(),
+          });
+        } catch {
+          await c.env.DB.prepare("UPDATE invite_requests SET notification_error = ? WHERE id = ?")
+            .bind("承認結果のLINE通知に失敗しました", requestId)
+            .run();
+          console.error({ event: "invite_approval_notification_failed", requestId });
+        }
+      }
+    }
+  }
+  return c.json({ reviewedCount });
 });
 
 app.post("/family/invites", async (c) => {

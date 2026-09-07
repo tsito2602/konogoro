@@ -11,6 +11,31 @@ export type FamilyMember = User & {
   lineConnected: boolean;
 };
 
+export type SharedInvite = {
+  id: string;
+  inviteUrl: string;
+  expiresAt: string;
+  closedAt: string | null;
+  requestCount: number;
+};
+
+export type InviteRequest = {
+  id: string;
+  displayName: string;
+  avatarUrl: string | null;
+  requestedAt: string;
+  status: "pending" | "approved" | "rejected";
+};
+
+export type InviteAccess = {
+  available: boolean;
+  reason: "available" | "expired" | "closed" | "full" | "invalid";
+  authenticated: boolean;
+  member: boolean;
+  requestStatus: InviteRequest["status"] | null;
+  lineFriend: boolean | null;
+};
+
 export type CurrentUser = User & {
   avatarUrl?: string | null;
   notificationEnabled?: boolean;

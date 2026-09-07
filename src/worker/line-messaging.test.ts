@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { buildNotificationText, sendLineNotification } from "./line-messaging";
+import { buildNotificationText, sendLineActionNotification, sendLineNotification } from "./line-messaging";
 
 describe("buildNotificationText", () => {
   it("投稿と写真・動画の件数を新着閲覧リンク付きで案内する", () => {
@@ -78,5 +78,43 @@ describe("sendLineNotification", () => {
       expect(String(error)).not.toContain("private body");
       expect(String(error)).not.toContain("秘密の通知本文");
     }
+  });
+});
+
+describe("sendLineActionNotification", () => {
+  it("確認ボタン付きのLINE通知を送る", async () => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response(null, { status: 200 }));
+
+    await sendLineActionNotification({
+      channelAccessToken: "secret-token",
+      to: "U123",
+      text: "母さんから閲覧リクエストが届きました",
+      actionLabel: "確認する",
+      actionUrl: "https://family.example.com/settings/family?section=requests",
+      retryKey: "123e4567-e89b-42d3-a456-426614174000",
+      fetcher,
+    });
+
+    const [, init] = fetcher.mock.calls[0];
+    expect(JSON.parse(String(init?.body))).toEqual({
+      to: "U123",
+      messages: [
+        {
+          type: "template",
+          altText: "母さんから閲覧リクエストが届きました",
+          template: {
+            type: "buttons",
+            text: "母さんから閲覧リクエストが届きました",
+            actions: [
+              {
+                type: "uri",
+                label: "確認する",
+                uri: "https://family.example.com/settings/family?section=requests",
+              },
+            ],
+          },
+        },
+      ],
+    });
   });
 });

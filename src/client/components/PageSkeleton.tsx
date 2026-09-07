@@ -267,6 +267,7 @@ function skeletonContent(variant: SkeletonVariant, currentUser?: CurrentUser): R
     case "event-edit":
       return (
         <div className="form-page page-content event-edit">
+          <div className="event-draft-preview skeleton-tile" />
           <div className="form-stack">
             {field()}
             <div className="date-row">
@@ -305,10 +306,12 @@ function skeletonContent(variant: SkeletonVariant, currentUser?: CurrentUser): R
                 <div className="skeleton-line" />
               </div>
             </section>
-            {field()}
-            {/* 見出しはイベント選択の取得後に表示するため、取得前には行を作らない。 */}
-            {field(true)}
-            <div className="skeleton-field" />
+            <section className="post-edit-details">
+              {field()}
+              {/* 見出しはイベント選択の取得後に表示するため、取得前には行を作らない。 */}
+              {field(true)}
+              <div className="skeleton-field" />
+            </section>
           </div>
         </div>
       );

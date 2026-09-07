@@ -200,10 +200,7 @@ export function MediaViewerPage() {
     const offset = entryOffset.current;
     entryOffset.current = 0;
     if (frame?.animate && offset && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      swipeAnimation.current = frame.animate(
-        [{ transform: `translate3d(${offset}px, 0, 0)` }, { transform: "translate3d(0, 0, 0)" }],
-        { duration: 240, easing: "cubic-bezier(.2,.8,.2,1)" },
-      );
+      swipeAnimation.current = frame.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 160, easing: "ease-out" });
     }
     return () => {
       swipeAnimation.current?.cancel();

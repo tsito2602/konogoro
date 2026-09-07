@@ -23,14 +23,11 @@ export function ViewerComments({
     const region = regionRef.current;
     if (!region?.animate || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return onClose();
     closing.current = true;
-    const to = window.matchMedia("(min-width: 960px)").matches ? "translateX(24px)" : "translateY(24px)";
-    const animation = region.animate(
-      [
-        { transform: "none", opacity: 1 },
-        { transform: to, opacity: 0 },
-      ],
-      { duration: 180, easing: "ease-out", fill: "forwards" },
-    );
+    const animation = region.animate([{ opacity: 1 }, { opacity: 0 }], {
+      duration: 180,
+      easing: "ease-out",
+      fill: "forwards",
+    });
     closeAnimation.current = animation;
     animation.finished.then(onClose).catch(() => {});
   };

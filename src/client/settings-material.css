@@ -88,6 +88,8 @@
 }
 .settings-page .theme-setting {
   padding: 0;
+  overflow: visible;
+  border-radius: 0;
   background: transparent;
 }
 .settings-page .theme-setting > div {

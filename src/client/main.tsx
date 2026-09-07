@@ -28,6 +28,7 @@ import "./accessibility.css";
 import "./editor-material.css";
 import "./post-modal.css";
 import "./timeline-material.css";
+import "./album-material.css";
 import { initializeInteractionFeedback } from "./interaction-feedback";
 
 const stopInstallPromptCapture = installPromptStore.start(window);

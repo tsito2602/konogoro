@@ -90,7 +90,14 @@ export function TimelinePage() {
           {groupTimelinePosts(posts ?? []).map((group) => (
             <section className="timeline-month-group" key={group.posts[0].id} aria-label={group.month}>
               <h2 className="timeline-month-heading">
-                <span>{group.month}</span>
+                {group.month.includes("年") ? (
+                  <>
+                    <span className="timeline-year">{group.month.split("年")[0]}年</span>
+                    <span className="timeline-month">{group.month.split("年")[1]}</span>
+                  </>
+                ) : (
+                  <span className="timeline-month">{group.month}</span>
+                )}
               </h2>
               {group.posts.map((post) => (
                 <PostCard

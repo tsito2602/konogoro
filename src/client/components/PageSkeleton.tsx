@@ -152,7 +152,10 @@ function skeletonContent(variant: SkeletonVariant, currentUser?: CurrentUser): R
     case "timeline":
       return (
         <section className="timeline-month-group">
-          <div className="timeline-month-heading">{line("short")}</div>
+          <div className="timeline-month-heading">
+            <span className="timeline-year">{line("short")}</span>
+            <span className="timeline-month">{line("short")}</span>
+          </div>
           {postSkeleton()}
           {postSkeleton()}
         </section>

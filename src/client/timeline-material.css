@@ -2,17 +2,36 @@
   padding-bottom: 20px;
 }
 .timeline-layout .timeline-month-heading {
-  margin: 0 0 16px;
-  padding: 12px 0;
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0 0 18px;
+  padding: 18px 2px 12px;
   background: var(--frost);
   color: var(--carbon);
-  font-size: 0.875rem;
-  letter-spacing: 0.04em;
+  font-weight: 600;
 }
-.timeline-layout .timeline-month-heading > span {
+.timeline-month-heading .timeline-year {
+  color: var(--ash);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+}
+.timeline-month-heading .timeline-month {
+  font-size: 1.5rem;
+  line-height: 1.2;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+}
+.timeline-month-heading .skeleton-line {
   display: inline-block;
-  border-left: 3px solid var(--accent);
-  padding: 2px 12px;
+}
+.timeline-month-heading .timeline-year .skeleton-line {
+  width: 38px;
+}
+.timeline-month-heading .timeline-month .skeleton-line {
+  width: 52px;
+  height: 24px;
 }
 .timeline-layout .post-card,
 .unread-flow .post-card {

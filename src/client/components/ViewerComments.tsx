@@ -18,8 +18,29 @@ export function ViewerComments({
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
   const regionRef = useRef<HTMLElement>(null);
+  const closing = useRef(false);
+  const closeAnimation = useRef<Animation | null>(null);
+  const dismiss = () => {
+    if (closing.current) return;
+    const region = regionRef.current;
+    if (!region?.animate || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return onClose();
+    closing.current = true;
+    const to = window.matchMedia("(min-width: 960px)").matches ? "translateX(24px)" : "translateY(24px)";
+    const animation = region.animate(
+      [
+        { transform: "none", opacity: 1 },
+        { transform: to, opacity: 0 },
+      ],
+      { duration: 180, easing: "ease-out", fill: "forwards" },
+    );
+    closeAnimation.current = animation;
+    animation.finished.then(onClose).catch(() => {});
+  };
   useEffect(() => {
-    regionRef.current?.focus();
+    regionRef.current?.focus({ preventScroll: true });
+    return () => {
+      closeAnimation.current?.cancel();
+    };
   }, []);
   const send = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -40,12 +61,23 @@ export function ViewerComments({
     }
   };
   return (
-    <section className="viewer-comments" ref={regionRef} tabIndex={-1} aria-label="この投稿のコメント">
+    <section
+      className="viewer-comments"
+      ref={regionRef}
+      tabIndex={-1}
+      aria-label="この投稿のコメント"
+      onKeyDown={(event) => {
+        if (event.key === "Escape") {
+          event.stopPropagation();
+          dismiss();
+        }
+      }}
+    >
       <header>
         <h2>
           この投稿のコメント <span>{post.comments.length}件</span>
         </h2>
-        <button className="viewer-button" type="button" onClick={onClose} aria-label="コメントを閉じて写真・動画に戻る">
+        <button className="viewer-button" type="button" onClick={dismiss} aria-label="コメントを閉じて写真・動画に戻る">
           <X />
         </button>
       </header>

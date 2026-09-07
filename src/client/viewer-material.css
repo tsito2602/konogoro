@@ -1,0 +1,184 @@
+/* Quiet controls around the media; motion follows the user's action. */
+.media-viewer {
+  --viewer-thumbnail-height: calc(80px + env(safe-area-inset-bottom));
+}
+.video-viewer .viewer-header {
+  padding: calc(10px + env(safe-area-inset-top)) 12px 0;
+  background: none;
+  pointer-events: none;
+}
+.video-viewer .viewer-header > * {
+  pointer-events: auto;
+}
+.video-viewer .viewer-header .viewer-button {
+  background: #121714b8;
+}
+.video-viewer .viewer-header > span {
+  justify-self: center;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: #121714b8;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.08em;
+}
+.video-viewer .viewer-info {
+  inset: auto 12px 8px;
+  padding: 12px 14px 6px;
+  border-radius: 18px;
+  background: #101512bd;
+}
+.video-viewer .viewer-info strong {
+  font-weight: 650;
+  line-height: 1.5;
+}
+.video-viewer .viewer-info > span {
+  color: #e0e4df;
+  line-height: 1.5;
+}
+.video-viewer .viewer-controls {
+  gap: 8px;
+  margin-top: 8px;
+}
+.video-viewer .viewer-controls button {
+  border: 0;
+  border-radius: 999px;
+  background: #ffffff14;
+}
+.video-viewer .viewer-comment-button {
+  border-radius: 999px;
+  margin: 2px 0 0;
+}
+.video-viewer .viewer-comment-button[aria-expanded="true"] {
+  background: #ffffff18;
+}
+.video-viewer.comments-open .viewer-info {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+.video-viewer .viewer-media-frame {
+  transition: transform 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.video-viewer .viewer-media-frame.dragging {
+  transition: none;
+}
+.media-viewer .thumbnail-strip {
+  height: var(--viewer-thumbnail-height);
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  gap: 8px;
+}
+.media-viewer .thumbnail-strip a {
+  border-radius: 8px;
+  opacity: 0.65;
+  transition:
+    translate 180ms ease-out,
+    opacity 180ms ease-out,
+    scale 160ms ease-out;
+}
+.media-viewer .thumbnail-strip a.selected {
+  translate: 0 -4px;
+  opacity: 1;
+}
+.media-viewer .thumbnail-strip a.selected::after {
+  inset: auto 8px 3px;
+  height: 2px;
+  border: 0;
+  border-radius: 2px;
+  background: #fff4d6;
+}
+.video-viewer .viewer-comments {
+  right: 10px;
+  left: 10px;
+  padding: 10px 16px 16px;
+  border: 1px solid #ffffff18;
+  border-radius: 20px 20px 0 0;
+  background: #202521;
+  box-shadow: none;
+  animation: viewer-comments-enter 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.video-viewer .viewer-comments > header {
+  flex-shrink: 0;
+  margin-bottom: 8px;
+}
+.video-viewer .viewer-comments form {
+  flex-shrink: 0;
+}
+.video-viewer .viewer-comment-input textarea {
+  border-color: #737d74;
+  border-radius: 14px;
+  background: #ffffff08;
+}
+.video-viewer .viewer-comment-input button {
+  border: 0;
+  color: #27342a;
+  background: #f2d28a;
+}
+@keyframes viewer-comments-enter {
+  from {
+    opacity: 0;
+    translate: 0 24px;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+@media (min-width: 760px) {
+  .video-viewer .viewer-info {
+    right: auto;
+    left: 50%;
+    width: min(calc(100% - 32px), 560px);
+    transform: translateX(-50%);
+  }
+}
+@media (min-width: 960px) {
+  .video-viewer .viewer-comments {
+    top: calc(72px + env(safe-area-inset-top));
+    bottom: var(--viewer-thumbnail-height);
+    left: auto;
+    right: 16px;
+    width: 360px;
+    max-height: none;
+    margin: 0;
+    border-radius: 20px;
+    animation-name: viewer-comments-enter-side;
+  }
+  .video-viewer .viewer-comment-list {
+    flex: 1;
+  }
+}
+@keyframes viewer-comments-enter-side {
+  from {
+    opacity: 0;
+    translate: 24px 0;
+  }
+  to {
+    opacity: 1;
+    translate: 0 0;
+  }
+}
+@media (orientation: landscape) and (max-height: 560px) {
+  .video-viewer {
+    --viewer-thumbnail-height: 68px;
+  }
+  .video-viewer .thumbnail-strip {
+    padding: 8px 16px;
+  }
+  .video-viewer .viewer-info {
+    padding: 8px 12px 4px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .video-viewer .viewer-media-frame,
+  .media-viewer .thumbnail-strip a,
+  .video-viewer .viewer-comments {
+    transition: none;
+    animation: none;
+  }
+}
+
+.video-viewer .skeleton-viewer-navigation > span,
+.video-viewer .skeleton-viewer-comment {
+  height: 44px;
+  border-radius: 999px;
+}

@@ -342,7 +342,12 @@ function skeletonContent(variant: SkeletonVariant, currentUser?: CurrentUser, pr
       return (
         <div className="settings-page skeleton-settings-layout">
           <div className="settings-form">
-            {settingsSection(field())}
+            {settingsSection(
+              <div className="settings-profile">
+                <span className="settings-profile-avatar skeleton-circle" />
+                {field()}
+              </div>,
+            )}
             {settingsSection(
               <>
                 <div className="notification-toggle">

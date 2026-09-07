@@ -1,5 +1,5 @@
 import { useReadingState } from "../reading-context";
-import { ListFilter, X } from "lucide-react";
+import { ArrowRight, Images, ListFilter, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigationType, useViewTransitionState } from "react-router-dom";
 import type { EventSummary } from "../../shared/types";
@@ -215,33 +215,13 @@ export function EventCard({
   onOpen?: () => void;
   returnFocus?: boolean;
 }) {
-  const [peekLoaded, setPeekLoaded] = useState(false);
   const [coverLoaded, setCoverLoaded] = useState(false);
   const linkRef = useRef<HTMLAnchorElement>(null);
   useEffect(() => {
     if (returnFocus) linkRef.current?.focus({ preventScroll: true });
   }, [returnFocus]);
-  const reveal = () => setPeekLoaded(true);
   return (
     <div className="event-card-stack">
-      {peekLoaded &&
-        event.coverUrl &&
-        (event.previewMediaUrls ?? []).slice(0, 2).map((url) => (
-          <img
-            className="event-card-peek"
-            key={url}
-            src={url}
-            alt=""
-            aria-hidden="true"
-            draggable={false}
-            onLoad={(e) => {
-              e.currentTarget.dataset.ready = "true";
-            }}
-            onError={(e) => {
-              e.currentTarget.hidden = true;
-            }}
-          />
-        ))}
       <Link
         ref={linkRef}
         data-reading-item={`event-${event.id}`}
@@ -249,9 +229,6 @@ export function EventCard({
         to={`/events/${event.id}`}
         state={{ eventPreview: event }}
         onClick={onOpen}
-        onPointerEnter={reveal}
-        onPointerDown={reveal}
-        onFocus={reveal}
         viewTransition={coverLoaded && !window.matchMedia("(prefers-reduced-motion: reduce)").matches}
         style={{ viewTransitionName: transitioning ? "event-surface" : undefined }}
       >
@@ -269,10 +246,12 @@ export function EventCard({
           <div className="event-card-badges">{eventStatusLabel(event.startDate, event.endDate)}</div>
         </div>
         <div className="event-card-copy">
+          <p className="event-card-date">{eventDate(event.startDate, event.endDate)}</p>
           <h3 style={{ viewTransitionName: transitioning ? "event-title" : undefined }}>{event.title}</h3>
           <div className="event-card-meta">
-            <p>{eventDate(event.startDate, event.endDate)}</p>
+            <Images size={14} aria-hidden="true" />
             <p className="event-media-count">{mediaCounts(event.photoCount, event.videoCount)}</p>
+            <ArrowRight size={20} aria-hidden="true" />
           </div>
         </div>
       </Link>

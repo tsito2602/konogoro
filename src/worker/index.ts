@@ -76,7 +76,6 @@ type EventRow = {
   end_date: string | null;
   cover_media_id: string | null;
   cover_source: "auto" | "manual";
-  preview_media_ids?: string;
   cover_position_x: number;
   cover_position_y: number;
   post_count: number;
@@ -1044,14 +1043,7 @@ app.get("/events", async (c) => {
     SELECT e.id, e.title, e.description, e.start_date, e.end_date, e.cover_media_id, e.cover_source, e.cover_position_x, e.cover_position_y,
            COUNT(DISTINCT CASE WHEN p.status = 'published' THEN p.id END) AS post_count,
            COUNT(DISTINCT CASE WHEN p.status = 'published' AND m.status = 'uploaded' AND m.kind = 'image' THEN m.id END) AS photo_count,
-           COUNT(DISTINCT CASE WHEN p.status = 'published' AND m.status = 'uploaded' AND m.kind = 'video' THEN m.id END) AS video_count,
-           (SELECT json_group_array(id) FROM (
-             SELECT peek.id FROM media peek JOIN posts pp ON pp.id = peek.post_id
-              WHERE pp.event_id = e.id AND pp.status = 'published' AND peek.status = 'uploaded'
-                AND peek.id != COALESCE(e.cover_media_id, '')
-              ORDER BY COALESCE(pp.captured_at, pp.published_at, pp.created_at), peek.position, peek.id
-              LIMIT 2
-           )) AS preview_media_ids
+           COUNT(DISTINCT CASE WHEN p.status = 'published' AND m.status = 'uploaded' AND m.kind = 'video' THEN m.id END) AS video_count
       FROM events e
       LEFT JOIN posts p ON p.event_id = e.id
       LEFT JOIN media m ON m.post_id = p.id
@@ -1989,9 +1981,6 @@ function mapEvent(row: EventRow): EventSummary {
     endDate: row.end_date,
     coverUrl: row.cover_media_id ? `/api/media/${row.cover_media_id}/content?variant=thumbnail` : null,
     coverSource: row.cover_source,
-    previewMediaUrls: (JSON.parse(row.preview_media_ids ?? "[]") as string[]).map(
-      (id) => `/api/media/${id}/content?variant=thumbnail`,
-    ),
     coverPosition: { x: row.cover_position_x ?? 50, y: row.cover_position_y ?? 50 },
     postCount: Number(row.post_count),
     photoCount: Number(row.photo_count),

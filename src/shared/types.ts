@@ -138,7 +138,6 @@ export type EventSummary = {
   endDate: string | null;
   coverUrl: string | null;
   coverSource: "auto" | "manual";
-  previewMediaUrls?: string[];
   coverPosition?: { x: number; y: number };
   postCount: number;
   photoCount: number;

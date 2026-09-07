@@ -199,11 +199,9 @@ function skeletonContent(variant: SkeletonVariant, currentUser?: CurrentUser): R
               <div className="event-card">
                 <div className="event-card-image skeleton-tile" />
                 <div className="event-card-copy skeleton-copy">
-                  {line("medium")}
-                  <div className="event-card-meta">
-                    {line("short")}
-                    {line("short")}
-                  </div>
+                  <p className="event-card-date">{line("short")}</p>
+                  <h3>{line("medium")}</h3>
+                  <div className="event-card-meta">{line("short")}</div>
                 </div>
               </div>
             </div>

@@ -198,6 +198,7 @@ function skeletonContent(variant: SkeletonVariant, currentUser?: CurrentUser): R
             <div className="event-card" key={i}>
               <div className="event-card-image skeleton-tile" />
               <div className="event-card-copy skeleton-copy">
+                {/* 実カードと同じ全面カバーの下部に情報を重ねる。 */}
                 {line("medium")}
                 {line("short")}
                 {line()}

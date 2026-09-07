@@ -678,7 +678,11 @@ a.icon-button {
   gap: 8px;
 }
 .skeleton-events .event-card-copy {
-  min-height: 108px;
+  min-height: 164px;
+  background: none;
+}
+.skeleton-events .event-card-copy .skeleton-line {
+  background: var(--surface);
 }
 .skeleton-year-picker > .skeleton-line {
   justify-self: center;
@@ -1570,18 +1574,24 @@ a.icon-button {
   font-size: 0.8125rem;
 }
 .event-card {
-  display: flex;
-  flex-direction: column;
+  position: relative;
+  display: grid;
+  min-height: 240px;
   align-self: start;
   min-width: 0;
   overflow: hidden;
   border-radius: var(--radius-card);
   background: var(--surface);
-  color: var(--carbon);
+  color: #fff;
+}
+.event-card::before {
+  content: "";
+  grid-area: 1 / 1;
+  aspect-ratio: 16 / 9;
 }
 .event-card-image {
-  position: relative;
-  aspect-ratio: 16 / 9;
+  position: absolute;
+  inset: 0;
   overflow: hidden;
 }
 .event-card-image img {
@@ -1599,6 +1609,7 @@ a.icon-button {
   inset: 12px 12px auto;
   display: flex;
   gap: 8px;
+  z-index: 1;
 }
 .event-card-badges .event-status {
   padding: 6px 9px;
@@ -1614,14 +1625,19 @@ a.icon-button {
   background: var(--accent);
 }
 .event-card-copy {
-  padding: 16px;
+  position: relative;
+  grid-area: 1 / 1;
+  align-self: end;
+  margin-top: 56px;
+  padding: 56px 16px 16px;
+  background: linear-gradient(transparent, rgb(0 0 0 / 78%) 56px, rgb(0 0 0 / 86%));
   overflow-wrap: anywhere;
 }
 .event-card-copy p {
   margin: 0;
   font-size: 0.875rem;
   line-height: 1.5;
-  color: var(--ash);
+  color: #fff;
 }
 .event-card-copy h3 {
   margin: 0 0 8px;
@@ -1634,7 +1650,7 @@ a.icon-button {
   margin-top: 12px;
   display: -webkit-box;
   overflow: hidden;
-  color: var(--carbon);
+  color: #fff;
   font-size: 1rem;
   line-height: 1.6;
   white-space: pre-line;

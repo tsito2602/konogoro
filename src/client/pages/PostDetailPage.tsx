@@ -1,6 +1,6 @@
 import { PostModalContext, postOrigin, modalTransform } from "../post-modal";
 import { VideoBadge } from "../components/VideoBadge";
-import { commentIntent } from "../comment-navigation";
+import { commentIntent, commentTargetId, revealComment } from "../comment-navigation";
 import { canReturnInApp, removeReadingPost, restorePanelPosition, updateReadingPost } from "../reading-context";
 import {
   CalendarDays,
@@ -58,6 +58,7 @@ export function PostDetailPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const commentInputRef = useRef<HTMLInputElement>(null);
   const conversationRef = useRef<HTMLElement>(null);
+  const sentCommentId = useRef<string | null>(null);
   const fallbackPath = post?.eventId ? `/events/${post.eventId}` : "/";
   const closePage = useCallback(() => {
     if ((location.state as { postPage?: boolean } | null)?.postPage && canReturnInApp()) navigate(-1);
@@ -84,14 +85,19 @@ export function PostDetailPage() {
       const intent = commentIntent(location.state);
       if (intent === "read") {
         const conversation = conversationRef.current!;
-        panel.scrollTop =
-          conversation.getBoundingClientRect().top - panel.getBoundingClientRect().top + panel.scrollTop;
+        revealComment(conversation, commentTargetId(location.state));
         conversation.focus({ preventScroll: true });
       } else if (intent === "write") {
         commentInputRef.current?.focus({ preventScroll: true });
       }
     });
   }, [location.key, location.state, post]);
+  useEffect(() => {
+    if (!post || !sentCommentId.current || !conversationRef.current) return;
+    revealComment(conversationRef.current, sentCommentId.current);
+    sentCommentId.current = null;
+  }, [post]);
+
   if (!post && !error)
     return (
       <PostPage onClose={closePage} footer={<CommentComposerSkeleton />}>
@@ -247,6 +253,7 @@ export function PostDetailPage() {
                   method: "POST",
                   body: JSON.stringify({ body }),
                 });
+                sentCommentId.current = comment.id;
                 setPost((current) => (current ? { ...current, comments: [...current.comments, comment] } : current));
                 form.reset();
               } catch (reason) {
@@ -509,7 +516,7 @@ function formatPostDate(value: string | null): string {
 
 function CommentRow({ comment, onDelete }: { comment: Comment; onDelete: () => Promise<void> }) {
   return (
-    <article className="comment">
+    <article className="comment" data-comment-id={comment.id}>
       <div className="comment-avatar">
         {comment.avatarUrl ? <img src={comment.avatarUrl} alt="" /> : comment.authorName.slice(0, 1)}
       </div>

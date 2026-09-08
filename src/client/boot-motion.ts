@@ -1,9 +1,11 @@
 export const bootMotionDuration = 900;
 
 export function bootMotionElapsed(): number {
-  if (typeof performance === "undefined") return 0;
-  const start = performance.getEntriesByName("konogoro-boot")[0]?.startTime;
-  return start === undefined ? 0 : Math.max(0, performance.now() - start);
+  if (typeof document === "undefined") return 0;
+  // Use the actual animation clock, including delayed first paint on mobile.
+  const sun = document.querySelector("#initial-boot circle");
+  const time = sun?.getAnimations()[0]?.currentTime;
+  return typeof time === "number" ? Math.max(0, time) : 0;
 }
 
 export function bootMotionRemaining(elapsed: number, standalone: boolean, reducedMotion: boolean): number {

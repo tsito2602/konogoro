@@ -89,8 +89,8 @@ export function isImageTap(deltaX: number, deltaY: number) {
   return Math.abs(deltaX) < 8 && Math.abs(deltaY) < 8;
 }
 
-export function isViewerOverlayVisible(kind: Media["kind"] | undefined, preferredVisible: boolean) {
-  return kind === "video" || preferredVisible;
+export function isViewerOverlayVisible(_kind: Media["kind"] | undefined, preferredVisible: boolean) {
+  return preferredVisible;
 }
 
 type ViewerNavigationItem = Pick<AlbumMedia, "id" | "postId" | "kind" | "thumbnailUrl">;
@@ -145,6 +145,7 @@ export function MediaViewerPage() {
   const postCache = useRef(new Map<string, Post>());
   const [commentsOpen, setCommentsOpen] = useState(false);
   const [viewerOverlayVisible, setViewerOverlayVisible] = useState(true);
+  const [videoControlsContainer, setVideoControlsContainer] = useState<HTMLDivElement | null>(null);
   const [finishedMedia, setFinishedMedia] = useState<string | null>(null);
   const [playingMedia, setPlayingMedia] = useState<string | null>(null);
   const commentButtonRef = useRef<HTMLButtonElement>(null);
@@ -337,6 +338,7 @@ export function MediaViewerPage() {
   useEffect(() => {
     const keydown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
+        if (document.fullscreenElement) return;
         if (commentsOpen) {
           setCommentsOpen(false);
           commentButtonRef.current?.focus();
@@ -551,6 +553,11 @@ export function MediaViewerPage() {
                 autoPlay={viewerState?.playVideo === true}
                 requestedAt={viewerState?.playRequestedAt}
                 paused={commentsOpen}
+                viewerControls={{
+                  container: videoControlsContainer,
+                  visible: overlayVisible && !commentsOpen,
+                  toggle: () => setViewerOverlayVisible((visible) => !visible),
+                }}
                 onPlaybackStarted={() => {
                   setFinishedMedia(null);
                 }}
@@ -574,6 +581,7 @@ export function MediaViewerPage() {
           aria-hidden={!overlayVisible || commentsOpen}
           inert={overlayVisible && !commentsOpen ? undefined : true}
         >
+          <div ref={setVideoControlsContainer} />
           <strong>{post?.caption || "写真・動画"}</strong>
           <span>
             {post && current ? `${formatDate(current.capturedAt ?? post.capturedAt)} · ${post.authorName}` : ""}

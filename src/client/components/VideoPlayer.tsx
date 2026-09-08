@@ -1,4 +1,5 @@
-import { Play } from "lucide-react";
+import { Play, Pause, RotateCcw, RotateCw, Volume2, VolumeX, Maximize } from "lucide-react";
+import { createPortal } from "react-dom";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { playbackMemory, recordVideoMetric, takePreparedVideo } from "../video-experience";
 
@@ -12,6 +13,7 @@ export function VideoPlayer({
   onEnded,
   onPlaybackStarted,
   onNearEnd,
+  viewerControls,
 }: {
   src: string;
   poster: string;
@@ -22,8 +24,13 @@ export function VideoPlayer({
   onEnded?: () => void;
   onPlaybackStarted?: () => void;
   onNearEnd?: () => void;
+  viewerControls?: { container: HTMLElement | null; visible: boolean; toggle: () => void };
 }) {
   const [status, setStatus] = useState<"idle" | "loading" | "ready" | "buffering" | "error">("idle");
+  const [playing, setPlaying] = useState(false);
+  const [duration, setDuration] = useState(0);
+  const [position, setPosition] = useState(0);
+  const [muted, setMuted] = useState(false);
   const [attempt, setAttempt] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
   const requested = useRef<number | null>(null);
@@ -81,15 +88,36 @@ export function VideoPlayer({
       setStatus("idle");
     });
   };
+  const seek = (time: number) => {
+    const video = videoRef.current;
+    if (!video || duration <= 0) return;
+    video.currentTime = Math.max(0, Math.min(duration, time));
+    setPosition(video.currentTime);
+  };
+  const fullscreen = async () => {
+    const video = videoRef.current as (HTMLVideoElement & { webkitEnterFullscreen?: () => void }) | null;
+    const viewer = video?.closest<HTMLElement>(".media-viewer");
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen();
+      else if (viewer?.requestFullscreen) await viewer.requestFullscreen();
+      else video?.webkitEnterFullscreen?.();
+    } catch {
+      /* Fullscreen can be unavailable in embedded browsers. */
+    }
+  };
   return (
     <div className="video-player">
       <video
         ref={videoRef}
         poster={poster}
-        controls={!paused}
+        controls={!viewerControls && !paused}
         playsInline
         preload="none"
         draggable={false}
+        onDurationChange={(event) =>
+          setDuration(Number.isFinite(event.currentTarget.duration) ? event.currentTarget.duration : 0)
+        }
+        onVolumeChange={(event) => setMuted(event.currentTarget.muted)}
         onLoadedMetadata={(event) => {
           const video = event.currentTarget;
           const position = memory.position();
@@ -98,6 +126,7 @@ export function VideoPlayer({
         }}
         onTimeUpdate={(event) => {
           const video = event.currentTarget;
+          setPosition(video.currentTime);
           if (!video.paused && video.duration - video.currentTime <= 10) onNearEnd?.();
         }}
         onPlay={(event) => {
@@ -105,6 +134,7 @@ export function VideoPlayer({
             event.currentTarget.pause();
             return;
           }
+          setPlaying(true);
           requested.current ??= performance.now();
           setStatus("loading");
         }}
@@ -117,6 +147,7 @@ export function VideoPlayer({
           onPlaybackStarted?.();
         }}
         onPause={() => {
+          setPlaying(false);
           const video = videoRef.current;
           if (video) memory.save(video.currentTime, video.duration);
           memory.flush();
@@ -130,6 +161,7 @@ export function VideoPlayer({
           setStatus(hasPlayed.current ? "buffering" : "loading");
         }}
         onEnded={(event) => {
+          setPlaying(false);
           memory.save(event.currentTarget.duration, event.currentTarget.duration);
           stopStall();
           setStatus("idle");
@@ -141,13 +173,87 @@ export function VideoPlayer({
           setStatus("error");
         }}
       />
-      {status === "idle" && !paused && (
+      {viewerControls && !paused && (
+        <button
+          className="video-overlay-surface"
+          type="button"
+          aria-label={viewerControls.visible ? "操作表示を隠す" : "操作表示を表示する"}
+          onClick={viewerControls.toggle}
+        />
+      )}
+      {viewerControls?.container &&
+        createPortal(
+          <div
+            className="viewer-video-controls"
+            aria-label="動画の操作"
+            onPointerDown={(event) => event.stopPropagation()}
+          >
+            <div className="viewer-video-buttons">
+              <button
+                type="button"
+                aria-label="10秒戻す"
+                disabled={paused || duration <= 0}
+                onClick={() => seek(position - 10)}
+              >
+                <RotateCcw aria-hidden />
+                <span>10</span>
+              </button>
+              <button
+                type="button"
+                aria-label={playing ? "一時停止" : "再生"}
+                disabled={paused || status === "error"}
+                onClick={() => (playing ? videoRef.current?.pause() : play())}
+              >
+                {playing ? <Pause aria-hidden /> : <Play aria-hidden />}
+              </button>
+              <button
+                type="button"
+                aria-label="10秒送る"
+                disabled={paused || duration <= 0}
+                onClick={() => seek(position + 10)}
+              >
+                <RotateCw aria-hidden />
+                <span>10</span>
+              </button>
+              <button
+                type="button"
+                aria-label={muted ? "音声をオン" : "消音"}
+                aria-pressed={muted}
+                onClick={() => {
+                  if (videoRef.current) videoRef.current.muted = !videoRef.current.muted;
+                }}
+              >
+                {muted ? <VolumeX aria-hidden /> : <Volume2 aria-hidden />}
+              </button>
+              <button type="button" aria-label="全画面表示を切り替える" onClick={() => void fullscreen()}>
+                <Maximize aria-hidden />
+              </button>
+            </div>
+            <div className="viewer-video-seek">
+              <span>{formatVideoTime(position)}</span>
+              <input
+                type="range"
+                aria-label="再生位置"
+                aria-valuetext={`${formatVideoTime(position)} / ${formatVideoTime(duration)}`}
+                min={0}
+                max={duration || 0}
+                step={0.1}
+                value={Math.min(position, duration)}
+                disabled={paused || duration <= 0}
+                onChange={(event) => seek(Number(event.target.value))}
+              />
+              <span>{formatVideoTime(duration)}</span>
+            </div>
+          </div>,
+          viewerControls.container,
+        )}
+      {!viewerControls && status === "idle" && !paused && (
         <button className="video-play-button" type="button" onClick={play}>
           <Play aria-hidden />
           動画を再生
         </button>
       )}
-      {["loading", "buffering", "error"].includes(status) && (
+      {["loading", "buffering", "error"].includes(status) && (!viewerControls || viewerControls.visible) && (
         <div className="video-player-status" role={status === "error" ? "alert" : "status"}>
           {status === "error" ? (
             <>
@@ -172,4 +278,9 @@ export function VideoPlayer({
       )}
     </div>
   );
+}
+
+export function formatVideoTime(seconds: number) {
+  const total = Number.isFinite(seconds) ? Math.max(0, Math.floor(seconds)) : 0;
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
 }

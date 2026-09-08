@@ -4328,6 +4328,9 @@ textarea:focus {
   font-size: 0.75rem;
 }
 .thumbnail-strip {
+  overflow-y: hidden;
+  touch-action: pan-x;
+  overscroll-behavior: none;
   position: relative;
   z-index: 5;
   min-width: 0;

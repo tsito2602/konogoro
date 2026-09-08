@@ -48,8 +48,82 @@
         height: 152px;
         margin-bottom: -12px;
       }
-      .boot-symbol-dark {
-        display: none;
+      .boot-symbol svg {
+        width: 100%;
+        height: 100%;
+        overflow: visible;
+      }
+      .standalone .boot-symbol-animated {
+        display: block;
+      }
+      .boot-symbol-animated svg,
+      .boot-symbol-animated path,
+      .boot-symbol-animated circle {
+        animation-delay: inherit;
+      }
+      .boot-symbol-animated path,
+      .boot-symbol-animated circle {
+        transform-box: fill-box;
+        transform-origin: center;
+        animation-duration: 900ms;
+        animation-fill-mode: both;
+        animation-timing-function: cubic-bezier(0.22, 0.7, 0.3, 1);
+      }
+      .boot-symbol-animated path:first-of-type {
+        animation-name: boot-sky;
+      }
+      .boot-symbol-animated circle {
+        animation-name: boot-sun;
+      }
+      .boot-symbol-animated path:last-of-type {
+        animation-name: boot-mountain;
+      }
+      @keyframes boot-sun {
+        0%,
+        12% {
+          transform: translateY(90px) scale(0.55);
+          opacity: 0;
+        }
+        58% {
+          transform: translateY(-22px) scale(1.02);
+          opacity: 1;
+        }
+        78% {
+          transform: translateY(6px) scale(0.99);
+          opacity: 1;
+        }
+        100% {
+          transform: none;
+          opacity: 1;
+        }
+      }
+      @keyframes boot-sky {
+        0% {
+          transform: translate(-24px, 8px) rotate(-2deg);
+        }
+        65% {
+          transform: translate(5px, -2px) rotate(0.4deg);
+        }
+        100% {
+          transform: none;
+        }
+      }
+      @keyframes boot-mountain {
+        0% {
+          transform: translateY(10px) rotate(1deg);
+        }
+        62% {
+          transform: translateY(-3px) rotate(-0.3deg);
+        }
+        100% {
+          transform: none;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .boot-symbol-animated path,
+        .boot-symbol-animated circle {
+          animation: none;
+        }
       }
       .boot-name {
         font-size: 20px;
@@ -61,9 +135,6 @@
         color: #707070;
         font-size: 14px;
       }
-      .standalone .boot-symbol-light {
-        display: block;
-      }
       .standalone .boot-status {
         display: none;
       }
@@ -72,12 +143,6 @@
           color: #f5f5f7;
           background: #000;
         }
-        :root:not([data-theme]) .boot-symbol-light {
-          display: none;
-        }
-        :root:not([data-theme]).standalone .boot-symbol-dark {
-          display: block;
-        }
         :root:not([data-theme]) .boot-status {
           color: #aeaeb2;
         }
@@ -85,12 +150,6 @@
       :root[data-theme="dark"] .boot-screen {
         color: #f5f5f7;
         background: #000;
-      }
-      :root[data-theme="dark"] .boot-symbol-light {
-        display: none;
-      }
-      :root[data-theme="dark"].standalone .boot-symbol-dark {
-        display: block;
       }
       :root[data-theme="dark"] .boot-status {
         color: #aeaeb2;
@@ -123,14 +182,28 @@
     <title>このごろ</title>
   </head>
   <body>
+    <script>
+      performance.mark("konogoro-boot");
+    </script>
     <div id="root">
       <main class="boot-screen">
         <div class="boot-brand">
-          <img class="boot-symbol boot-symbol-light" src="/icons/icon-light-transparent.png" alt="" /><img
-            class="boot-symbol boot-symbol-dark"
-            src="/icons/icon-dark-transparent.png"
-            alt=""
-          /><strong class="boot-name">このごろ</strong>
+          <!-- Keep this initial artwork in sync with assets/brand/symbol.svg. -->
+          <span class="boot-symbol boot-symbol-animated" aria-hidden="true"
+            ><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+              <title id="title">このごろ — 山の向こう</title>
+              <desc id="desc">青い空、緑の山、その向こうからのぞく杏色の太陽で、ひらがなの「こ」を表したシンボル</desc>
+              <path
+                d="M208 283 C372 157 603 156 778 231 C815 247 837 269 832 307 C828 349 793 379 752 365 C578 309 408 310 271 391 C235 416 195 407 179 376 C159 341 170 311 208 283 Z"
+                fill="#9DBFDB"
+              />
+              <circle cx="510" cy="617" r="157" fill="#F8BD74" />
+              <path
+                d="M105 609 C120 566 164 545 209 573 C305 647 381 653 460 633 C549 611 599 557 660 512 C698 482 720 475 750 490 C805 521 851 581 890 622 C930 670 918 711 877 742 C751 844 531 872 347 815 C212 782 156 733 120 680 C109 662 95 635 105 609 Z"
+                fill="#447F70"
+              />
+            </svg> </span
+          ><strong class="boot-name">このごろ</strong>
           <p class="boot-status">読み込み中…</p>
         </div>
       </main>

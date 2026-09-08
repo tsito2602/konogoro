@@ -11,6 +11,8 @@ import { ErrorState } from "./AsyncState";
 import { PwaGuide } from "./PwaGuide";
 import { WelcomePhotos } from "./WelcomePhotos";
 import { AddMenu } from "./AddMenu";
+import { remainingBootMotion } from "../boot-motion";
+import { BootSymbol } from "./BootSymbol";
 import { ToastProvider } from "./Toast";
 
 export const mainNavigationItems = [
@@ -51,6 +53,20 @@ export function AppLayout() {
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [authError, setAuthError] = useState("");
+  const [bootMotionComplete, setBootMotionComplete] = useState(() => remainingBootMotion() === 0);
+  useEffect(() => {
+    if (bootMotionComplete || invite) return;
+    const timer = window.setTimeout(() => setBootMotionComplete(true), remainingBootMotion());
+    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const stopMotion = () => {
+      if (reducedMotion.matches) setBootMotionComplete(true);
+    };
+    reducedMotion.addEventListener("change", stopMotion);
+    return () => {
+      window.clearTimeout(timer);
+      reducedMotion.removeEventListener("change", stopMotion);
+    };
+  }, [bootMotionComplete, invite]);
   const [addMenuOpen, setAddMenuOpen] = useState(false);
   const outlet = useOutlet(currentUser);
   const routedContent = (
@@ -128,7 +144,7 @@ export function AppLayout() {
   }, [invite, loadAuth]);
 
   if (invite) return <div className="app-shell">{routedContent}</div>;
-  if (authenticated === null && !authError) return <BootScreen />;
+  if (!bootMotionComplete || (authenticated === null && !authError)) return <BootScreen />;
   if (authError)
     return (
       <div className="app-shell">
@@ -232,8 +248,7 @@ export function BootScreen() {
   return (
     <main className="boot-screen" role="status" aria-label="このごろを読み込み中">
       <div className="boot-brand">
-        <img className="boot-symbol boot-symbol-light" src="/icons/icon-light-transparent.png" alt="" />
-        <img className="boot-symbol boot-symbol-dark" src="/icons/icon-dark-transparent.png" alt="" />
+        <BootSymbol />
         <strong className="boot-name">このごろ</strong>
         <p className="boot-status">読み込み中…</p>
       </div>

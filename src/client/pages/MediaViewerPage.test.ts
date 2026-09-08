@@ -52,10 +52,11 @@ describe("image zoom", () => {
     expect(isImageTap(0, -8)).toBe(false);
   });
 
-  it("写真の表示設定を維持しつつ動画では操作を常に表示する", () => {
+  it("写真・動画ともにオーバーレイの表示設定を維持する", () => {
     expect(isViewerOverlayVisible("image", false)).toBe(false);
     expect(isViewerOverlayVisible("image", true)).toBe(true);
-    expect(isViewerOverlayVisible("video", false)).toBe(true);
+    expect(isViewerOverlayVisible("video", false)).toBe(false);
+    expect(isViewerOverlayVisible("video", true)).toBe(true);
   });
 });
 

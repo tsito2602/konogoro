@@ -110,7 +110,11 @@ export function ActivityPage() {
                 key={activity.id}
               >
                 <span className="activity-person" aria-hidden>
-                  {activity.actorName.slice(0, 1)}
+                  {activity.actorAvatarUrl ? (
+                    <img src={activity.actorAvatarUrl} alt="" loading="lazy" />
+                  ) : (
+                    activity.actorName.slice(0, 1)
+                  )}
                   <span className={`activity-kind ${activity.kind}`}>
                     {activity.kind === "post" ? <Send /> : <MessageCircle />}
                   </span>

@@ -96,6 +96,7 @@ type ActivityRow = {
   occurred_at: string;
   actor_id: string;
   actor_name: string;
+  actor_avatar_url: string | null;
   post_id: string;
   post_label: string;
   body: string | null;
@@ -973,7 +974,7 @@ app.get("/activity", async (c) => {
            (SELECT m.id FROM media m WHERE m.post_id = activity.post_id AND m.status = 'uploaded' ORDER BY m.position, m.id LIMIT 1) AS media_id
       FROM (
         SELECT 'post:' || p.id AS activity_id, 'post' AS kind, p.published_at AS occurred_at,
-               u.id AS actor_id, u.display_name AS actor_name, p.id AS post_id,
+               u.id AS actor_id, u.display_name AS actor_name, u.avatar_url AS actor_avatar_url, p.id AS post_id,
                COALESCE(s.title, e.title, '投稿') AS post_label, NULL AS body
           FROM posts p
           JOIN users u ON u.id = p.created_by
@@ -982,7 +983,7 @@ app.get("/activity", async (c) => {
          WHERE p.status = 'published' AND p.published_at IS NOT NULL
         UNION ALL
         SELECT 'comment:' || c.id, 'comment', c.created_at,
-               u.id, u.display_name, p.id, COALESCE(s.title, e.title, '投稿'), c.body
+               u.id, u.display_name, u.avatar_url, p.id, COALESCE(s.title, e.title, '投稿'), c.body
           FROM comments c
           JOIN users u ON u.id = c.user_id
           JOIN posts p ON p.id = c.post_id
@@ -1004,6 +1005,7 @@ app.get("/activity", async (c) => {
     occurredAt: item.occurred_at,
     actorId: item.actor_id,
     actorName: item.actor_name,
+    actorAvatarUrl: item.actor_avatar_url,
     postId: item.post_id,
     postLabel: item.post_label,
     body: item.body,

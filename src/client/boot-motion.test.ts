@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { bootMotionRemaining } from "./boot-motion";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { bootMotionElapsed, bootMotionRemaining } from "./boot-motion";
 
 describe("boot motion gate", () => {
   it("waits only for the remaining part of the initial animation", () => {
@@ -13,5 +13,17 @@ describe("boot motion gate", () => {
   it("does not delay reduced motion or a browser without the boot icon", () => {
     expect(bootMotionRemaining(0, true, true)).toBe(0);
     expect(bootMotionRemaining(0, false, false)).toBe(0);
+  });
+});
+
+describe("initial boot animation clock", () => {
+  afterEach(() => vi.unstubAllGlobals());
+  it("uses actual animation progress instead of document load time", () => {
+    vi.stubGlobal("document", { querySelector: () => ({ getAnimations: () => [{ currentTime: 240 }] }) });
+    expect(bootMotionRemaining(bootMotionElapsed(), true, false)).toBe(660);
+  });
+  it("waits for the full motion when first paint has not started", () => {
+    vi.stubGlobal("document", { querySelector: () => ({ getAnimations: () => [{ currentTime: null }] }) });
+    expect(bootMotionRemaining(bootMotionElapsed(), true, false)).toBe(900);
   });
 });

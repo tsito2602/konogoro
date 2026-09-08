@@ -143,6 +143,13 @@ export function AppLayout() {
     return () => document.removeEventListener("visibilitychange", resumeAuth);
   }, [invite, loadAuth]);
 
+  const showingBoot = !invite && (!bootMotionComplete || (authenticated === null && !authError));
+  useLayoutEffect(() => {
+    // Keep the original SVG mounted so React/auth updates cannot restart its motion.
+    const initialBoot = document.getElementById("initial-boot");
+    if (initialBoot) initialBoot.hidden = !showingBoot;
+  }, [showingBoot]);
+
   if (invite) return <div className="app-shell">{routedContent}</div>;
   if (!bootMotionComplete || (authenticated === null && !authError)) return <BootScreen />;
   if (authError)
@@ -245,6 +252,7 @@ export function AppLayout() {
 }
 
 export function BootScreen() {
+  if (typeof document !== "undefined" && document.getElementById("initial-boot")) return null;
   return (
     <main className="boot-screen" role="status" aria-label="このごろを読み込み中">
       <div className="boot-brand">

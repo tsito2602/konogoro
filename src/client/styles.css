@@ -13,8 +13,8 @@
   line-height: 1.5;
   letter-spacing: normal;
   text-rendering: optimizeLegibility;
-  --accent: #ffd166;
-  --accent-ink: #6b4b00;
+  --accent: #f8bd74;
+  --accent-ink: #754719;
   --accent-contrast: #1f2733;
   --carbon: #242424;
   --frost: #f7f7f5;
@@ -48,7 +48,7 @@
     color-scheme: dark;
     color: #f5f5f3;
     background: #141416;
-    --accent-ink: #ffd166;
+    --accent-ink: #f8bd74;
     --carbon: #f5f5f3;
     --frost: #141416;
     --ash: #b8b8b2;
@@ -91,7 +91,7 @@
   color-scheme: dark;
   color: #f5f5f3;
   background: #141416;
-  --accent-ink: #ffd166;
+  --accent-ink: #f8bd74;
   --carbon: #f5f5f3;
   --frost: #141416;
   --ash: #b8b8b2;

@@ -69,6 +69,8 @@
         animation-timing-function: cubic-bezier(0.33, 0, 0.2, 1);
       }
       .boot-symbol-animated path:first-of-type {
+        transform-box: view-box;
+        transform-origin: 50% 70%;
         animation-name: boot-sky;
       }
       .boot-symbol-animated circle {
@@ -98,10 +100,10 @@
       }
       @keyframes boot-sky {
         from {
-          transform: translate3d(-96px, -36px, 0);
+          transform: rotate(-8deg);
         }
         to {
-          transform: translate3d(0, 0, 0);
+          transform: rotate(0deg);
         }
       }
       @keyframes boot-mountain {

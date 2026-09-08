@@ -4,14 +4,14 @@
 
 ## 構成
 
-| 対象 | staging | production |
-|---|---|---|
-| Git branch | `staging` | `main` |
-| Worker | `konogoro-staging` | `konogoro` |
-| URL | `https://konogoro-staging.tsito-apps.workers.dev` | `https://konogoro.tsito-apps.workers.dev` |
-| D1 | `family-timeline-staging` | `family-timeline` |
-| R2 | `family-timeline-media-staging` | `family-timeline-media` |
-| Cron / LINE通知 | 無効 | 有効 |
+| 対象            | staging                                           | production                                |
+| --------------- | ------------------------------------------------- | ----------------------------------------- |
+| Git branch      | `staging`                                         | `main`                                    |
+| Worker          | `konogoro-staging`                                | `konogoro`                                |
+| URL             | `https://konogoro-staging.tsito-apps.workers.dev` | `https://konogoro.tsito-apps.workers.dev` |
+| D1              | `family-timeline-staging`                         | `family-timeline`                         |
+| R2              | `family-timeline-media-staging`                   | `family-timeline-media`                   |
+| Cron / LINE通知 | 無効                                              | 有効                                      |
 
 stagingは本番D1・R2を参照しない。初回デプロイ時にGitHub Actionsがstaging用D1とR2を作成し、migrationを適用する。LINE Loginを設定しないため、migrationで作成される固定の開発ユーザーでログインする。
 
@@ -32,7 +32,7 @@ PRを作成・更新したら、毎回、追加承認を求めず以下の統合
 3. `staging`をpushし、対象commitの`Deploy staging to Cloudflare`の成功と配信内容を確認する。反映したPR・commitと結果を報告する。
 4. staging URLをスマートフォンで開き、対象機能をまとめて確認する。
 5. 問題なければ、元の各PRを依存関係の順に`main`へmergeする。
-6. 本番反映後、`staging`を最新の`main`と同じcommitへ戻す。
+6. 本番反映後も、まだ確認中のPRは`staging`に維持する。最新`main`から再構成する場合は確認中PRをすべて再統合し、同時更新を上書きしない。確認中PRが残っていない場合だけ、`staging`を最新の`main`と同じcommitへ戻す。
 
 `staging`自体から`main`へのPRは作らない。各Issueとの対応、レビュー履歴、バージョン判断を保つため、必ず元のPRを個別にmainへmergeする。
 

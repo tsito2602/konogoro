@@ -170,7 +170,7 @@ export function AppLayout() {
         onClickCapture={(event) => {
           if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
           const link = (event.target as Element).closest<HTMLAnchorElement>("a");
-          if (link && viewerPattern.test(link.pathname))
+          if (!viewerPattern.test(pathname) && link && viewerPattern.test(link.pathname))
             viewerEntryRef.current = { path: link.pathname, rect: link.getBoundingClientRect() };
         }}
       >

@@ -191,6 +191,16 @@ export function VideoPlayer({
             <div className="viewer-video-buttons">
               <button
                 type="button"
+                aria-label={muted ? "音声をオン" : "消音"}
+                aria-pressed={muted}
+                onClick={() => {
+                  if (videoRef.current) videoRef.current.muted = !videoRef.current.muted;
+                }}
+              >
+                {muted ? <VolumeX aria-hidden /> : <Volume2 aria-hidden />}
+              </button>
+              <button
+                type="button"
                 aria-label="10秒戻す"
                 disabled={paused || duration <= 0}
                 onClick={() => seek(position - 10)}
@@ -214,16 +224,6 @@ export function VideoPlayer({
               >
                 <RotateCw aria-hidden />
                 <span>10</span>
-              </button>
-              <button
-                type="button"
-                aria-label={muted ? "音声をオン" : "消音"}
-                aria-pressed={muted}
-                onClick={() => {
-                  if (videoRef.current) videoRef.current.muted = !videoRef.current.muted;
-                }}
-              >
-                {muted ? <VolumeX aria-hidden /> : <Volume2 aria-hidden />}
               </button>
               <button type="button" aria-label="全画面表示を切り替える" onClick={() => void fullscreen()}>
                 <Maximize aria-hidden />

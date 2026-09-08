@@ -99,8 +99,9 @@ describe("BootScreen", () => {
   it("PWA起動中も正式アイコンとアプリ名を表示する", () => {
     const html = renderToStaticMarkup(createElement(BootScreen));
 
-    expect(html).toContain('class="boot-symbol boot-symbol-light"');
-    expect(html).toContain('class="boot-symbol boot-symbol-dark"');
+    expect(html).toContain('class="boot-symbol boot-symbol-animated"');
+    expect(html).toContain('aria-hidden="true"');
+    expect(html).toContain("<circle");
     expect(html).toContain("このごろ");
     expect(html).toContain('role="status"');
   });

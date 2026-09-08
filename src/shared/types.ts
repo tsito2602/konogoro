@@ -77,6 +77,7 @@ export type Activity = {
   occurredAt: string;
   actorId: string;
   actorName: string;
+  actorAvatarUrl: string | null;
   postId: string;
   postLabel: string;
   body: string | null;

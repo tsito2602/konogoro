@@ -8,6 +8,7 @@ const activity = (id: string, kind: Activity["kind"]): Activity => ({
   occurredAt: "2026-09-01T00:00:00.000Z",
   actorId: "user-1",
   actorName: "翼",
+  actorAvatarUrl: null,
   postId: "post-1",
   postLabel: "お土産",
   body: kind === "comment" ? "きれい" : null,

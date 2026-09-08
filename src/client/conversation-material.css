@@ -16,6 +16,13 @@
   font-size: 1rem;
   font-weight: 600;
 }
+.activity-person > img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  object-fit: cover;
+}
 .activity-kind {
   position: absolute;
   right: -3px;

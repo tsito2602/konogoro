@@ -1,0 +1,4 @@
+interface:
+  display_name: "konogoro staging"
+  short_description: "konogoroのPRをstagingへ統合しデプロイを確認する"
+  default_prompt: "$konogoro-staging を使って対象PRの最新commitをstagingに反映し、デプロイ結果を確認して。"

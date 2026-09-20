@@ -61,6 +61,7 @@ export function PostEditPage() {
   const [error, setError] = useState("");
   const [savingPost, setSaving] = useState(false);
   const [regeneratingThumbnail, setRegeneratingThumbnail] = useState(false);
+  const [thumbnailMessage, setThumbnailMessage] = useState<{ text: string; error: boolean } | null>(null);
   const saving = savingPost || regeneratingThumbnail;
   const [progress, setProgress] = useState(0);
   const [importingPlayback, setImportingPlayback] = useState(false);
@@ -538,6 +539,26 @@ export function PostEditPage() {
                       <>
                         <img src={entry.media.thumbnailUrl} alt="" draggable={false} />
                         {entry.media.kind === "video" && <VideoBadge durationSeconds={entry.media.durationSeconds} />}
+                        {post.canEdit && entry.media.kind === "video" && (
+                          <VideoThumbnailRepair
+                            media={entry.media}
+                            disabled={saving || preparing || importingPlayback}
+                            onBusy={setRegeneratingThumbnail}
+                            onMessage={setThumbnailMessage}
+                            onUpdated={(id, thumbnailUrl) =>
+                              setPost((current) =>
+                                current
+                                  ? {
+                                      ...current,
+                                      media: current.media.map((item) =>
+                                        item.id === id ? { ...item, thumbnailUrl } : item,
+                                      ),
+                                    }
+                                  : current,
+                              )
+                            }
+                          />
+                        )}
                         <button
                           className="remove-selected-photo"
                           type="button"
@@ -626,22 +647,13 @@ export function PostEditPage() {
                 .filter(Boolean)
                 .join(" · ")}
             </p>
-            {post.canEdit && (
-              <VideoThumbnailRepair
-                media={remainingMedia}
-                disabled={saving || preparing}
-                onBusy={setRegeneratingThumbnail}
-                onUpdated={(id, thumbnailUrl) =>
-                  setPost((current) =>
-                    current
-                      ? {
-                          ...current,
-                          media: current.media.map((item) => (item.id === id ? { ...item, thumbnailUrl } : item)),
-                        }
-                      : current,
-                  )
-                }
-              />
+            {thumbnailMessage && (
+              <p
+                className={`thumbnail-repair-message ${thumbnailMessage.error ? "form-error" : "muted"}`}
+                role={thumbnailMessage.error ? "alert" : "status"}
+              >
+                {thumbnailMessage.text}
+              </p>
             )}
             <PreparedVideoImport
               files={files}

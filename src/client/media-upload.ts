@@ -103,18 +103,24 @@ async function prepareMediaFile(item: SelectedMediaFile): Promise<SelectedMediaF
   try {
     if (item.file.type.startsWith("video/")) {
       const playbackUrl = item.playback ? URL.createObjectURL(item.playback.file) : null;
-      let video: HTMLVideoElement;
+      let video: HTMLVideoElement | undefined;
+      let thumbnail: Blob;
+      let width: number;
+      let height: number;
+      let durationSeconds: number | null;
       try {
         video = await loadVideoFirstFrame(playbackUrl ?? item.previewUrl);
+        width = item.width ?? video.videoWidth;
+        height = item.height ?? video.videoHeight;
+        durationSeconds = Number.isFinite(video.duration) ? video.duration : null;
+        thumbnail = await drawOptimizedImage(video, video.videoWidth, video.videoHeight, 480, 0.78, true);
       } finally {
+        if (video) {
+          video.removeAttribute("src");
+          video.load();
+        }
         if (playbackUrl) URL.revokeObjectURL(playbackUrl);
       }
-      const width = item.width ?? video.videoWidth;
-      const height = item.height ?? video.videoHeight;
-      const durationSeconds = Number.isFinite(video.duration) ? video.duration : null;
-      const thumbnail = await drawOptimizedImage(video, video.videoWidth, video.videoHeight, 480, 0.78);
-      video.removeAttribute("src");
-      video.load();
       const previewUrl = URL.createObjectURL(thumbnail);
       URL.revokeObjectURL(item.previewUrl);
       return {
@@ -190,24 +196,49 @@ async function captureDate(file: File): Promise<string | null> {
 function loadVideoFirstFrame(url: string): Promise<HTMLVideoElement> {
   return new Promise((resolve, reject) => {
     const video = document.createElement("video");
-    const timer = setTimeout(() => fail(), 20_000);
-    const fail = () => {
+    let settled = false;
+    const cleanup = () => {
       clearTimeout(timer);
+      video.removeEventListener("loadeddata", seekFrame);
+      video.removeEventListener("seeked", finish);
+      video.removeEventListener("error", fail);
+    };
+    const fail = () => {
+      if (settled) return;
+      settled = true;
+      cleanup();
       video.removeAttribute("src");
       video.load();
       reject(new Error("動画を読み込めません"));
     };
+    const finish = () => {
+      if (settled) return;
+      if (video.readyState < 2 || video.videoWidth <= 0 || video.videoHeight <= 0) {
+        fail();
+        return;
+      }
+      settled = true;
+      cleanup();
+      resolve(video);
+    };
+    const seekFrame = () => {
+      // Do not capture the initial, potentially unpainted frame on mobile browsers.
+      if (Number.isNaN(video.duration) || video.duration <= 0) {
+        fail();
+        return;
+      }
+      try {
+        video.currentTime = Math.min(0.1, video.duration / 2);
+      } catch {
+        fail();
+      }
+    };
+    const timer = setTimeout(fail, 20_000);
     video.preload = "auto";
     video.muted = true;
     video.playsInline = true;
-    video.addEventListener(
-      "loadeddata",
-      () => {
-        clearTimeout(timer);
-        resolve(video);
-      },
-      { once: true },
-    );
+    video.addEventListener("loadeddata", seekFrame, { once: true });
+    video.addEventListener("seeked", finish, { once: true });
     video.addEventListener("error", fail, { once: true });
     video.src = url;
     video.load();
@@ -220,12 +251,22 @@ async function drawOptimizedImage(
   height: number,
   max: number,
   quality: number,
+  requireVisibleFrame = false,
 ): Promise<Blob> {
+  if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0)
+    throw new Error("プレビュー画像のサイズが不正です");
   const scale = Math.min(1, max / Math.max(width, height));
   const canvas = document.createElement("canvas");
   canvas.width = Math.max(1, Math.round(width * scale));
   canvas.height = Math.max(1, Math.round(height * scale));
-  canvas.getContext("2d")?.drawImage(source, 0, 0, canvas.width, canvas.height);
+  const context = canvas.getContext("2d");
+  if (!context) throw new Error("プレビュー画像を描画できません");
+  context.drawImage(source, 0, 0, canvas.width, canvas.height);
+  if (requireVisibleFrame) {
+    const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+    // Black frames are valid; fully transparent frames mean nothing was drawn.
+    if (!pixels.some((value, index) => index % 4 === 3 && value > 0)) throw new Error("動画のフレームを取得できません");
+  }
   return new Promise((resolve, reject) =>
     canvas.toBlob(
       (blob) => (blob ? resolve(blob) : reject(new Error("プレビュー画像を作成できません"))),

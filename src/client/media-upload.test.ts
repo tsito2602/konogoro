@@ -21,11 +21,21 @@ describe("validateMediaFiles", () => {
 describe("prepareMediaFiles", () => {
   afterEach(() => vi.unstubAllGlobals());
 
-  it("動画をシークせず1件ずつ準備する", async () => {
+  it.each([
+    "opaque",
+    "unknown-duration",
+    "transparent",
+    "no-context",
+    "zero-width",
+    "seek-error",
+    "decode-error",
+    "encode-error",
+  ])("動画を1件ずつシーク後に準備し、不正フレームを拒否する: %s", async (mode) => {
     let activeEncodes = 0;
     let maxActiveEncodes = 0;
     let objectUrlIndex = 0;
-    const videos: Array<{ preload: string }> = [];
+    const videos: Array<{ preload: string; load: ReturnType<typeof vi.fn> }> = [];
+    let seekCount = 0;
 
     vi.stubGlobal("window", { setTimeout });
     vi.stubGlobal("URL", {
@@ -40,17 +50,26 @@ describe("prepareMediaFiles", () => {
             preload: "",
             muted: false,
             playsInline: false,
-            videoWidth: 1920,
+            videoWidth: mode === "zero-width" ? 0 : 1920,
+            readyState: 2,
             videoHeight: 1080,
-            duration: 8,
+            duration: mode === "unknown-duration" ? Infinity : 8,
             addEventListener: (type: string, listener: EventListener) => listeners.set(type, listener),
+            removeEventListener: (type: string) => listeners.delete(type),
             removeAttribute: vi.fn(),
             load: vi.fn(),
             set src(_value: string) {
-              setTimeout(() => listeners.get("loadeddata")?.(new Event("loadeddata")), 0);
+              setTimeout(
+                () => listeners.get(mode === "decode-error" ? "error" : "loadeddata")?.(new Event("loadeddata")),
+                0,
+              );
             },
-            set currentTime(_value: number) {
-              throw new Error("動画をシークしてはいけません");
+            set currentTime(value: number) {
+              expect(value).toBeGreaterThan(0);
+              expect(value).toBeLessThan(8);
+              seekCount += 1;
+              if (mode === "seek-error") throw new Error("seek failed");
+              setTimeout(() => listeners.get("seeked")?.(new Event("seeked")), 0);
             },
           };
           videos.push(video);
@@ -59,13 +78,19 @@ describe("prepareMediaFiles", () => {
         return {
           width: 0,
           height: 0,
-          getContext: () => ({ drawImage: vi.fn() }),
+          getContext: () =>
+            mode === "no-context"
+              ? null
+              : {
+                  drawImage: () => expect(seekCount).toBeGreaterThan(0),
+                  getImageData: () => ({ data: new Uint8ClampedArray([0, 0, 0, mode === "transparent" ? 0 : 255]) }),
+                },
           toBlob: (callback: BlobCallback, type: string) => {
             activeEncodes += 1;
             maxActiveEncodes = Math.max(maxActiveEncodes, activeEncodes);
             setTimeout(() => {
               activeEncodes -= 1;
-              callback(new Blob(["thumbnail"], { type }));
+              callback(mode === "encode-error" ? null : new Blob(["thumbnail"], { type }));
             }, 10);
           },
         };
@@ -77,8 +102,16 @@ describe("prepareMediaFiles", () => {
     await prepareMediaFiles(files, (file) => prepared.push(file));
 
     expect(prepared).toHaveLength(3);
-    expect(prepared.every((file) => file.status === "ready")).toBe(true);
-    expect(maxActiveEncodes).toBe(1);
+    expect(
+      prepared.every(
+        (file) => file.status === (mode === "opaque" || mode === "unknown-duration" ? "ready" : "preparation-failed"),
+      ),
+    ).toBe(true);
+    expect(
+      prepared.every((file) => Boolean(file.thumbnail) === (mode === "opaque" || mode === "unknown-duration")),
+    ).toBe(true);
+    expect(videos.every((video) => video.load.mock.calls.length === 2)).toBe(true);
+    expect(maxActiveEncodes).toBe(mode === "opaque" || mode === "unknown-duration" || mode === "encode-error" ? 1 : 0);
     expect(videos.every((video) => video.preload === "auto")).toBe(true);
   });
 });

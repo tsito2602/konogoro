@@ -5110,3 +5110,44 @@ textarea:focus {
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+.thumbnail-repair {
+  margin-top: 24px;
+  display: grid;
+  gap: 12px;
+}
+.thumbnail-repair h2 {
+  font-size: 1rem;
+  margin: 0;
+}
+.thumbnail-repair p {
+  margin: 0;
+  font-size: 0.875rem;
+}
+.thumbnail-repair-item {
+  display: grid;
+  gap: 8px;
+  padding: 12px 0;
+}
+.thumbnail-repair-name {
+  overflow-wrap: anywhere;
+  font-size: 0.875rem;
+}
+.thumbnail-repair-item .outline-button {
+  justify-self: start;
+  min-height: 44px;
+  max-width: 100%;
+}
+.thumbnail-repair-spinner {
+  animation: thumbnail-repair-spin 1s linear infinite;
+}
+@keyframes thumbnail-repair-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .thumbnail-repair-spinner {
+    animation: none;
+  }
+}

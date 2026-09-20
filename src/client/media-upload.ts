@@ -193,12 +193,14 @@ async function captureDate(file: File): Promise<string | null> {
   return file.lastModified ? new Date(file.lastModified).toISOString() : null;
 }
 
-function loadVideoFirstFrame(url: string): Promise<HTMLVideoElement> {
+function loadVideoFirstFrame(url: string, signal?: AbortSignal, timeoutMs = 20_000): Promise<HTMLVideoElement> {
+  signal?.throwIfAborted();
   return new Promise((resolve, reject) => {
     const video = document.createElement("video");
     let settled = false;
     const cleanup = () => {
       clearTimeout(timer);
+      signal?.removeEventListener("abort", fail);
       video.removeEventListener("loadeddata", seekFrame);
       video.removeEventListener("seeked", finish);
       video.removeEventListener("error", fail);
@@ -233,7 +235,8 @@ function loadVideoFirstFrame(url: string): Promise<HTMLVideoElement> {
         fail();
       }
     };
-    const timer = setTimeout(fail, 20_000);
+    const timer = setTimeout(fail, timeoutMs);
+    signal?.addEventListener("abort", fail, { once: true });
     video.preload = "auto";
     video.muted = true;
     video.playsInline = true;
@@ -252,6 +255,7 @@ async function drawOptimizedImage(
   max: number,
   quality: number,
   requireVisibleFrame = false,
+  mimeType = "image/webp",
 ): Promise<Blob> {
   if (!Number.isFinite(width) || !Number.isFinite(height) || width <= 0 || height <= 0)
     throw new Error("プレビュー画像のサイズが不正です");
@@ -270,8 +274,21 @@ async function drawOptimizedImage(
   return new Promise((resolve, reject) =>
     canvas.toBlob(
       (blob) => (blob ? resolve(blob) : reject(new Error("プレビュー画像を作成できません"))),
-      "image/webp",
+      mimeType,
       quality,
     ),
   );
+}
+
+/** Generate a replacement without downloading the entire original into JS memory. */
+export async function regenerateVideoThumbnail(url: string, signal: AbortSignal): Promise<Blob> {
+  const video = await loadVideoFirstFrame(url, signal, 60_000);
+  try {
+    const image = await drawOptimizedImage(video, video.videoWidth, video.videoHeight, 480, 0.78, true, "image/png");
+    signal.throwIfAborted();
+    return image;
+  } finally {
+    video.removeAttribute("src");
+    video.load();
+  }
 }

@@ -1,3 +1,5 @@
+import { thumbnailUrl } from "../shared/media-thumbnail";
+import { mediaThumbnailRoutes } from "./media-thumbnail";
 import { videoPlaybackRoutes } from "./video-playback";
 import { retryResourceId } from "./request-id";
 import { multipartRoutes } from "./multipart";
@@ -69,6 +71,7 @@ type Bindings = Cloudflare.Env &
   LineSecrets &
   LineWebhookSecrets & { STAGING?: string; LINE_CHANNEL_ACCESS_TOKEN?: string };
 type EventRow = {
+  thumbnail_object_key?: string | null;
   id: string;
   title: string;
   description: string;
@@ -83,6 +86,7 @@ type EventRow = {
   video_count: number;
 };
 type AlbumMediaRow = {
+  thumbnail_object_key?: string | null;
   duration_seconds: number | null;
   id: string;
   post_id: string;
@@ -91,6 +95,7 @@ type AlbumMediaRow = {
   album_date: string;
 };
 type ActivityRow = {
+  thumbnail_object_key?: string | null;
   activity_id: string;
   kind: "post" | "comment";
   occurred_at: string;
@@ -933,7 +938,7 @@ app.get("/album", async (c) => {
   const cursor = c.req.query("cursor")?.split("|");
   const validCursor = cursor?.length === 3 && cursor.every(Boolean) ? cursor : null;
   const limit = 60;
-  let select = `SELECT m.id, m.post_id, m.kind, m.duration_seconds, ${albumCapturedAt} AS captured_at,
+  let select = `SELECT m.id, m.post_id, m.kind, m.thumbnail_object_key, m.duration_seconds, ${albumCapturedAt} AS captured_at,
            ${albumDate} AS album_date ${albumSource}`;
   const values: (string | number)[] = [];
   const period = month ?? year;
@@ -959,8 +964,11 @@ app.get("/album", async (c) => {
     capturedAt: item.captured_at,
     albumDate: item.album_date,
     durationSeconds: item.duration_seconds,
-    thumbnailUrl: `/api/media/${item.id}/content?variant=thumbnail`,
-    previewUrl: `/api/media/${item.id}/content?variant=${item.kind === "image" ? "preview" : "thumbnail"}`,
+    thumbnailUrl: thumbnailUrl(item.id, item.thumbnail_object_key),
+    previewUrl:
+      item.kind === "image"
+        ? `/api/media/${item.id}/content?variant=preview`
+        : thumbnailUrl(item.id, item.thumbnail_object_key),
   }));
   const last = rows.at(-1);
   return c.json({ media, nextCursor: hasMore && last ? `${last.album_date}|${last.captured_at}|${last.id}` : null });
@@ -971,7 +979,8 @@ app.get("/activity", async (c) => {
   const limit = 40;
   const activitySelect = `
     SELECT activity.*,
-           (SELECT m.id FROM media m WHERE m.post_id = activity.post_id AND m.status = 'uploaded' ORDER BY m.position, m.id LIMIT 1) AS media_id
+           (SELECT m.id FROM media m WHERE m.post_id = activity.post_id AND m.status = 'uploaded' ORDER BY m.position, m.id LIMIT 1) AS media_id,
+           (SELECT m.thumbnail_object_key FROM media m WHERE m.post_id = activity.post_id AND m.status = 'uploaded' ORDER BY m.position, m.id LIMIT 1) AS thumbnail_object_key
       FROM (
         SELECT 'post:' || p.id AS activity_id, 'post' AS kind, p.published_at AS occurred_at,
                u.id AS actor_id, u.display_name AS actor_name, u.avatar_url AS actor_avatar_url, p.id AS post_id,
@@ -1009,7 +1018,7 @@ app.get("/activity", async (c) => {
     postId: item.post_id,
     postLabel: item.post_label,
     body: item.body,
-    thumbnailUrl: item.media_id ? `/api/media/${item.media_id}/content?variant=thumbnail` : null,
+    thumbnailUrl: item.media_id ? thumbnailUrl(item.media_id, item.thumbnail_object_key) : null,
   }));
   const memberLastViewed = canViewMemberLastViewed(c.var.currentUser)
     ? (
@@ -1043,6 +1052,7 @@ app.get("/events", async (c) => {
   const result = await c.env.DB.prepare(
     `
     SELECT e.id, e.title, e.description, e.start_date, e.end_date, e.cover_media_id, e.cover_source, e.cover_position_x, e.cover_position_y,
+           (SELECT thumbnail_object_key FROM media WHERE id = e.cover_media_id) AS thumbnail_object_key,
            COUNT(DISTINCT CASE WHEN p.status = 'published' THEN p.id END) AS post_count,
            COUNT(DISTINCT CASE WHEN p.status = 'published' AND m.status = 'uploaded' AND m.kind = 'image' THEN m.id END) AS photo_count,
            COUNT(DISTINCT CASE WHEN p.status = 'published' AND m.status = 'uploaded' AND m.kind = 'video' THEN m.id END) AS video_count
@@ -1200,6 +1210,7 @@ app.get("/events/:eventId", async (c) => {
   const event = await c.env.DB.prepare(
     `
     SELECT e.id, e.title, e.description, e.start_date, e.end_date, e.cover_media_id, e.cover_source, e.cover_position_x, e.cover_position_y,
+           (SELECT thumbnail_object_key FROM media WHERE id = e.cover_media_id) AS thumbnail_object_key,
            COUNT(DISTINCT CASE WHEN p.status = 'published' THEN p.id END) AS post_count,
            COUNT(DISTINCT CASE WHEN p.status = 'published' AND m.status = 'uploaded' AND m.kind = 'image' THEN m.id END) AS photo_count,
            COUNT(DISTINCT CASE WHEN p.status = 'published' AND m.status = 'uploaded' AND m.kind = 'video' THEN m.id END) AS video_count
@@ -1284,17 +1295,17 @@ app.get("/events/:eventId/cover-media", async (c) => {
   if (!event) return c.json({ error: "イベントが見つかりません" }, 404);
   const result = await c.env.DB.prepare(
     `
-    SELECT m.id, m.kind FROM media m JOIN posts p ON p.id = m.post_id
+    SELECT m.id, m.kind, m.thumbnail_object_key FROM media m JOIN posts p ON p.id = m.post_id
      WHERE p.event_id = ? AND p.status = 'published' AND m.status = 'uploaded'
      ORDER BY COALESCE(m.captured_at, p.captured_at, p.published_at, p.created_at), m.position, m.id
   `,
   )
     .bind(c.req.param("eventId"))
-    .all<{ id: string; kind: "image" | "video" }>();
+    .all<{ id: string; kind: "image" | "video"; thumbnail_object_key: string | null }>();
   const media: EventCoverMedia[] = result.results.map((item) => ({
     id: item.id,
     kind: item.kind,
-    thumbnailUrl: `/api/media/${item.id}/content?variant=thumbnail`,
+    thumbnailUrl: thumbnailUrl(item.id, item.thumbnail_object_key),
   }));
   return c.json({ media });
 });
@@ -1510,6 +1521,7 @@ app.delete("/posts/:postId", async (c) => {
 });
 
 app.route("/", videoPlaybackRoutes);
+app.route("/", mediaThumbnailRoutes);
 
 app.post("/posts/:postId/media/upload-urls", async (c) => {
   if (!canCreatePost(c.var.currentUser)) return c.json({ error: "投稿する権限がありません" }, 403);
@@ -1981,7 +1993,7 @@ function mapEvent(row: EventRow): EventSummary {
     description: row.description,
     startDate: row.start_date,
     endDate: row.end_date,
-    coverUrl: row.cover_media_id ? `/api/media/${row.cover_media_id}/content?variant=thumbnail` : null,
+    coverUrl: row.cover_media_id ? thumbnailUrl(row.cover_media_id, row.thumbnail_object_key) : null,
     coverSource: row.cover_source,
     coverPosition: { x: row.cover_position_x ?? 50, y: row.cover_position_y ?? 50 },
     postCount: Number(row.post_count),
@@ -2061,7 +2073,7 @@ async function serveMedia(c: Context<AppEnv>, download: boolean): Promise<Respon
       return missingMediaPreview(c.req.raw);
     return (
       (await serveStoredMedia(c.req.raw, c.env.MEDIA, imageKey || media.original_object_key, {
-        contentType: imageKey ? "image/webp" : media.mime_type,
+        contentType: imageKey ? (imageKey.endsWith(".png") ? "image/png" : "image/webp") : media.mime_type,
         imageOnly: true,
       })) || missingMediaPreview(c.req.raw)
     );

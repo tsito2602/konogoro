@@ -331,6 +331,7 @@ function skeletonContent(variant: SkeletonVariant, currentUser?: CurrentUser, pr
           <div className="form-stack post-edit-form">
             <section className="photo-picker">
               <div className="selected-photos">{tiles(5)}</div>
+              {/* サムネイル再生成欄は編集可能な既存動画がある場合だけ表示するため、読込中は作らない。 */}
               <div className="media-reorder-hint">
                 <div className="skeleton-line" />
               </div>

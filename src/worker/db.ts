@@ -1,3 +1,4 @@
+import { thumbnailUrl } from "../shared/media-thumbnail";
 import { canCreatePost, canDeleteComment, canDeletePost } from "../shared/permissions";
 import type { Comment, Media, Post, SeenUser, User } from "../shared/types";
 
@@ -21,6 +22,7 @@ type MediaRow = {
   post_id: string;
   kind: "image" | "video";
   mime_type: string;
+  thumbnail_object_key?: string | null;
   original_filename: string;
   byte_size: number | null;
   width: number | null;
@@ -62,7 +64,7 @@ export async function loadPosts(
   if (rows.length === 0) return [];
 
   const placeholders = rows.map(() => "?").join(",");
-  const mediaColumns = `id, post_id, kind, mime_type, original_filename, byte_size,
+  const mediaColumns = `id, post_id, kind, mime_type, thumbnail_object_key, original_filename, byte_size,
     width, height, duration_seconds, captured_at, position, playback_status, playback_byte_size`;
   const mediaQuery =
     mode === "summary"
@@ -126,7 +128,7 @@ export async function loadPosts(
         item.kind === "video"
           ? `/api/media/${item.id}/content?variant=video-v2`
           : `/api/media/${item.id}/content?variant=preview`,
-      thumbnailUrl: `/api/media/${item.id}/content?variant=thumbnail`,
+      thumbnailUrl: thumbnailUrl(item.id, item.thumbnail_object_key),
       downloadUrl: `/api/media/${item.id}/download`,
       playbackReady: item.playback_status === "ready",
       playbackByteSize: item.playback_status === "ready" ? (item.playback_byte_size ?? null) : null,

@@ -1,3 +1,4 @@
+import { VideoThumbnailRepair } from "../components/VideoThumbnailRepair";
 import { useMediaReorder } from "../hooks/useMediaReorder";
 import { SceneEditorList } from "../components/SceneEditorList";
 import { PreparedVideoImport } from "../components/PreparedVideoImport";
@@ -58,7 +59,9 @@ export function PostEditPage() {
   const [files, setFiles] = useState<SelectedMediaFile[]>([]);
   const [mediaOrder, setMediaOrder] = useState<string[]>([]);
   const [error, setError] = useState("");
-  const [saving, setSaving] = useState(false);
+  const [savingPost, setSaving] = useState(false);
+  const [regeneratingThumbnail, setRegeneratingThumbnail] = useState(false);
+  const saving = savingPost || regeneratingThumbnail;
   const [progress, setProgress] = useState(0);
   const [importingPlayback, setImportingPlayback] = useState(false);
   const { gridRef, announcement } = useMediaReorder(mediaOrder, setMediaOrder, !post || saving || importingPlayback);
@@ -420,6 +423,7 @@ export function PostEditPage() {
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (regeneratingThumbnail) return;
     if (totalCount === 0) {
       setError("写真・動画を1件以上残してください");
       return;
@@ -622,6 +626,23 @@ export function PostEditPage() {
                 .filter(Boolean)
                 .join(" · ")}
             </p>
+            {post.canEdit && (
+              <VideoThumbnailRepair
+                media={remainingMedia}
+                disabled={saving || preparing}
+                onBusy={setRegeneratingThumbnail}
+                onUpdated={(id, thumbnailUrl) =>
+                  setPost((current) =>
+                    current
+                      ? {
+                          ...current,
+                          media: current.media.map((item) => (item.id === id ? { ...item, thumbnailUrl } : item)),
+                        }
+                      : current,
+                  )
+                }
+              />
+            )}
             <PreparedVideoImport
               files={files}
               disabled={saving || preparing}
@@ -786,7 +807,9 @@ export function PostEditPage() {
             >
               {files.some((item) => item.status === "failed") && <RotateCcw />}
               {saving
-                ? "保存中…"
+                ? regeneratingThumbnail
+                  ? "サムネイルを再生成中…"
+                  : "保存中…"
                 : files.some((item) => item.status === "failed")
                   ? "失敗した項目を再試行"
                   : "変更を保存"}

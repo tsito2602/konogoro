@@ -3818,7 +3818,8 @@ textarea:focus {
     transition: none;
   }
 }
-.selected-photo .remove-selected-photo {
+.selected-photo .remove-selected-photo,
+.selected-photo .regenerate-selected-photo {
   position: absolute;
   z-index: 3;
   top: 0;
@@ -3831,10 +3832,15 @@ textarea:focus {
   color: white;
   background: transparent;
 }
-.selected-photo .remove-selected-photo svg {
-  width: 28px;
-  height: 28px;
-  padding: 6px;
+.selected-photo .regenerate-selected-photo {
+  left: 0;
+  right: auto;
+}
+.selected-photo .remove-selected-photo svg,
+.selected-photo .regenerate-selected-photo svg {
+  width: 24px;
+  height: 24px;
+  padding: 5px;
   border-radius: 50%;
   background: rgba(0, 0, 0, 0.62);
 }
@@ -5111,32 +5117,13 @@ textarea:focus {
   white-space: nowrap;
 }
 
-.thumbnail-repair {
-  margin-top: 24px;
-  display: grid;
-  gap: 12px;
+.post-edit-form .selected-photos {
+  /* 44pxの左右タップ領域の間に、最低16pxの空間を残す。Skeletonも共用。 */
+  grid-template-columns: repeat(auto-fill, minmax(min(104px, 100%), 1fr));
 }
-.thumbnail-repair h2 {
-  font-size: 1rem;
-  margin: 0;
-}
-.thumbnail-repair p {
-  margin: 0;
-  font-size: 0.875rem;
-}
-.thumbnail-repair-item {
-  display: grid;
-  gap: 8px;
-  padding: 12px 0;
-}
-.thumbnail-repair-name {
+.thumbnail-repair-message {
   overflow-wrap: anywhere;
   font-size: 0.875rem;
-}
-.thumbnail-repair-item .outline-button {
-  justify-self: start;
-  min-height: 44px;
-  max-width: 100%;
 }
 .thumbnail-repair-spinner {
   animation: thumbnail-repair-spin 1s linear infinite;

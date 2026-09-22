@@ -24,6 +24,12 @@ Cloudflare Dashboardの「Workers & Pages」→`konogoro`→「Observability」�
 4. LINE通知の受信
 5. 共通招待URLからの閲覧リクエスト、管理者の承認、承認後の閲覧
 
+## LINE通知のリンク
+
+新着・閲覧リクエスト・承認結果の通知先は、`wrangler.jsonc` の `LINE_NOTIFICATION_ORIGIN`（`https://konogoro.tsito-apps.workers.dev`）を使用する。ログイン用secret `APP_ORIGIN` に旧URLが残っていても通知先には使わない。ドメイン変更時はこの設定も更新する。stagingにはstaging用URLを設定し、LINE通知は従来どおり無効とする。
+
+ローカルなどで `LINE_NOTIFICATION_ORIGIN` を設定しない場合は `APP_ORIGIN` にフォールバックする。送信済みのLINEメッセージのリンクは変更されない。
+
 ## LINE Webhook
 
 Webhook URLは次を使用する。

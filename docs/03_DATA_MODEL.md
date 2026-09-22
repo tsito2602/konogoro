@@ -195,10 +195,14 @@ created_at
 
 ## notification_batches
 
-Phase 2。
+`notification_batches` と `notification_batch_posts` は旧方式の履歴として保持する。0015移行時のpendingは宛先別の受付状態が不明なため `notification_legacy_holds` へ元レコードを保全し、旧Cronによる再送を止めるため旧statusをsentへ閉じる。これは配達成功の判定ではなく、sent_atは補完しない。
 
-投稿通知を一定時間まとめるために使用。
+新方式は次のテーブルを使用する。
 
-詳細schemaはLINE通知実装時に確定する。
+- `notification_dispatches`: collecting / sending / completed。collectingは最大1件。送信開始時の投稿・写真・動画件数と、初回送信前の本文を保存する。
+- `notification_dispatch_posts`: 投稿と通知の対応。post_idは一意。旧方式で登録済みの投稿も再登録しない。
+- `notification_deliveries`: 通知×メンバーの複合主キー。固定したLINE宛先、pending / accepted / failed / expired / skipped、試行回数、初回・次回試行日時、受付日時、エラー分類、送信占有tokenと期限を保持する。
+
+collectingからsendingへの変更・件数と宛先の固定はD1トランザクションで行う。送信は宛先ごとの期限付き占有と安定したretry keyで同時実行・応答喪失に対応する。completedは処理終了を意味し、全員への配達成功とは限らない。
 
 動画サムネイルの再生成では、検証済みPNGを新しいR2キーへ保存してから `thumbnail_object_key` を比較更新する。元動画・その他のMedia属性は変更しない。再生成キーの識別子を画像URLの版として使用する。従来の画像は復旧用に保持し、公開参照だけを差し替える。

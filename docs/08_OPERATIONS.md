@@ -9,10 +9,11 @@ Cloudflare Dashboardの「Workers & Pages」→`konogoro`→「Observability」�
 - HTTP 5xxとuncaught exceptionの有無
 - `event = api_error`のAPIエラー
 - `event = r2_delete_error`のR2削除失敗
-- `event = notification_batch_failed`のLINE通知失敗
+- `event = notification_delivery_failed`のLINE通知失敗
+- `event = notification_delivery_expired`の自動再送期限切れ
 - `event = invite_request_notification_failed`の閲覧リクエスト通知失敗
 - `event = invite_approval_notification_failed`の承認結果通知失敗
-- `event = notification_cron_completed`の`failedCount`と実行数
+- `notification_deliveries` の failed / expired と、sendingのまま残るdispatch
 
 ログにはsecret、LINE user ID、セッションtoken、コメントや投稿本文を含めない。障害調査時はエラー種別、`requestId`、発生時刻、対象IDを使う。
 
@@ -20,7 +21,7 @@ Cloudflare Dashboardの「Workers & Pages」→`konogoro`→「Observability」�
 
 1. ログインとタイムライン表示
 2. 画像1枚の投稿と表示
-3. Cron実行後の`notification_cron_completed`
+3. Cron実行後の`notification_deliveries`の受付状態（API受付と実端末への配達は別）
 4. LINE通知の受信
 5. 共通招待URLからの閲覧リクエスト、管理者の承認、承認後の閲覧
 
@@ -29,6 +30,18 @@ Cloudflare Dashboardの「Workers & Pages」→`konogoro`→「Observability」�
 新着・閲覧リクエスト・承認結果の通知先は、`wrangler.jsonc` の `LINE_NOTIFICATION_ORIGIN`（`https://konogoro.tsito-apps.workers.dev`）を使用する。ログイン用secret `APP_ORIGIN` に旧URLが残っていても通知先には使わない。ドメイン変更時はこの設定も更新する。stagingにはstaging用URLを設定し、LINE通知は従来どおり無効とする。
 
 ローカルなどで `LINE_NOTIFICATION_ORIGIN` を設定しない場合は `APP_ORIGIN` にフォールバックする。送信済みのLINEメッセージのリンクは変更されない。
+
+## 通知再試行方式の移行（0015）
+
+本番反映前にCloudflareで旧 `family-timeline` Workerの存在とCronを確認する。残っていれば旧WorkerのCronだけを停止し、稼働中の旧送信処理が終わってから移行する。現行 `konogoro` のCronは維持する。D1 `family-timeline` とR2 `family-timeline-media` は現行本番も使用しているため削除しない。旧Workerの停止は、このリポジトリのデプロイだけでは保証できない。
+
+0015は宛先別の受付記録がない旧pendingを `notification_legacy_holds` に保全し、自動再送を停止する。まだ誰にも届いていない通知も含まれ得るため、必要な案内は履歴確認後に個別判断し、旧pendingを一括で戻さない。投稿・写真・閲覧記録は削除しない。移行とデプロイの間は投稿を控え、旧テーブルに新しいpendingが残っていないか確認する。
+
+新方式は送信内容を固定し、宛先ごとにAPI受付を保存する。通信障害・5xx・429は1分、2分、4分…最大15分間隔で再試行し、初回試行から23時間でexpiredにする。受付済みを示す `409` + `x-line-accepted-request-id` はacceptedとする。恒久的な4xxはfailed。通知OFF・退会・ブロック・LINEアカウント変更後はskipped。failed/expiredを調査するときも本文・LINE IDをログへ出さない。
+
+DB障害で受付保存に失敗した場合も、同じ本文・宛先・retry keyで期限内だけ再試行する。期限超過や旧履歴の不確実な送信は、重複回避を優先して自動再開しない。0015後の旧コードへのロールバックは新方式の未完了通知を処理しないため、単純なコード巻戻しではなく修正版を前進デプロイする。
+
+参考: https://developers.line.biz/en/docs/messaging-api/retrying-api-request/
 
 ## LINE Webhook
 

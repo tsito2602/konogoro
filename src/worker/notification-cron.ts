@@ -1,4 +1,9 @@
-import { buildNotificationText, sendLineNotification } from "./line-messaging";
+import {
+  buildNotificationText,
+  lineNotificationOrigin,
+  sendLineNotification,
+  type LineNotificationEnv,
+} from "./line-messaging";
 
 type NotificationBatch = {
   id: string;
@@ -14,10 +19,10 @@ type NotificationRecipient = {
 
 type SendNotification = typeof sendLineNotification;
 
-export type NotificationCronEnv = Cloudflare.Env & {
-  LINE_CHANNEL_ACCESS_TOKEN?: string;
-  APP_ORIGIN?: string;
-};
+export type NotificationCronEnv = Cloudflare.Env &
+  LineNotificationEnv & {
+    LINE_CHANNEL_ACCESS_TOKEN?: string;
+  };
 
 export async function processNotificationBatches(
   env: NotificationCronEnv,
@@ -62,7 +67,7 @@ export async function processNotificationBatches(
       postCount: Number(batch.post_count),
       photoCount: Number(batch.photo_count),
       videoCount: Number(batch.video_count),
-      appOrigin: env.APP_ORIGIN ?? "",
+      appOrigin: lineNotificationOrigin(env),
     });
     const results = await Promise.allSettled(
       recipients.results.map(async (recipient) => {

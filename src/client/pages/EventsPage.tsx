@@ -5,6 +5,7 @@ import { Link, useNavigationType, useViewTransitionState } from "react-router-do
 import type { EventSummary } from "../../shared/types";
 import { api, eventDate } from "../api";
 import { EmptyState, ErrorState } from "../components/AsyncState";
+import { DateRangePicker } from "../components/DateRangePicker";
 import { PageHeader } from "../components/PageHeader";
 import { PageSkeleton } from "../components/PageSkeleton";
 import "../event-material.css";
@@ -144,26 +145,13 @@ export function EventsPage() {
                   onChange={(event) => setDraftFilters({ ...draftFilters, keyword: event.target.value })}
                 />
               </label>
-              <div className="date-row">
-                <label>
-                  期間の開始
-                  <input
-                    type="date"
-                    value={draftFilters.from}
-                    max={draftFilters.to || undefined}
-                    onChange={(event) => setDraftFilters({ ...draftFilters, from: event.target.value })}
-                  />
-                </label>
-                <label>
-                  期間の終了
-                  <input
-                    type="date"
-                    value={draftFilters.to}
-                    min={draftFilters.from || undefined}
-                    onChange={(event) => setDraftFilters({ ...draftFilters, to: event.target.value })}
-                  />
-                </label>
-              </div>
+              <DateRangePicker
+                startDate={draftFilters.from}
+                endDate={draftFilters.to}
+                onChange={({ startDate, endDate }) =>
+                  setDraftFilters((current) => ({ ...current, from: startDate, to: endDate }))
+                }
+              />
               {invalidRange && (
                 <p className="form-error" role="alert">
                   終了日は開始日以降にしてください。

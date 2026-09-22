@@ -1,116 +1,172 @@
 import {
   buildNotificationText,
   lineNotificationOrigin,
+  LineDeliveryError,
   sendLineNotification,
   type LineNotificationEnv,
 } from "./line-messaging";
 
-type NotificationBatch = {
+export type NotificationCronEnv = Cloudflare.Env &
+  LineNotificationEnv & {
+    LINE_CHANNEL_ACCESS_TOKEN?: string;
+    STAGING?: string;
+  };
+type Dispatch = {
   id: string;
   post_count: number;
   photo_count: number;
   video_count: number;
+  message_text: string | null;
 };
+type Delivery = { user_id: string; line_user_id: string };
 
-type NotificationRecipient = {
-  id: string;
-  line_user_id: string;
-};
-
-type SendNotification = typeof sendLineNotification;
-
-export type NotificationCronEnv = Cloudflare.Env &
-  LineNotificationEnv & {
-    LINE_CHANNEL_ACCESS_TOKEN?: string;
-  };
+// Leave a safety margin inside LINE's 24-hour retry-key lifetime.
+export const NOTIFICATION_RETRY_WINDOW_MS = 23 * 60 * 60 * 1000;
 
 export async function processNotificationBatches(
   env: NotificationCronEnv,
   now = new Date(),
-  send: SendNotification = sendLineNotification,
+  send: typeof sendLineNotification = sendLineNotification,
 ): Promise<void> {
-  if (!env.LINE_CHANNEL_ACCESS_TOKEN) return;
-
-  const due = await env.DB.prepare(
-    `
-    SELECT b.id,
-           COUNT(DISTINCT p.id) AS post_count,
-           COUNT(DISTINCT CASE WHEN m.status = 'uploaded' AND m.kind = 'image' THEN m.id END) AS photo_count,
-           COUNT(DISTINCT CASE WHEN m.status = 'uploaded' AND m.kind = 'video' THEN m.id END) AS video_count
-      FROM notification_batches b
-      JOIN notification_batch_posts bp ON bp.batch_id = b.id
-      JOIN posts p ON p.id = bp.post_id
-      LEFT JOIN media m ON m.post_id = p.id
-     WHERE b.status = 'pending' AND b.scheduled_for <= ?
-     GROUP BY b.id
-     ORDER BY b.scheduled_for, b.id
-  `,
-  )
-    .bind(now.toISOString())
-    .all<NotificationBatch>();
-
-  if (due.results.length === 0) return;
-
-  const recipients = await env.DB.prepare(
-    `
-    SELECT id, line_user_id
-      FROM users
-     WHERE is_active = 1 AND notification_enabled = 1 AND line_friend_enabled = 1 AND line_user_id IS NOT NULL
-     ORDER BY id
-  `,
-  ).all<NotificationRecipient>();
-
-  let sentCount = 0;
-  let failedCount = 0;
-  for (const batch of due.results) {
-    const text = buildNotificationText({
-      postCount: Number(batch.post_count),
-      photoCount: Number(batch.photo_count),
-      videoCount: Number(batch.video_count),
-      appOrigin: lineNotificationOrigin(env),
-    });
-    const results = await Promise.allSettled(
-      recipients.results.map(async (recipient) => {
-        await send({
-          channelAccessToken: env.LINE_CHANNEL_ACCESS_TOKEN!,
-          to: recipient.line_user_id,
-          text,
-          retryKey: await notificationRetryKey(batch.id, recipient.id),
-        });
-      }),
-    );
-    const failed = results.find((result): result is PromiseRejectedResult => result.status === "rejected");
-
-    if (failed) {
-      const message = failed.reason instanceof Error ? failed.reason.message : String(failed.reason);
-      await env.DB.prepare("UPDATE notification_batches SET last_error = ? WHERE id = ? AND status = 'pending'")
-        .bind(message.slice(0, 1000), batch.id)
-        .run();
-      failedCount += 1;
-      console.error({
-        event: "notification_batch_failed",
-        batchId: batch.id,
-        recipientCount: recipients.results.length,
-        message,
+  if (!env.LINE_CHANNEL_ACCESS_TOKEN || env.STAGING === "true") return;
+  const started = Date.now();
+  const currentTime = () => new Date(now.getTime() + Math.max(0, Date.now() - started));
+  const at = now.toISOString();
+  const sealToken = crypto.randomUUID();
+  // Counts and recipients are frozen atomically with sealing. A concurrent cron
+  // cannot append recipients, because its seal token will not match.
+  await env.DB.batch([
+    env.DB.prepare(
+      `
+      UPDATE notification_dispatches SET state = 'sending', seal_token = ?,
+        post_count = (SELECT COUNT(*) FROM notification_dispatch_posts bp
+          JOIN posts p ON p.id = bp.post_id WHERE bp.batch_id = notification_dispatches.id AND p.status = 'published'),
+        photo_count = (SELECT COUNT(*) FROM notification_dispatch_posts bp
+          JOIN posts p ON p.id = bp.post_id JOIN media m ON m.post_id = p.id
+          WHERE bp.batch_id = notification_dispatches.id AND p.status = 'published' AND m.status = 'uploaded' AND m.kind = 'image'),
+        video_count = (SELECT COUNT(*) FROM notification_dispatch_posts bp
+          JOIN posts p ON p.id = bp.post_id JOIN media m ON m.post_id = p.id
+          WHERE bp.batch_id = notification_dispatches.id AND p.status = 'published' AND m.status = 'uploaded' AND m.kind = 'video')
+      WHERE state = 'collecting' AND scheduled_for <= ?
+    `,
+    ).bind(sealToken, at),
+    env.DB.prepare(
+      `
+      INSERT INTO notification_deliveries (batch_id, user_id, line_user_id, next_attempt_at)
+      SELECT b.id, u.id, u.line_user_id, ? FROM notification_dispatches b CROSS JOIN users u
+      WHERE b.seal_token = ? AND b.post_count > 0 AND u.is_active = 1
+        AND u.notification_enabled = 1 AND u.line_friend_enabled = 1 AND u.line_user_id IS NOT NULL
+    `,
+    ).bind(at, sealToken),
+  ]);
+  const batches = await env.DB.prepare(
+    "SELECT id, post_count, photo_count, video_count, message_text FROM notification_dispatches WHERE state = 'sending'",
+  ).all<Dispatch>();
+  for (const batch of batches.results) {
+    if (batch.message_text === null) {
+      const text = buildNotificationText({
+        postCount: batch.post_count,
+        photoCount: batch.photo_count,
+        videoCount: batch.video_count,
+        appOrigin: lineNotificationOrigin(env),
       });
-      continue;
+      await env.DB.prepare("UPDATE notification_dispatches SET message_text = ? WHERE id = ? AND message_text IS NULL")
+        .bind(text, batch.id)
+        .run();
     }
-
-    await env.DB.prepare(
-      "UPDATE notification_batches SET status = 'sent', sent_at = ?, last_error = NULL WHERE id = ? AND status = 'pending'",
+    const payload = await env.DB.prepare("SELECT message_text FROM notification_dispatches WHERE id = ?")
+      .bind(batch.id)
+      .first<{ message_text: string }>();
+    if (!payload) continue;
+    const deliveries = await env.DB.prepare(
+      `
+      SELECT user_id, line_user_id FROM notification_deliveries
+      WHERE batch_id = ? AND state = 'pending' AND next_attempt_at <= ?
+        AND (lease_until IS NULL OR lease_until <= ?)
+    `,
     )
-      .bind(now.toISOString(), batch.id)
+      .bind(batch.id, at, at)
+      .all<Delivery>();
+    for (const delivery of deliveries.results) {
+      const attemptTime = currentTime();
+      const attemptAt = attemptTime.toISOString();
+      const lease = crypto.randomUUID();
+      const claimed = await env.DB.prepare(
+        `
+        UPDATE notification_deliveries SET lease_token = ?, lease_until = ?,
+          first_attempt_at = COALESCE(first_attempt_at, ?), attempts = attempts + 1
+        WHERE batch_id = ? AND user_id = ? AND state = 'pending'
+          AND next_attempt_at <= ? AND (lease_until IS NULL OR lease_until <= ?)
+        RETURNING first_attempt_at, attempts
+      `,
+      )
+        .bind(
+          lease,
+          new Date(attemptTime.getTime() + 60_000).toISOString(),
+          attemptAt,
+          batch.id,
+          delivery.user_id,
+          attemptAt,
+          attemptAt,
+        )
+        .first<{ first_attempt_at: string; attempts: number }>();
+      if (!claimed) continue;
+      const settle = async (state: string, error: string | null = null, next = attemptAt) => {
+        await env.DB.prepare(
+          `
+          UPDATE notification_deliveries SET state = ?, last_error = ?, next_attempt_at = ?,
+            accepted_at = CASE WHEN ? = 'accepted' THEN ? ELSE accepted_at END,
+            lease_token = NULL, lease_until = NULL
+          WHERE batch_id = ? AND user_id = ? AND lease_token = ?
+        `,
+        )
+          .bind(state, error, next, state, currentTime().toISOString(), batch.id, delivery.user_id, lease)
+          .run();
+      };
+      if (attemptTime.getTime() - Date.parse(claimed.first_attempt_at) >= NOTIFICATION_RETRY_WINDOW_MS) {
+        await settle("expired", "retry_window_expired");
+        console.error({ event: "notification_delivery_expired", batchId: batch.id });
+        continue;
+      }
+      const eligible = await env.DB.prepare(
+        `
+        SELECT id FROM users WHERE id = ? AND line_user_id = ? AND is_active = 1
+          AND notification_enabled = 1 AND line_friend_enabled = 1
+      `,
+      )
+        .bind(delivery.user_id, delivery.line_user_id)
+        .first();
+      if (!eligible) {
+        await settle("skipped");
+        continue;
+      }
+      try {
+        await send({
+          channelAccessToken: env.LINE_CHANNEL_ACCESS_TOKEN,
+          to: delivery.line_user_id,
+          text: payload.message_text,
+          retryKey: await notificationRetryKey(batch.id, delivery.user_id),
+        });
+        await settle("accepted");
+      } catch (error) {
+        const retryable = !(error instanceof LineDeliveryError) || error.retryable;
+        const reason = error instanceof LineDeliveryError ? `line_http_${error.status}` : "delivery_uncertain";
+        const delay = Math.min(15 * 60_000, 60_000 * 2 ** Math.min(claimed.attempts - 1, 4));
+        await settle(retryable ? "pending" : "failed", reason, new Date(currentTime().getTime() + delay).toISOString());
+        console.error({ event: "notification_delivery_failed", batchId: batch.id, reason });
+      }
+    }
+    await env.DB.prepare(
+      `
+      UPDATE notification_dispatches SET state = 'completed', completed_at = ?
+      WHERE id = ? AND state = 'sending' AND NOT EXISTS (
+        SELECT 1 FROM notification_deliveries WHERE batch_id = ? AND state = 'pending'
+      )
+    `,
+    )
+      .bind(at, batch.id, batch.id)
       .run();
-    sentCount += 1;
   }
-
-  console.log({
-    event: "notification_cron_completed",
-    dueCount: due.results.length,
-    sentCount,
-    failedCount,
-    recipientCount: recipients.results.length,
-  });
 }
 
 export async function notificationRetryKey(batchId: string, userId: string): Promise<string> {

@@ -1,5 +1,14 @@
 const LINE_PUSH_ENDPOINT = "https://api.line.me/v2/bot/message/push";
 
+export class LineDeliveryError extends Error {
+  constructor(public readonly status: number) {
+    super(`LINE Messaging API request failed (status: ${status})`);
+  }
+  get retryable(): boolean {
+    return this.status === 429 || this.status >= 500;
+  }
+}
+
 export type LineNotificationEnv = {
   LINE_NOTIFICATION_ORIGIN?: string;
   APP_ORIGIN?: string;
@@ -48,6 +57,7 @@ export async function sendLineNotification(notification: LineNotification): Prom
   const fetcher = notification.fetcher ?? fetch;
   const response = await fetcher(LINE_PUSH_ENDPOINT, {
     method: "POST",
+    signal: AbortSignal.timeout(15_000),
     headers: {
       Authorization: `Bearer ${notification.channelAccessToken}`,
       "Content-Type": "application/json",
@@ -59,9 +69,9 @@ export async function sendLineNotification(notification: LineNotification): Prom
     }),
   });
 
-  if (!response.ok) {
-    throw new Error(`LINE Messaging API request failed (status: ${response.status})`);
-  }
+  // Only an identified, already accepted request is a successful 409.
+  if (response.status === 409 && response.headers.get("x-line-accepted-request-id")) return;
+  if (!response.ok) throw new LineDeliveryError(response.status);
 }
 
 export async function sendLineActionNotification(notification: LineActionNotification): Promise<void> {

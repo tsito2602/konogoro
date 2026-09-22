@@ -55,7 +55,7 @@ import { createInviteToken } from "./invite-token";
 import { processNotificationBatches, type NotificationCronEnv } from "./notification-cron";
 import { addPostToNotificationBatch } from "./notification-batch";
 import { lineFriendshipStatements, verifyLineWebhookSignature, type LineWebhookSecrets } from "./line-webhook";
-import { sendLineActionNotification } from "./line-messaging";
+import { lineNotificationOrigin, sendLineActionNotification, type LineNotificationEnv } from "./line-messaging";
 import {
   parseTimelineCursor,
   serializeTimelineCursor,
@@ -69,6 +69,7 @@ import {
 type Bindings = Cloudflare.Env &
   R2Secrets &
   LineSecrets &
+  LineNotificationEnv &
   LineWebhookSecrets & { STAGING?: string; LINE_CHANNEL_ACCESS_TOKEN?: string };
 type EventRow = {
   thumbnail_object_key?: string | null;
@@ -755,7 +756,7 @@ app.post("/family/invites/:token/requests", async (c) => {
       `SELECT id, line_user_id FROM users
         WHERE role = 'owner' AND is_active = 1 AND line_friend_enabled = 1 AND line_user_id IS NOT NULL`,
     ).all<{ id: string; line_user_id: string }>();
-    const actionUrl = new URL("/settings/family?section=requests", c.env.APP_ORIGIN ?? c.req.url).toString();
+    const actionUrl = new URL("/settings/family?section=requests", lineNotificationOrigin(c.env, c.req.url)).toString();
     const results = await Promise.allSettled(
       owners.results.map((owner) =>
         sendLineActionNotification({
@@ -848,7 +849,7 @@ app.post("/family/invite-requests/review", async (c) => {
             to: recipient.line_user_id,
             text: "写真や動画を見られるようになりました",
             actionLabel: "このごろを開く",
-            actionUrl: new URL("/", c.env.APP_ORIGIN ?? c.req.url).toString(),
+            actionUrl: new URL("/", lineNotificationOrigin(c.env, c.req.url)).toString(),
             retryKey: crypto.randomUUID(),
           });
         } catch {

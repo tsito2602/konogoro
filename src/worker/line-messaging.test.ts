@@ -1,5 +1,31 @@
 import { describe, expect, it, vi } from "vitest";
-import { buildNotificationText, sendLineActionNotification, sendLineNotification } from "./line-messaging";
+import {
+  buildNotificationText,
+  lineNotificationOrigin,
+  sendLineActionNotification,
+  sendLineNotification,
+} from "./line-messaging";
+
+describe("lineNotificationOrigin", () => {
+  it.each(["https://konogoro.tsito-apps.workers.dev", "https://konogoro-staging.tsito-apps.workers.dev"])(
+    "通知設定 %s を古いログイン設定より優先する",
+    (origin) => {
+      const env = {
+        LINE_NOTIFICATION_ORIGIN: origin,
+        APP_ORIGIN: "https://family-timeline.tsito-apps.workers.dev",
+      };
+      expect(lineNotificationOrigin(env, "https://old.example.com/api/family")).toBe(origin);
+      for (const path of ["/unread", "/settings/family?section=requests", "/"]) {
+        expect(new URL(path, lineNotificationOrigin(env)).toString()).toBe(`${origin}${path}`);
+      }
+    },
+  );
+
+  it("通知設定がなければローカル設定、リクエストURLの順に使う", () => {
+    expect(lineNotificationOrigin({ APP_ORIGIN: "http://localhost:5173" })).toBe("http://localhost:5173");
+    expect(lineNotificationOrigin({}, "http://localhost:5173/api/family")).toBe("http://localhost:5173/api/family");
+  });
+});
 
 describe("buildNotificationText", () => {
   it("投稿と写真・動画の件数を新着閲覧リンク付きで案内する", () => {

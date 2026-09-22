@@ -49,7 +49,8 @@ describe("processNotificationBatches", () => {
         MEDIA: {} as R2Bucket,
         R2_BUCKET_NAME: "family-timeline-media",
         LINE_CHANNEL_ACCESS_TOKEN: "line-token",
-        APP_ORIGIN: "https://family.example.com",
+        APP_ORIGIN: "https://family-timeline.tsito-apps.workers.dev",
+        LINE_NOTIFICATION_ORIGIN: "https://konogoro.tsito-apps.workers.dev",
       },
       new Date("2026-09-03T00:00:00.000Z"),
       send,
@@ -57,6 +58,7 @@ describe("processNotificationBatches", () => {
 
     expect(sqlStatements[0]).not.toContain("latest_post_id");
     expect(send).toHaveBeenCalledOnce();
-    expect(messages).toEqual([expect.stringContaining("https://family.example.com/unread")]);
+    expect(messages).toEqual([expect.stringContaining("https://konogoro.tsito-apps.workers.dev/unread")]);
+    expect(messages[0]).not.toContain("family-timeline.tsito-apps.workers.dev");
   });
 });

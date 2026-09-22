@@ -64,6 +64,7 @@ function mediaEnv(
   }));
   return {
     APP_ORIGIN: "http://localhost:5173",
+    LINE_NOTIFICATION_ORIGIN: "https://konogoro.tsito-apps.workers.dev",
     R2_ACCOUNT_ID: "account-id",
     R2_ACCESS_KEY_ID: "access-key-id",
     R2_SECRET_ACCESS_KEY: "secret-access-key",

@@ -1,5 +1,15 @@
 const LINE_PUSH_ENDPOINT = "https://api.line.me/v2/bot/message/push";
 
+export type LineNotificationEnv = {
+  LINE_NOTIFICATION_ORIGIN?: string;
+  APP_ORIGIN?: string;
+};
+
+export function lineNotificationOrigin(env: LineNotificationEnv, requestUrl?: string): string {
+  // Keep notification destinations independent of the legacy login callback secret.
+  return env.LINE_NOTIFICATION_ORIGIN ?? env.APP_ORIGIN ?? requestUrl ?? "";
+}
+
 export type NotificationCounts = {
   postCount: number;
   photoCount: number;

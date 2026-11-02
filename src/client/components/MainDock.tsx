@@ -1,0 +1,112 @@
+import { useLayoutEffect, useRef, type ReactNode } from "react";
+import { NavLink, useLocation } from "react-router-dom";
+import { Live, RM } from "../cartoon/cartoon";
+import { CartoonDock } from "../cartoon/cartoon-dock";
+
+export type MainDockItem = { to: string; label: string; icon: ReactNode; end?: boolean };
+
+/** The selection pill's two edges on two springs; moving right, the right edge leads (40 ms).
+    Ported from kondo's trip-dock.tsx (cartoon-kit docs/DOCK.md). */
+function edges(element: HTMLElement) {
+  let left = 0;
+  let right = 0;
+  const draw = () => {
+    element.style.left = `${Math.min(left, right)}px`;
+    element.style.width = `${Math.abs(right - left)}px`;
+  };
+  return {
+    L: new Live(0, (value) => ((left = value), draw())),
+    R: new Live(0, (value) => ((right = value), draw())),
+    timer: 0 as ReturnType<typeof setTimeout> | 0,
+  };
+}
+type Edges = ReturnType<typeof edges>;
+
+function moveEdges(springs: Edges, left: number, right: number, animate: boolean) {
+  clearTimeout(springs.timer);
+  if (!animate || RM()) {
+    springs.L.set(left);
+    springs.R.set(right);
+    return;
+  }
+  const rightward = left > springs.L.t;
+  void (rightward ? springs.R : springs.L).to(rightward ? right : left, "lead");
+  springs.timer = setTimeout(() => void (rightward ? springs.L : springs.R).to(rightward ? left : right, "split"), 40);
+}
+
+function isActive(item: MainDockItem, pathname: string) {
+  if (item.end) return pathname === item.to;
+  return pathname === item.to || pathname.startsWith(`${item.to}/`);
+}
+
+/** スマホ・タブレットのボトムナビ：cartoon-kit の親指ドック（1本の島にアイコンだけのタブ）。 */
+export function MainDock({
+  items,
+  measureRef,
+}: {
+  items: readonly MainDockItem[];
+  measureRef?: (element: HTMLElement | null) => void;
+}) {
+  const { pathname } = useLocation();
+  const active = items.findIndex((item) => isActive(item, pathname));
+  const group = useRef<HTMLDivElement>(null);
+  const pill = useRef<HTMLSpanElement>(null);
+  const springs = useRef<Edges | null>(null);
+  const placed = useRef(false);
+
+  useLayoutEffect(() => {
+    const node = group.current;
+    const indicator = pill.current;
+    if (!node || !indicator) return;
+    springs.current ??= edges(indicator);
+    const place = (animate: boolean) => {
+      const link = node.querySelectorAll<HTMLElement>("a")[active];
+      if (!link) {
+        springs.current!.L.set(0);
+        springs.current!.R.set(0);
+        return;
+      }
+      moveEdges(springs.current!, link.offsetLeft, link.offsetLeft + link.offsetWidth, animate);
+    };
+    // The first placement is instant; later moves run on the springs.
+    place(placed.current && node.offsetWidth > 0);
+    placed.current = node.offsetWidth > 0;
+    let width = node.offsetWidth;
+    const observer =
+      typeof ResizeObserver === "undefined"
+        ? null
+        : new ResizeObserver(() => {
+            if (node.offsetWidth === width) return;
+            width = node.offsetWidth;
+            place(false);
+            placed.current = width > 0;
+          });
+    observer?.observe(node);
+    return () => observer?.disconnect();
+  }, [active]);
+
+  return (
+    <nav ref={measureRef} className="main-dock-host" aria-label="メインナビゲーション">
+      <div className="thumb-dock">
+        <CartoonDock identity="tabs">
+          <div ref={group} className="cdock-group cdock-tabs" data-slot="tabs" data-full="">
+            <span ref={pill} className="cdock-ind" aria-hidden="true" />
+            {items.map((item, index) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.end}
+                aria-label={item.label}
+                data-on={index === active}
+                draggable={false}
+                onClick={() => window.scrollTo(0, 0)}
+              >
+                {item.icon}
+              </NavLink>
+            ))}
+          </div>
+        </CartoonDock>
+      </div>
+    </nav>
+  );
+}

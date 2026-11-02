@@ -4,6 +4,9 @@
      既存の役割名をそこへ対応づける。色は白黒だけで、意味のある赤だけを残す。 */
   color: var(--p-ink);
   background: var(--p-paper);
+  /* 本文は Noto Sans JP。数字の見出しは Bricolage Grotesque のまま、漢字は本文書体へ落とす。 */
+  --f-body: "Noto Sans JP", "Hiragino Sans", system-ui, sans-serif;
+  --f-num: "Bricolage Grotesque", "Noto Sans JP", system-ui, sans-serif;
   font-family: var(--f-body);
   font-synthesis: none;
   line-height: 1.5;
@@ -295,10 +298,10 @@ a.icon-button {
 .floating-add-button {
   position: fixed;
   z-index: 34;
-  right: max(18px, env(safe-area-inset-right));
-  bottom: calc(var(--bottom-nav-height, 64px + env(safe-area-inset-bottom)) + 12px);
-  width: 56px;
-  height: 56px;
+  right: max(20px, env(safe-area-inset-right));
+  bottom: calc(var(--bottom-nav-height, 64px + env(safe-area-inset-bottom)) + 22px);
+  width: 58px;
+  height: 58px;
   display: grid;
   place-items: center;
   border: 0;
@@ -329,8 +332,8 @@ a.icon-button {
 .add-menu {
   position: fixed;
   z-index: 33;
-  right: max(18px, env(safe-area-inset-right));
-  bottom: calc(var(--bottom-nav-height, 64px + env(safe-area-inset-bottom)) + 78px);
+  right: max(20px, env(safe-area-inset-right));
+  bottom: calc(var(--bottom-nav-height, 64px + env(safe-area-inset-bottom)) + 88px);
   width: min(260px, calc(100vw - 36px));
   padding: 7px;
   display: grid;
@@ -5077,7 +5080,7 @@ textarea:focus {
   }
 }
 
-/* cartoon-kit の書体：年月などの数字の見出しは Bricolage Grotesque（漢字は本文書体へ落ちる）。 */
+/* 年月などの数字の見出しは cartoon-kit の Bricolage Grotesque（漢字は Noto Sans JP へ落ちる）。 */
 .timeline-month-heading,
 .album-year,
 .album-year-picker strong,

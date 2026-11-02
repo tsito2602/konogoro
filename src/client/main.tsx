@@ -23,6 +23,7 @@ import { initializeTheme } from "./theme";
 import { installSpringTokens } from "./cartoon/cartoon";
 import "./cartoon/fonts.css";
 import "./cartoon/theme.css";
+import "./cartoon/dock.css";
 import "./styles.css";
 import "./media-status.css";
 import "./video-experience.css";
@@ -38,6 +39,7 @@ import "./conversation-material.css";
 import "./invitation-material.css";
 import "./common-material.css";
 import "./entry-material.css";
+import "./dock-layout.css";
 import { initializeInteractionFeedback } from "./interaction-feedback";
 
 const stopInstallPromptCapture = installPromptStore.start(window);

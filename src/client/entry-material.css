@@ -85,7 +85,7 @@
   }
 }
 .add-menu-dialog {
-  inset: auto max(18px, env(safe-area-inset-right)) calc(var(--bottom-nav-height, 64px) + 78px) auto;
+  inset: auto max(20px, env(safe-area-inset-right)) calc(var(--bottom-nav-height, 64px) + 88px) auto;
   width: min(300px, calc(100vw - 36px));
   height: max-content;
   min-height: 0;

@@ -39,7 +39,7 @@ function isActive(item: MainDockItem, pathname: string) {
   return pathname === item.to || pathname.startsWith(`${item.to}/`);
 }
 
-/** スマホ・タブレットのボトムナビ：cartoon-kit の親指ドック（1本の島にアイコンだけのタブ）。 */
+/** スマホ・タブレットのボトムナビ：cartoon-kit の親指ドック。家族の誰でも分かるよう、アイコンの下にページ名を出す。 */
 export function MainDock({
   items,
   measureRef,
@@ -96,12 +96,12 @@ export function MainDock({
                 key={item.to}
                 to={item.to}
                 end={item.end}
-                aria-label={item.label}
                 data-on={index === active}
                 draggable={false}
                 onClick={() => window.scrollTo(0, 0)}
               >
                 {item.icon}
+                <span className="main-dock-label">{item.label}</span>
               </NavLink>
             ))}
           </div>

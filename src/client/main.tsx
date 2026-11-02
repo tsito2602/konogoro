@@ -41,6 +41,7 @@ import "./common-material.css";
 import "./entry-material.css";
 import "./dock-layout.css";
 import { initializeInteractionFeedback } from "./interaction-feedback";
+import { startUpdateChecks } from "./app-update";
 
 const stopInstallPromptCapture = installPromptStore.start(window);
 const hotModule = (import.meta as ImportMeta & { hot?: { dispose: (callback: () => void) => void } }).hot;
@@ -50,6 +51,8 @@ initializeTheme();
 installSpringTokens();
 const stopInteractionFeedback = initializeInteractionFeedback();
 hotModule?.dispose(stopInteractionFeedback);
+const stopUpdateChecks = startUpdateChecks();
+hotModule?.dispose(stopUpdateChecks);
 
 const router = createBrowserRouter([
   {

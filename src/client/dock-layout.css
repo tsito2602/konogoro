@@ -50,3 +50,88 @@
     pointer-events: none;
   }
 }
+
+/* 更新のお知らせ（components/UpdateNotice.tsx）：kondo と同じく、ドックの 12px 上に浮かぶ黒い帯。 */
+:root {
+  --update-notice-space: 72px;
+}
+.update-notice-host {
+  position: fixed;
+  z-index: 35;
+  left: max(16px, env(safe-area-inset-left));
+  right: max(16px, env(safe-area-inset-right));
+  bottom: calc(var(--bottom-nav-height, 64px) + 12px);
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+.update-notice {
+  pointer-events: auto;
+  width: min(100%, 520px);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 10px 10px 16px;
+  border: 0;
+  border-radius: 24px;
+  background: var(--p-ink);
+  color: var(--p-paper);
+  font: inherit;
+  font-family: var(--f-body);
+  line-height: 1.7;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 14px 30px -12px #0007;
+}
+.update-notice-spark {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--p-paper);
+  color: var(--p-ink);
+}
+.update-notice-spark svg {
+  width: 18px;
+  height: 18px;
+}
+.update-notice-text {
+  flex: 1;
+  min-width: 0;
+}
+.update-notice-text b {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+}
+.update-notice-text small {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 700;
+  opacity: 0.7;
+}
+.update-notice-action {
+  flex: none;
+  height: 40px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  border-radius: 99px;
+  background: var(--p-paper);
+  color: var(--p-ink);
+  font-size: 13.5px;
+  font-weight: 700;
+}
+/* お知らせが出ているあいだ、＋ボタン・追加メニュー・トーストはその上へ移る。 */
+:root[data-app-update="waiting"] :is(.floating-add-button, .add-menu, .add-menu-dialog, .toast) {
+  margin-bottom: var(--update-notice-space);
+}
+@media (min-width: 1024px) {
+  .update-notice-host {
+    left: calc(216px + 32px);
+    right: 32px;
+    bottom: 24px;
+  }
+}

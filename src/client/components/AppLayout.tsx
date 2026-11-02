@@ -15,6 +15,7 @@ import { remainingBootMotion } from "../boot-motion";
 import { BootSymbol } from "./BootSymbol";
 import { ToastProvider } from "./Toast";
 import { MainDock } from "./MainDock";
+import { UpdateNotice } from "./UpdateNotice";
 
 export const mainNavigationItems = [
   { to: "/", label: "タイムライン", description: "未閲覧の思い出と全投稿を見る", icon: Images, end: true },
@@ -223,6 +224,7 @@ export function AppLayout() {
             ))}
           </nav>
         )}
+        {!hideNavigation && <UpdateNotice />}
         {!hideNavigation && (
           <MainDock
             measureRef={navigationHeightRef}

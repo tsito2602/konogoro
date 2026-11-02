@@ -14,6 +14,7 @@ import { AddMenu } from "./AddMenu";
 import { remainingBootMotion } from "../boot-motion";
 import { BootSymbol } from "./BootSymbol";
 import { ToastProvider } from "./Toast";
+import { MainDock } from "./MainDock";
 
 export const mainNavigationItems = [
   { to: "/", label: "タイムライン", description: "未閲覧の思い出と全投稿を見る", icon: Images, end: true },
@@ -187,7 +188,6 @@ export function AppLayout() {
         <PwaGuide user={currentUser} />
         {!hideNavigation && (
           <nav
-            ref={navigationHeightRef}
             className={`tab-bar${canCreatePost(currentUser) ? " has-desktop-add" : ""}`}
             aria-label="メインナビゲーション"
           >
@@ -222,6 +222,17 @@ export function AppLayout() {
               <NavItem {...item} icon={<Icon />} key={item.to} />
             ))}
           </nav>
+        )}
+        {!hideNavigation && (
+          <MainDock
+            measureRef={navigationHeightRef}
+            items={mainNavigationItems.map(({ icon: Icon, ...item }) => ({
+              to: item.to,
+              label: item.label,
+              end: "end" in item && item.end,
+              icon: <Icon />,
+            }))}
+          />
         )}
         {!hideNavigation && canCreatePost(currentUser) && canManageEvent(currentUser) && addMenuOpen && (
           <AddMenu postPath={addPostPath} close={() => setAddMenuOpen(false)} />

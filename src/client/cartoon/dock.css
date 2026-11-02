@@ -1,0 +1,300 @@
+/* cartoon-kit の src/styles/dock.css から、島と中のボタンの部分だけを写したもの。
+   置き場所（.main-dock-host）は konogoro 側の dock-layout.css で決める。 */
+.cdock {
+  position: absolute;
+  inset: 0;
+  font-family: var(--f-body);
+}
+/* The islands' box reaches 30 px below them, as the mock's 120 px zone does,
+   so a bump or an inflation squashes toward the bottom of the screen. */
+.cdock-islands {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -30px;
+  height: 120px;
+  transform-origin: 50% 100%;
+  pointer-events: none;
+  /* Its own layer: on iOS a spring on a chip in the panel (誰が持つ) made
+     WebKit drop the shadowed islands for up to a second, flashing every
+     frame (Tsubasa 2026-10-07「ちらつく」). */
+  will-change: transform;
+}
+/* The islands are one contour (dock-morph.ts), so parting and joining
+   islands share one outline and one shadow. */
+.cdock-shape {
+  position: absolute;
+  inset: 0;
+  overflow: visible;
+  filter: drop-shadow(0 9px 9px #0000001f);
+}
+.cdock-fill {
+  fill: var(--p-dock);
+  stroke: var(--p-line);
+  stroke-width: 2;
+  paint-order: stroke;
+}
+.cdock-ink {
+  fill: var(--p-ink);
+}
+.cdock-islands[data-tone="ink-dim"] .cdock-ink {
+  fill: color-mix(in srgb, var(--p-ink) 40%, var(--p-paper));
+}
+.cdock-ui,
+.cdock-content {
+  position: absolute;
+  inset: 0;
+}
+.cdock-group {
+  position: absolute;
+  bottom: 0;
+  height: var(--dock-height);
+  display: flex;
+  align-items: center;
+  pointer-events: auto;
+}
+.cdock-group[data-outgoing] {
+  pointer-events: none !important;
+}
+.cdock-group > button,
+.cdock-group > a {
+  transform-origin: 50% 60%;
+}
+
+/* Every dock control: the mock's .dock-btn. */
+.cdock-group > button,
+.cdock-group > a,
+.cdock-btn {
+  position: relative;
+  height: var(--dock-height);
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  border-radius: calc(var(--dock-height) / 2);
+  background: none;
+  color: var(--p-ink);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.cdock-group svg {
+  width: 22px;
+  height: 22px;
+}
+.cdock-group .danger {
+  color: var(--p-danger);
+}
+.cdock-group :disabled,
+.cdock-group [aria-disabled="true"] {
+  opacity: 0.45;
+}
+
+/* l: the back circle (or a word such as 「やめる」). */
+.cdock-group[data-slot="l"] {
+  left: max(16px, env(safe-area-inset-left));
+  min-width: var(--dock-height);
+}
+.cdock-group[data-slot="l"] > :is(button, a) {
+  min-width: var(--dock-height);
+}
+.cdock-group[data-slot="l"] > :is(button, a) > svg {
+  width: 24px;
+  height: 24px;
+}
+.cdock-group[data-slot="l"] > .context-back-label {
+  padding: 0 22px;
+}
+
+/* r: context actions; icons 56 wide (112 for two), words padded. */
+.cdock-group[data-slot="r"] {
+  right: max(16px, env(safe-area-inset-right));
+  min-width: var(--dock-height);
+}
+.cdock-group[data-slot="r"] > :is(button, a) {
+  min-width: var(--dock-height);
+}
+.cdock-group[data-slot="r"] > :is(button, a):not([aria-label]),
+.cdock-group[data-slot="r"] > :is(button, a):has(> svg + *),
+.cdock-group[data-slot="r"] > :is(button, a):has(> :not(svg, .haptic-touch)) {
+  padding: 0 24px 0 20px;
+}
+.cdock-group[data-tone="ink"],
+.cdock-group[data-tone="ink"] > :is(button, a) {
+  color: var(--p-paper);
+}
+.cdock-group[data-tone="ink-dim"] > :is(button, a) {
+  color: var(--p-paper);
+  opacity: 1;
+}
+.cdock-group[data-tone="ink"] svg {
+  width: 20px;
+  height: 20px;
+}
+/* A primary beside other actions is an ink pill on the plain island. */
+.cdock-group[data-mixed] {
+  padding-right: 8px;
+}
+.cdock-group[data-mixed] > :last-child {
+  height: 46px;
+  margin-left: 4px;
+  padding: 0 18px;
+  border-radius: 24px;
+  background: var(--p-ink);
+  color: var(--p-paper);
+}
+/* m: a separate function (しおりで見る, 詳細を開く) on its own island, 10 px
+   left of the r island (--cdock-r-w is r's width, set by the dock). */
+.cdock-group[data-slot="m"] {
+  right: calc(max(16px, env(safe-area-inset-right)) + var(--cdock-r-w, 112px) + 10px);
+  min-width: var(--dock-height);
+}
+.cdock-group[data-slot="m"] > :is(button, a) {
+  min-width: var(--dock-height);
+}
+.cdock-group > .cdock-function {
+  gap: 6px;
+  padding: 0 16px 0 14px;
+}
+/* A phone too narrow for three islands with words: the icon alone. */
+@media (max-width: 349px) {
+  .cdock-group[data-slot="m"] > .cdock-function {
+    padding: 0;
+  }
+  .cdock-group[data-slot="m"] .cdock-function-label {
+    display: none;
+  }
+}
+
+/* k: a separate function right after the back circle (持たない). */
+.cdock-group[data-slot="k"] {
+  left: calc(max(16px, env(safe-area-inset-left)) + var(--dock-height) + 10px);
+}
+/* A stretched 保存: all the room between its neighbours. */
+.cdock-group[data-stretch] {
+  left: calc(max(16px, env(safe-area-inset-left)) + var(--dock-height) + 10px + var(--cdock-k-w, 0px));
+}
+.cdock-group[data-stretch] > :is(button, a) {
+  flex: 1;
+  padding: 0 20px;
+}
+
+/* Wide context rows (a note's tools) sit where the tabs do. */
+.cdock-group[data-slot="r"][data-wide] {
+  left: max(82px, calc(66px + env(safe-area-inset-left)));
+  padding: 0 4px;
+  justify-content: space-around;
+}
+.cdock-group[data-slot="r"][data-wide] > :is(button, a) {
+  flex: 1;
+  min-width: 0;
+  height: calc(var(--dock-height) - 8px);
+  border-radius: calc(var(--dock-height) / 2 - 4px);
+  color: var(--p-mute);
+}
+.cdock-group[data-slot="r"][data-wide] > :is(button, a).on {
+  color: var(--p-ink);
+}
+.cdock-group[data-slot="r"][data-wide] svg {
+  width: 24px;
+  height: 24px;
+}
+
+/* tabs: six icons with the selection pill moving between them. */
+.cdock-tabs {
+  left: max(82px, calc(66px + env(safe-area-inset-left)));
+  right: max(16px, env(safe-area-inset-right));
+  padding: 0 4px;
+  justify-content: space-around;
+}
+/* No back circle on the trip tabs (the header goes back): the full width. */
+.cdock-tabs[data-full] {
+  left: max(16px, env(safe-area-inset-left));
+}
+.cdock-tabs > a {
+  z-index: 1;
+  flex: 1;
+  height: calc(var(--dock-height) - 8px);
+  border-radius: calc(var(--dock-height) / 2 - 4px);
+  color: var(--p-mute);
+  transition: color 0.2s;
+}
+.cdock-tabs > a[data-on="true"] {
+  color: var(--p-ink);
+}
+.cdock-tabs svg {
+  width: 24px;
+  height: 24px;
+}
+.cdock-ind {
+  position: absolute;
+  top: 4px;
+  left: 0;
+  width: 0;
+  height: calc(var(--dock-height) - 8px);
+  border-radius: calc(var(--dock-height) / 2 - 4px);
+  background: var(--p-select);
+  pointer-events: none;
+}
+
+/* toast: what happened, and 「元に戻す」 (kondo-cartoon §5). */
+.cdock-group[data-slot="toast"] {
+  left: max(16px, env(safe-area-inset-left));
+  right: max(16px, env(safe-area-inset-right));
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 8px 0 22px;
+  font-size: 14px;
+  font-weight: 700;
+}
+.cdock-group[data-slot="toast"].cdock-toast-r {
+  left: max(82px, calc(66px + env(safe-area-inset-left)));
+}
+.cdock-group[data-slot="toast"] > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* 元に戻す fills up like a gauge until the deletion is real. */
+.cdock-group[data-slot="toast"] > button.cdock-undo-gauge {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  background: color-mix(in srgb, var(--p-ink) 38%, transparent);
+}
+.cdock-undo-gauge::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--p-ink);
+  transform-origin: left center;
+  animation: cdock-undo-fill var(--undo-ms, 5000ms) linear both;
+}
+@keyframes cdock-undo-fill {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+.cdock-group[data-slot="toast"] > button {
+  flex: none;
+  height: auto;
+  padding: 9px 16px;
+  border-radius: 99px;
+  background: var(--p-ink);
+  color: var(--p-paper);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.7;
+}

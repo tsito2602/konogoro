@@ -1,0 +1,71 @@
+/* The mocks' :root, verbatim (kondo-cartoon.html and every screen mock).
+   --p-* is the phone's material; --f-* the three faces (see fonts.css).
+   Both dark forms are kept: the system preference unless 設定 picked light,
+   and an explicit data-theme="dark" (the app always sets one of the two). */
+:root {
+  --f-num: "Bricolage Grotesque", "Zen Kaku Gothic New", system-ui, sans-serif;
+  --f-body: "Zen Kaku Gothic New", "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  --p-paper: #ffffff;
+  --p-ink: #000000;
+  --p-mid: #9c978f;
+  --p-pale: #cbc5bb;
+  --p-soft: #f3f2ef;
+  --p-mute: #77726b;
+  --p-line: #e8e6e1;
+  --p-dock: #ffffff;
+  --p-danger: #c0392b;
+  /* Shared shapes the mocks repeat on every screen. */
+  --p-dock-shadow: 0 0 0 1px var(--p-line), 0 12px 26px -10px #0004;
+  --p-sheet-shadow: 0 0 0 1px var(--p-line), 0 24px 60px -20px #0005;
+  --p-scrim: color-mix(in srgb, var(--p-paper) 50%, transparent);
+  --p-select: color-mix(in srgb, var(--p-mid) 24%, transparent);
+  --r-card: 20px;
+  --r-sheet: 30px;
+  --r-dock: 31px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --p-paper: #141312;
+    --p-ink: #f5f1e9;
+    --p-mid: #b6b0a6;
+    --p-pale: #57534d;
+    --p-soft: #23221f;
+    --p-mute: #aaa49b;
+    --p-line: #2d2b29;
+    --p-dock: #262522;
+    --p-danger: #ff6b5a;
+    --trip-morph: #000;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --p-paper: #141312;
+  --p-ink: #f5f1e9;
+  --p-mid: #b6b0a6;
+  --p-pale: #57534d;
+  --p-soft: #23221f;
+  --p-mute: #aaa49b;
+  --p-line: #2d2b29;
+  --p-dock: #262522;
+  --p-danger: #ff6b5a;
+  --trip-morph: #000;
+  color-scheme: dark;
+}
+
+/* Cartoon physics layers (cartoon.ts): morph() rectangles and burst() dots. */
+.cartoon-morph {
+  position: fixed;
+  z-index: 60;
+  pointer-events: none;
+  background: var(--p-ink);
+}
+.cartoon-fx {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  width: 100vw;
+  height: 100vh;
+  overflow: visible;
+  pointer-events: none;
+}

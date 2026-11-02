@@ -4,17 +4,7 @@
  */
 
 :root {
-  --focus-ring: rgba(107, 75, 0, 0.72);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme]) {
-    --focus-ring: rgba(255, 209, 102, 0.72);
-  }
-}
-
-:root[data-theme="dark"] {
-  --focus-ring: rgba(255, 209, 102, 0.72);
+  --focus-ring: var(--p-ink);
 }
 
 :where(a, button, input, select, textarea, [tabindex]):focus-visible {

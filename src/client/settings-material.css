@@ -112,9 +112,10 @@
   height: 18px;
 }
 .settings-page .theme-setting .theme-preview {
-  --sample-paper: #f7f7f5;
-  --sample-surface: #fff;
-  --sample-muted: #d5d5cf;
+  --sample-paper: #ffffff;
+  --sample-surface: #f3f2ef;
+  --sample-muted: #e8e6e1;
+  --sample-photo: #cbc5bb;
   display: grid;
   grid-template-rows: 9px 40px 4px 9px;
   gap: 6px;
@@ -133,22 +134,24 @@
   background: var(--sample-surface);
 }
 .theme-preview-photo {
-  background: linear-gradient(150deg, #adbbab, #637e71);
+  background: var(--sample-photo);
 }
 .theme-preview-caption {
   width: 65%;
   background: var(--sample-muted);
 }
 .settings-page .theme-preview[data-sample="dark"] {
-  --sample-paper: #141416;
-  --sample-surface: #202023;
-  --sample-muted: #747477;
+  --sample-paper: #141312;
+  --sample-surface: #23221f;
+  --sample-muted: #2d2b29;
+  --sample-photo: #57534d;
 }
 @media (prefers-color-scheme: dark) {
   .settings-page .theme-preview[data-sample="system"] {
-    --sample-paper: #141416;
-    --sample-surface: #202023;
-    --sample-muted: #747477;
+    --sample-paper: #141312;
+    --sample-surface: #23221f;
+    --sample-muted: #2d2b29;
+    --sample-photo: #57534d;
   }
 }
 .settings-page .settings-menu-row {

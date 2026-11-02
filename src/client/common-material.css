@@ -3,23 +3,10 @@
 .outline-button {
   gap: 8px;
   transition:
-    scale var(--feedback-release) ease-out,
-    translate var(--feedback-release) ease-out,
     opacity var(--feedback-release) ease-out,
     background-color var(--feedback-release) ease-out,
     border-color var(--feedback-release) ease-out,
     box-shadow var(--feedback-release) ease-out;
-}
-.primary-button {
-  box-shadow: inset 0 -2px 0 rgb(107 75 0 / 14%);
-}
-.primary-button:disabled,
-.primary-button[aria-disabled="true"] {
-  box-shadow: none;
-}
-.primary-button[data-feedback-pressed]:not(:disabled, [aria-disabled="true"], [aria-busy="true"]) {
-  translate: 0 1px;
-  box-shadow: inset 0 1px 0 rgb(107 75 0 / 12%);
 }
 .post-action-menu {
   padding: 8px;
@@ -135,9 +122,6 @@
   animation-duration: 1.8s;
 }
 @media (prefers-reduced-motion: reduce) {
-  .primary-button[data-feedback-pressed] {
-    translate: none;
-  }
   .post-action-menu,
   .confirmation-modal {
     animation: none;

@@ -11,13 +11,13 @@
   pointer-events: auto;
 }
 .video-viewer .viewer-header .viewer-button {
-  background: #121714b8;
+  background: #141312b8;
 }
 .video-viewer .viewer-header > span {
   justify-self: center;
   padding: 6px 12px;
   border-radius: 999px;
-  background: #121714b8;
+  background: #141312b8;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.08em;
 }
@@ -72,8 +72,7 @@
   opacity: 0.65;
   transition:
     translate 180ms ease-out,
-    opacity 180ms ease-out,
-    scale 160ms ease-out;
+    opacity 180ms ease-out;
 }
 .media-viewer .thumbnail-strip a.selected {
   translate: 0 -4px;

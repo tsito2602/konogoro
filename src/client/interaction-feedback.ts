@@ -1,3 +1,5 @@
+import { RM, squishDown, squishUp } from "./cartoon/cartoon";
+
 const controlSelector = 'button, a[href], input, select, textarea, label, [role="button"], [role="tab"], summary';
 const unavailableSelector = ':disabled, [aria-disabled="true"], [aria-busy="true"], [inert], [data-feedback="none"]';
 
@@ -20,13 +22,45 @@ function pressTarget(target: EventTarget | null): HTMLElement | null {
   return control;
 }
 
+/** cartoon-kit の「押すとつぶれる」（scale 2-v, v）の量。押した要素そのものに一致する最初の行を使い、
+    入れ子では最も内側の操作だけをつぶす。1 は形を変えない（読む文や選択の面）。 */
+const squishAmounts: [selector: string, amount: number][] = [
+  [
+    ".notification-toggle, .theme-setting label, .role-guide label, .text-button, .more-comments-link, .comment-count-link, .post-caption, .post-comment-preview, p a",
+    1,
+  ],
+  [".floating-add-button, .desktop-add-button", 0.88],
+  [".icon-button", 0.9],
+  [
+    ".event-card, .media-cell, .album-grid a, .album-cover, .thumbnail-strip a, .thumbnail-strip button, .post-head, .settings-menu-row, .photo-add, .cover-grid button",
+    0.97,
+  ],
+];
+const defaultSquish = 0.95;
+
+function squishAmount(control: HTMLElement) {
+  for (const [selector, amount] of squishAmounts) if (control.matches(selector)) return amount;
+  return defaultSquish;
+}
+
+function canSquish(control: HTMLElement) {
+  return typeof requestAnimationFrame === "function" && "style" in control && !RM();
+}
+
 /** One delegated listener set also covers menus/portals and newly loaded cards. */
 export function initializeInteractionFeedback() {
   document.documentElement.setAttribute("data-input-method", "pointer");
   let pressed: HTMLElement | null = null;
   let pointer: { id: number; x: number; y: number; bounds: DOMRect } | null = null;
   let key: string | null = null;
+  const press = (control: HTMLElement) => {
+    pressed = control;
+    control.setAttribute("data-feedback-pressed", "");
+    const amount = squishAmount(control);
+    if (amount < 1 && canSquish(control)) void squishDown(control, amount);
+  };
   const reset = () => {
+    if (pressed && canSquish(pressed)) void squishUp(pressed);
     pressed?.removeAttribute("data-feedback-pressed");
     pressed = null;
     pointer = null;
@@ -36,10 +70,10 @@ export function initializeInteractionFeedback() {
     document.documentElement.setAttribute("data-input-method", "pointer");
     reset();
     if (!event.isPrimary || event.button !== 0) return;
-    pressed = pressTarget(event.target);
-    if (!pressed) return;
-    pointer = { id: event.pointerId, x: event.clientX, y: event.clientY, bounds: pressed.getBoundingClientRect() };
-    pressed.setAttribute("data-feedback-pressed", "");
+    const target = pressTarget(event.target);
+    if (!target) return;
+    pointer = { id: event.pointerId, x: event.clientX, y: event.clientY, bounds: target.getBoundingClientRect() };
+    press(target);
   };
   const move = (event: PointerEvent) => {
     if (!pointer || pointer.id !== event.pointerId) return;
@@ -65,9 +99,8 @@ export function initializeInteractionFeedback() {
     const target = pressTarget(event.target);
     if (!target || (event.key === " " && target.matches("a[href]"))) return;
     reset();
-    pressed = target;
     key = event.key;
-    pressed.setAttribute("data-feedback-pressed", "");
+    press(target);
   };
   const keyUp = (event: KeyboardEvent) => {
     if (event.key === key) reset();

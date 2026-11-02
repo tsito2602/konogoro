@@ -104,7 +104,7 @@
 }
 @keyframes comment-arrival {
   from {
-    background-color: rgb(255 209 102 / 22%);
+    background-color: var(--p-select);
   }
   to {
     background-color: transparent;

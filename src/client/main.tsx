@@ -20,6 +20,9 @@ import { UnreadPostsPage } from "./pages/UnreadPostsPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { installPromptStore } from "./install-prompt";
 import { initializeTheme } from "./theme";
+import { installSpringTokens } from "./cartoon/cartoon";
+import "./cartoon/fonts.css";
+import "./cartoon/theme.css";
 import "./styles.css";
 import "./media-status.css";
 import "./video-experience.css";
@@ -42,6 +45,7 @@ const hotModule = (import.meta as ImportMeta & { hot?: { dispose: (callback: () 
 hotModule?.dispose(stopInstallPromptCapture);
 
 initializeTheme();
+installSpringTokens();
 const stopInteractionFeedback = initializeInteractionFeedback();
 hotModule?.dispose(stopInteractionFeedback);
 

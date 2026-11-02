@@ -30,9 +30,7 @@
 .event-card-stack .event-card {
   z-index: 1;
   border-radius: 12px;
-  transition:
-    translate 180ms var(--event-settle),
-    scale 160ms ease-out;
+  transition: translate 180ms var(--event-settle);
 }
 @media (hover: hover) and (pointer: fine) {
   .event-card-stack .event-card:hover {
@@ -41,12 +39,11 @@
 }
 .event-card-stack .event-card:is(:active, [data-feedback-pressed]) {
   translate: 0 1px;
-  scale: 0.985;
   transition-duration: 100ms;
 }
 .event-card-stack .event-card::after {
   inset: 0;
-  background: linear-gradient(180deg, #132a1d00 22%, #10231aab 100%);
+  background: linear-gradient(180deg, #00000000 22%, #000000ab 100%);
 }
 .event-card-stack .event-card-copy {
   padding: 56px 24px 24px;
@@ -88,7 +85,7 @@
 }
 .event-detail .event-cover::after {
   inset: 40% 0 0;
-  background: linear-gradient(transparent, #10231ac7);
+  background: linear-gradient(transparent, #000000c7);
 }
 .event-detail .event-cover-copy {
   width: 100%;

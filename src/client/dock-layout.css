@@ -32,6 +32,22 @@
     margin: 0 auto;
     color: var(--p-ink);
   }
+  /* アイコンの下にページ名（cartoon-kit はアイコンだけだが、このごろは親の世代も使うため）。 */
+  .main-dock-host .cdock-tabs > a {
+    flex-direction: column;
+    gap: 2px;
+    line-height: 1;
+  }
+  .main-dock-host .cdock-tabs svg {
+    width: 22px;
+    height: 22px;
+  }
+  .main-dock-label {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0;
+    white-space: nowrap;
+  }
   /* ドックと ＋ の後ろで画面がふわっと消える（cartoon-kit の dock.css と同じ）。 */
   .app-shell:has(> .main-dock-host)::after {
     content: "";

@@ -17,6 +17,7 @@ import { ToastProvider } from "./Toast";
 import { MainDock } from "./MainDock";
 import { UpdateNotice } from "./UpdateNotice";
 import { useRouteEnter } from "../route-motion";
+import { usePageJelly } from "../jelly-scroll";
 
 export const mainNavigationItems = [
   { to: "/", label: "タイムライン", description: "未閲覧の思い出と全投稿を見る", icon: Images, end: true },
@@ -94,6 +95,7 @@ export function AppLayout() {
     postPageNavigation && showPostPage && !!backgroundContent && backgroundSnapshot.routeIdentity !== routeIdentity;
   const modal = showPostPage && retainBackground;
   const hideNavigation = viewerPattern.test(pathname);
+  usePageJelly(Boolean(currentUser) && !hideNavigation);
   const viewerEntryRef = useRef<{ path: string; rect: DOMRect } | null>(null);
   useLayoutEffect(() => {
     const entry = viewerEntryRef.current;

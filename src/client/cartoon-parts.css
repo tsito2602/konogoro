@@ -181,7 +181,12 @@
 :root .settings-logout strong {
   color: var(--p-danger);
 }
+/* ログアウトはアイコンが1つだけなので「最後のアイコン（›）」の18px指定にもかかり、余白9pxで中身が0になる。行頭のアイコンと同じ40pxに戻す。 */
 :root .settings-logout > svg:first-child {
+  width: 40px;
+  height: 40px;
+  padding: 9px;
+  color: var(--p-danger);
   background: none;
 }
 :root .settings-profile input {

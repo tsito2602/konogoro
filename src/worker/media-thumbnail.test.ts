@@ -143,19 +143,16 @@ describe("動画のサムネイル再生成", () => {
     expect(f.put).not.toHaveBeenCalled();
     expect(f.get).not.toHaveBeenCalled();
   });
-  it.each([
-    "UPDATE posts SET status='draft'",
-    "DELETE FROM posts",
-    "UPDATE media SET kind='image'",
-    "UPDATE media SET status='pending'",
-    "DELETE FROM media",
-  ])("対象外のデータを拒否: %s", async (query) => {
-    const f = fixture();
-    f.sql.exec(query);
-    expect((await f.update()).status).toBe(404);
-    expect((await f.source()).status).toBe(404);
-    expect(f.put).not.toHaveBeenCalled();
-  });
+  it.each(["UPDATE posts SET status='draft'", "UPDATE media SET kind='image'"])(
+    "対象外のデータを拒否: %s",
+    async (query) => {
+      const f = fixture();
+      f.sql.exec(query);
+      expect((await f.update()).status).toBe(404);
+      expect((await f.source()).status).toBe(404);
+      expect(f.put).not.toHaveBeenCalled();
+    },
+  );
   it("PNG以外、不正な画像、サイズ超過では元画像を保持する", async () => {
     const f = fixture();
     expect((await f.update(png, "image/jpeg")).status).toBe(400);

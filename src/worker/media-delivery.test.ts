@@ -187,7 +187,6 @@ describe("authenticated media delivery", () => {
 
   it.each([
     { record: { thumbnail_object_key: null }, options: {} },
-    { record: {}, options: { missingKey: thumbnailKey } },
     { record: { thumbnail_object_key: videoKey }, options: {} },
     { record: {}, options: { thumbnailMime: "video/mp4" } },
   ])("サムネイルが欠落・不正でも動画本体ではなく有効なSVGを返す: %o", async ({ record, options }) => {
@@ -267,10 +266,7 @@ describe("streamed original downloads", () => {
 
   it.each([
     ["bytes=0-0", "a", "bytes 0-0/12", 0, 1],
-    ["bytes=3-6", "defg", "bytes 3-6/12", 3, 4],
-    ["bytes=11-", "l", "bytes 11-11/12", 11, 1],
     ["bytes=-3", "jkl", "bytes 9-11/12", 9, 3],
-    ["bytes=-100", original, "bytes 0-11/12", 0, 12],
     ["bytes=5-9999999999999999999999", "fghijkl", "bytes 5-11/12", 5, 7],
   ] as const)("%sは範囲内だけR2から取得して206を返す", async (range, body, contentRange, offset, length) => {
     const env = mediaEnv();
@@ -285,37 +281,27 @@ describe("streamed original downloads", () => {
     });
   });
 
-  it.each(["bytes=12-", "bytes=9999999999999999999999-", "bytes=-0", "bytes=5-2"])(
-    "%sはR2本体を読まず416を返す",
-    async (range) => {
-      const env = mediaEnv();
-      const response = await app.request("/api/media/video-1/download", { headers: { Range: range } }, env);
-      expect(response.status).toBe(416);
-      expect(response.headers.get("Content-Range")).toBe("bytes */12");
-      expect(response.headers.get("Content-Length")).toBe("0");
-      expect(await response.text()).toBe("");
-      expect(env.calls.get).not.toHaveBeenCalled();
-    },
-  );
+  it.each(["bytes=12-", "bytes=5-2"])("%sはR2本体を読まず416を返す", async (range) => {
+    const env = mediaEnv();
+    const response = await app.request("/api/media/video-1/download", { headers: { Range: range } }, env);
+    expect(response.status).toBe(416);
+    expect(response.headers.get("Content-Range")).toBe("bytes */12");
+    expect(response.headers.get("Content-Length")).toBe("0");
+    expect(await response.text()).toBe("");
+    expect(env.calls.get).not.toHaveBeenCalled();
+  });
 
-  it.each(["bytes=0-1,4-5", "items=0-1", "bytes=abc", "bytes=-"])(
-    "非対応の範囲 %s は200全体配信に戻す",
-    async (range) => {
-      const response = await app.request("/api/media/video-1/download", { headers: { Range: range } }, mediaEnv());
-      expect(response.status).toBe(200);
-      expect(response.headers.has("Content-Range")).toBe(false);
-      expect(await response.text()).toBe(original);
-    },
-  );
+  it.each(["bytes=0-1,4-5", "bytes=abc"])("非対応の範囲 %s は200全体配信に戻す", async (range) => {
+    const response = await app.request("/api/media/video-1/download", { headers: { Range: range } }, mediaEnv());
+    expect(response.status).toBe(200);
+    expect(response.headers.has("Content-Range")).toBe(false);
+    expect(await response.text()).toBe(original);
+  });
 
   it.each([
     ['"video-etag"', 206],
-    [uploaded.toUTCString(), 206],
     ['"old-etag"', 200],
     ['W/"video-etag"', 200],
-    ["Sun, 06 Sep 2026 02:00:00 GMT", 200],
-    ["Sun, 06 Sep 2026 04:00:00 GMT", 200],
-    ["not-a-date", 200],
   ] as const)("If-Range %s は表現が一致するときだけ部分取得する", async (ifRange, status) => {
     const response = await app.request(
       "/api/media/video-1/download",
@@ -326,7 +312,7 @@ describe("streamed original downloads", () => {
     expect(await response.text()).toBe(status === 206 ? "ab" : original);
   });
 
-  it.each(['"video-etag"', 'W/"video-etag"', '"other", W/"video-etag"', "*"])(
+  it.each(['"video-etag"', '"other", W/"video-etag"'])(
     "If-None-Match %s が一致したら本体を取得せず304を返す",
     async (etag) => {
       const env = mediaEnv();

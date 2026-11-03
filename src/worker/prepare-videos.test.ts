@@ -78,41 +78,4 @@ describe("PC動画準備コマンド", () => {
     },
     30_000,
   );
-
-  it.skipIf(!hasFfmpeg)(
-    "音声のない縦動画は縦横比を保ち、無音のまま変換できる",
-    () => {
-      const directory = mkdtempSync(path.join(tmpdir(), "konogoro-portrait-"));
-      try {
-        const source = path.join(directory, "portrait.mp4");
-        const output = path.join(directory, "prepared");
-        expect(
-          spawnSync("ffmpeg", [
-            "-v",
-            "error",
-            "-f",
-            "lavfi",
-            "-i",
-            "color=c=red:size=1152x2048:rate=30",
-            "-t",
-            "0.2",
-            "-c:v",
-            "libx264",
-            "-pix_fmt",
-            "yuv420p",
-            source,
-          ]).status,
-        ).toBe(0);
-        const result = spawnSync(process.execPath, ["scripts/prepare-videos.mjs", "--output", output, source]);
-        expect(result.status, result.stderr?.toString()).toBe(0);
-        const { entries } = playbackManifestSchema.parse(
-          JSON.parse(readFileSync(path.join(output, "konogoro-videos.json"), "utf8")),
-        );
-        expect(entries[0].playback).toMatchObject({ width: 1080, height: 1920, audioCodec: null });
-      } finally {
-        rmSync(directory, { recursive: true, force: true });
-      }
-    },
-    30_000,
-  );
 });

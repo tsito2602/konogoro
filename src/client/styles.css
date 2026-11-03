@@ -3666,7 +3666,7 @@ textarea:focus {
   color: var(--ash);
   font-size: 0.75rem;
 }
-.settings-menu-row > svg:last-child {
+.settings-menu-row > svg:last-of-type {
   width: 18px;
   color: var(--ash);
 }

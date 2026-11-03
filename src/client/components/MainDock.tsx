@@ -1,7 +1,10 @@
-import { useLayoutEffect, useRef, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, type ReactNode } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { Live, RM } from "../cartoon/cartoon";
 import { CartoonDock } from "../cartoon/cartoon-dock";
+
+/** The page the tabs last stood on (the post page closes back onto it). */
+let lastTabsPath = "/";
 
 export type MainDockItem = { to: string; label: string; icon: ReactNode; end?: boolean };
 
@@ -56,9 +59,16 @@ export function MainDock({
   label?: string;
   children?: ReactNode;
 }) {
-  const { pathname } = useLocation();
-  const active = items.findIndex((item) => isActive(item, pathname));
+  const { pathname: current } = useLocation();
   const showTabs = children == null;
+  // A page with its own controls (the post page) turns back into the tabs as it closes: light the
+  // tab of the page it returns to, so the next dock takes the same shape over without the pill
+  // appearing afterwards.
+  useEffect(() => {
+    if (!className) lastTabsPath = current;
+  }, [className, current]);
+  const pathname = showTabs && className ? lastTabsPath : current;
+  const active = items.findIndex((item) => isActive(item, pathname));
   const group = useRef<HTMLDivElement>(null);
   const pill = useRef<HTMLSpanElement>(null);
   const springs = useRef<Edges | null>(null);

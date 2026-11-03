@@ -4,9 +4,14 @@
      既存の役割名をそこへ対応づける。色は白黒だけで、意味のある赤だけを残す。 */
   color: var(--p-ink);
   background: var(--p-paper);
-  /* 本文は Noto Sans JP。数字の見出しは Bricolage Grotesque のまま、漢字は本文書体へ落とす。 */
-  --f-body: "Noto Sans JP", "Hiragino Sans", system-ui, sans-serif;
-  --f-num: "Bricolage Grotesque", "Noto Sans JP", system-ui, sans-serif;
+  /* 本文は端末の標準フォント（iPhone はヒラギノ、Android は Noto Sans CJK、Windows は Yu Gothic UI）。
+     数字の見出しは Bricolage Grotesque のまま、漢字は本文と同じ標準フォントへ落とす。 */
+  --f-body:
+    system-ui, -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", Meiryo,
+    sans-serif;
+  --f-num:
+    "Bricolage Grotesque", system-ui, -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN",
+    "Yu Gothic UI", Meiryo, sans-serif;
   font-family: var(--f-body);
   font-synthesis: none;
   line-height: 1.5;
@@ -5080,7 +5085,7 @@ textarea:focus {
   }
 }
 
-/* 年月などの数字の見出しは cartoon-kit の Bricolage Grotesque（漢字は Noto Sans JP へ落ちる）。 */
+/* 年月などの数字の見出しは cartoon-kit の Bricolage Grotesque（漢字は端末の標準フォントへ落ちる）。 */
 .timeline-month-heading,
 .album-year,
 .album-year-picker strong,

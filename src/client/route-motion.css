@@ -1,4 +1,4 @@
-/* ページ遷移（kondo src/web/styles.css の route-content と page-rise を移したもの）。
+/* ページ遷移（kondo src/web/styles.css の route-content を移したもの。部品の出現は route-motion.ts の cascadeRows）。
    ボトムナビ、＋ボタン、更新のお知らせは動かさず、ページの中身だけを入れ替える。 */
 :root {
   view-transition-name: none;
@@ -78,44 +78,6 @@
   }
 }
 
-/* 入ってきたページの部品が、少しずつずれて下から上がる。
-   一覧はまとめて上げずに、中の1件ずつを上げる。 */
-@keyframes page-rise {
-  from {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-}
-.route-page-enter .page-content > :not(.feed, .event-list-section, .activity-list, .change-save-bar),
-.route-page-enter .page-content > :is(.feed, .event-list-section, .activity-list) > * {
-  animation: page-rise 640ms cubic-bezier(0.22, 0.72, 0.18, 1) both;
-  animation-delay: 330ms;
-}
-.route-page-enter .page-content > :nth-child(1),
-.route-page-enter .page-content > * > :nth-child(1) {
-  animation-delay: 50ms;
-}
-.route-page-enter .page-content > :nth-child(2),
-.route-page-enter .page-content > * > :nth-child(2) {
-  animation-delay: 100ms;
-}
-.route-page-enter .page-content > :nth-child(3),
-.route-page-enter .page-content > * > :nth-child(3) {
-  animation-delay: 150ms;
-}
-.route-page-enter .page-content > :nth-child(4),
-.route-page-enter .page-content > * > :nth-child(4) {
-  animation-delay: 200ms;
-}
-.route-page-enter .page-content > :nth-child(5),
-.route-page-enter .page-content > * > :nth-child(5) {
-  animation-delay: 245ms;
-}
-.route-page-enter .page-content > :nth-child(6),
-.route-page-enter .page-content > * > :nth-child(6) {
-  animation-delay: 290ms;
-}
-
 /* スケルトン：すぐ読み終わるときは出さず、120ms 待ってから静かに現れる。
    光の帯は画面全体で1本にそろえて流す（kondo の bk-shimmer と同じ色と速さ）。 */
 @keyframes skeleton-appear {
@@ -161,7 +123,6 @@
   ::view-transition-group(*),
   ::view-transition-old(*),
   ::view-transition-new(*),
-  .route-page-enter *,
   .page-skeleton,
   .skeleton-line,
   .skeleton-circle,

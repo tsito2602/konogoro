@@ -530,6 +530,16 @@ function PostPage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modal, postId]);
 
+  // キーボードを出すと iPhone は画面ごとずらし、画面の外にあった下の文書（タイムライン）が
+  // キーボードの後ろに見える。書いている間は後ろのタイムラインを隠し、文書の地を欄の色にする。
+  useEffect(() => {
+    if (!composing) return;
+    const root = document.documentElement;
+    root.dataset.postComposing = "";
+    return () => {
+      delete root.dataset.postComposing;
+    };
+  }, [composing]);
   // キーボードが出入りしたら、書き込み欄とページをその上へ載せ直す。
   useEffect(() => {
     const motion = motionRef.current;

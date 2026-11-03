@@ -8,6 +8,9 @@ import { useLocation, useNavigationType } from "react-router-dom";
 const viewerPattern = /^\/posts\/[^/]+\/media\//;
 const ENTER_CLASS = "route-page-enter";
 let enterTimer = 0;
+let enterGeneration = 0;
+// Content that replaced a skeleton while the page was rising: it runs only its own reveal, never page-rise too.
+const revealedDuringEnter = new Set<HTMLElement>();
 let pendingLink: { pathname: string; dock: boolean; time: number } | null = null;
 
 export const reduceMotion = () =>
@@ -43,7 +46,24 @@ export function markPageEnter() {
   void page.offsetWidth;
   page.classList.add(ENTER_CLASS);
   window.clearTimeout(enterTimer);
-  enterTimer = window.setTimeout(() => page.classList.remove(ENTER_CLASS), 1100);
+  const generation = ++enterGeneration;
+  // 上がっている途中の部品があれば、終わるのを待ってから外す（途中で外すと元の位置へ跳ぶ）。
+  const finish = () => {
+    if (generation !== enterGeneration) return;
+    const rising = page
+      .getAnimations({ subtree: true })
+      .filter(
+        (animation) => (animation as CSSAnimation).animationName === "page-rise" && animation.playState === "running",
+      );
+    if (rising.length) {
+      void Promise.allSettled(rising.map((animation) => animation.finished)).then(finish);
+      return;
+    }
+    page.classList.remove(ENTER_CLASS);
+    for (const element of revealedDuringEnter) element.style.removeProperty("animation");
+    revealedDuringEnter.clear();
+  };
+  enterTimer = window.setTimeout(finish, 1100);
 }
 
 /** Remembers the link a click is about to follow, so the router's navigate can tell a page link from a dock tab. */
@@ -135,6 +155,12 @@ export function installSkeletonReveal() {
         .filter((record) => record.target === parent)
         .flatMap((record) => Array.from(record.addedNodes))
         .filter((node): node is HTMLElement => node instanceof HTMLElement && node.isConnected && !isSkeleton(node));
+      // ページの上昇（CSS）と重なると、片方が終わったときにもう片方の途中の位置へ跳ぶ。中身は reveal だけで動かす。
+      if (document.querySelector(`.route-background.${ENTER_CLASS}`))
+        for (const element of [...added, ...revealTargets(added)]) {
+          element.style.animation = "none";
+          revealedDuringEnter.add(element);
+        }
       revealTargets(added)
         .slice(0, 12)
         .forEach((element, index) =>

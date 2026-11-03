@@ -24,6 +24,7 @@ import {
   type FormEvent,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import type { Comment, Post } from "../../shared/types";
 import { api, formatDate } from "../api";
@@ -55,6 +56,8 @@ export function PostDetailPage() {
   const [deleteError, setDeleteError] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  // 「…」メニューは kondo のように画面全体の幕の上に出すため、開いている面（シートか body）へ portal で置く。
+  const [menuHost, setMenuHost] = useState<{ host: Element; top: number; right: number } | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const commentInputRef = useRef<HTMLInputElement>(null);
   const conversationRef = useRef<HTMLElement>(null);
@@ -187,48 +190,60 @@ export function PostDetailPage() {
             <button
               className="icon-button"
               type="button"
-              onClick={() => setMenuOpen((open) => !open)}
+              onClick={(event) => {
+                const button = event.currentTarget;
+                const box = button.getBoundingClientRect();
+                setMenuHost({
+                  host: button.closest("dialog") ?? document.body,
+                  top: box.bottom + 8,
+                  right: window.innerWidth - box.right,
+                });
+                setMenuOpen((open) => !open);
+              }}
               aria-label="投稿メニュー"
               aria-expanded={menuOpen}
             >
               <Ellipsis />
             </button>
-            {menuOpen && (
-              <>
-                <button
-                  className="post-menu-backdrop"
-                  type="button"
-                  aria-label="投稿メニューを閉じる"
-                  onClick={() => setMenuOpen(false)}
-                />
-                <div className="post-action-menu" role="menu">
-                  {post.canEdit && (
-                    <Link
-                      to={`/posts/${post.id}/edit`}
-                      state={{ ...(location.state as object | null), returnToDetail: true }}
-                      role="menuitem"
-                      onClick={() => setMenuOpen(false)}
-                    >
-                      <Pencil />
-                      編集
-                    </Link>
-                  )}
-                  {post.canDelete && (
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => {
-                        setMenuOpen(false);
-                        setDeleteOpen(true);
-                      }}
-                    >
-                      <Trash2 />
-                      削除
-                    </button>
-                  )}
-                </div>
-              </>
-            )}
+            {menuOpen &&
+              menuHost &&
+              createPortal(
+                <>
+                  <button
+                    className="post-menu-backdrop"
+                    type="button"
+                    aria-label="投稿メニューを閉じる"
+                    onClick={() => setMenuOpen(false)}
+                  />
+                  <div className="post-action-menu" role="menu" style={{ top: menuHost.top, right: menuHost.right }}>
+                    {post.canEdit && (
+                      <Link
+                        to={`/posts/${post.id}/edit`}
+                        state={{ ...(location.state as object | null), returnToDetail: true }}
+                        role="menuitem"
+                        onClick={() => setMenuOpen(false)}
+                      >
+                        <Pencil />
+                        編集
+                      </Link>
+                    )}
+                    {post.canDelete && (
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => {
+                          setMenuOpen(false);
+                          setDeleteOpen(true);
+                        }}
+                      >
+                        <Trash2 />
+                        削除
+                      </button>
+                    )}
+                  </div>
+                </>,
+                menuHost.host,
+              )}
           </div>
         )
       }

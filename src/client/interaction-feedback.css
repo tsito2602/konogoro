@@ -69,3 +69,37 @@
     opacity: 0.88;
   }
 }
+
+/* 振動（haptics.ts、kondo から移したもの）。
+   iPhone haptics: a transparent label over each tappable surface toggles a
+   hidden switch the finger never touches, so touches on it can still scroll. */
+:where([data-haptic-host]) {
+  position: relative;
+}
+[data-haptic-host] > label.haptic-touch {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: block;
+  margin: 0;
+  padding: 0;
+  border-radius: inherit;
+  background: none;
+  cursor: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+label.haptic-touch > input.haptic-touch {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  min-width: 0;
+  height: 1px;
+  min-height: 0;
+  margin: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+:disabled > label.haptic-touch {
+  display: none;
+}

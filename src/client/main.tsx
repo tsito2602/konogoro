@@ -22,6 +22,7 @@ import { installPromptStore } from "./install-prompt";
 import { initializeTheme } from "./theme";
 import { installSpringTokens } from "./cartoon/cartoon";
 import { installRouteMotion, installSkeletonReveal } from "./route-motion";
+import { installHaptics } from "./haptics";
 import "./cartoon/fonts.css";
 import "./cartoon/theme.css";
 import "./cartoon/dock.css";
@@ -51,6 +52,7 @@ hotModule?.dispose(stopInstallPromptCapture);
 
 initializeTheme();
 installSpringTokens();
+installHaptics();
 const stopInteractionFeedback = initializeInteractionFeedback();
 hotModule?.dispose(stopInteractionFeedback);
 const stopUpdateChecks = startUpdateChecks();

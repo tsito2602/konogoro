@@ -1,6 +1,7 @@
 import { useLayoutEffect } from "react";
 import { useLocation, useNavigationType } from "react-router-dom";
 import { spring } from "./cartoon/cartoon";
+import { isHapticTouch } from "./haptics";
 
 // kondo のページ遷移（kondo src/web/motion.ts）を移したもの。
 // 前のページは 6px 浮いて 170ms で消え、次のページはフェードで現れ、その中の部品が下から上がる。
@@ -95,6 +96,8 @@ export function markPageEnter() {
 /** Remembers the link a click is about to follow, so the router's navigate can tell a page link from a dock tab. */
 export function rememberLinkClick(event: MouseEvent) {
   if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+  // iPhone の振動用ラベルのクリックは移動ではない（このあと本物のクリックが続く）。
+  if (isHapticTouch(event.target)) return;
   const link = event.target instanceof Element ? event.target.closest<HTMLAnchorElement>("a[href]") : null;
   if (!link || link.origin !== location.origin || (link.target && link.target !== "_self")) {
     pendingLink = null;

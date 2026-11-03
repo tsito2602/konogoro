@@ -157,7 +157,7 @@
 .settings-page .settings-menu-row {
   padding: 18px;
 }
-.settings-page .settings-menu-row > span:only-child {
+.settings-page .settings-menu-row:not(:has(> :not(span, .haptic-touch))) > span {
   grid-column: 1 / -1;
   min-width: 0;
 }

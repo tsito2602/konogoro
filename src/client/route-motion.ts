@@ -162,32 +162,46 @@ const isSkeleton = (node: Node) =>
   node instanceof HTMLElement &&
   (node.matches(".page-skeleton") || node.querySelector(":scope > .page-skeleton") !== null);
 
-/** When a skeleton is replaced by the loaded content, the content's rows cascade in its place. */
+/** Rows that are not already rising (markPageEnter or an earlier record may have started them). */
+const resting = (rows: HTMLElement[]) => rows.filter((row) => row.getAnimations().length === 0);
+
+/**
+ * Content that appears inside a page cascades in: the loaded content in place of a skeleton,
+ * and content that replaces the old without one (an album month switch with the photos already read).
+ */
 export function installSkeletonReveal() {
   if (typeof MutationObserver === "undefined") return () => {};
   const observer = new MutationObserver((records) => {
     if (reduceMotion()) return;
-    const parents = new Set<Node>();
+    const revealed = new Set<Node>();
     for (const record of records) {
       const page = record.target instanceof Element && record.target.matches(".route-background, .app-shell, #root");
-      if (!page && Array.from(record.removedNodes).some(isSkeleton)) parents.add(record.target);
+      if (!page && Array.from(record.removedNodes).some(isSkeleton)) revealed.add(record.target);
     }
-    for (const parent of parents) {
-      const added = records
-        .filter((record) => record.target === parent)
-        .flatMap((record) => Array.from(record.addedNodes))
-        .filter((node): node is HTMLElement => node instanceof HTMLElement && node.isConnected && !isSkeleton(node));
-      cascadeRows(added.flatMap((element) => (element.matches(CASCADE_ROWS) ? [element] : rowsOrSelf(element))));
+    const rows: HTMLElement[] = [];
+    for (const record of records) {
+      const target = record.target;
+      if (!(target instanceof HTMLElement) || target.matches(".route-background, .app-shell, #root")) continue;
+      // ページの外（ビューアー、シート、メニュー）や、行の中の小さな書き換えは動かさない。
+      if (!target.closest(".route-background") || target.closest(CASCADE_ROWS)) continue;
+      const fromSkeleton = revealed.has(target);
+      for (const node of record.addedNodes) {
+        if (!(node instanceof HTMLElement) || !node.isConnected || isSkeleton(node)) continue;
+        if (node.matches(CASCADE_ROWS)) rows.push(node);
+        else rows.push(...rowsIn(node, fromSkeleton));
+      }
     }
+    cascadeRows(resting([...new Set(rows)]));
   });
   observer.observe(document.body, { childList: true, subtree: true });
   return () => observer.disconnect();
 }
 
-function rowsOrSelf(element: HTMLElement): HTMLElement[] {
+/** The outermost rows inside `element`; after a skeleton, the element itself when it has none (forms). */
+function rowsIn(element: HTMLElement, orSelf: boolean): HTMLElement[] {
   const rows = Array.from(element.querySelectorAll<HTMLElement>(CASCADE_ROWS)).filter((row) => {
     const outer = row.parentElement?.closest(CASCADE_ROWS);
     return !outer || !element.contains(outer);
   });
-  return rows.length ? rows : [element];
+  return rows.length || !orSelf ? rows : [element];
 }

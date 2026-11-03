@@ -28,4 +28,4 @@ node scripts/prepare-videos.mjs --output "/path/to/new-prepared-folder" "/path/t
 
 ## 検証
 
-`npm run test -- src/worker/prepare-videos.test.ts`はffmpeg/ffprobeがある環境で合成動画を実際に変換し、H.264/AAC、横・縦の上限、無音、faststart、元動画保持、出力先上書き禁止を確認する。ffmpegのない環境ではこの2ケースをskipする。ブラウザの対応確認と確定APIの権限・失敗・再試行は通常のVitestで常に実行する。
+`npm run test -- src/worker/prepare-videos.test.ts`はffmpeg/ffprobeがある環境で合成動画を実際に変換し、H.264/AAC、横の上限、faststart、元動画保持を確認する。ffmpegのない環境ではskipする。ブラウザの対応確認と確定APIの権限・失敗・再試行は通常のVitestで常に実行する。

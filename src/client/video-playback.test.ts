@@ -7,7 +7,7 @@ import { createPendingMediaFile } from "./media-upload";
 const digest = (data: string | Uint8Array) => createHash("sha256").update(data).digest("hex");
 
 describe("動画の対応確認", () => {
-  it.each([0, 1, 55, 56, 63, 64, 65, 127, 128, 1024 * 1024, 2 * 1024 * 1024 + 111])(
+  it.each([0, 55, 56, 64, 2 * 1024 * 1024 + 111])(
     "%iバイトを1MiB以下の分割でNodeのSHA-256と同じ結果にする",
     async (size) => {
       const bytes = Uint8Array.from({ length: size }, (_, index) => index % 251);

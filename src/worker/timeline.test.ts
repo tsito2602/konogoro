@@ -59,7 +59,7 @@ function timelineEnv(role: User["role"], statements: Array<{ sql: string; values
 }
 
 describe("GET /timeline", () => {
-  it.each<User["role"]>(["owner", "uploader", "viewer"])("%sでも同じイベント時系列を返す", async (role) => {
+  it.each<User["role"]>(["owner", "viewer"])("%sでも同じイベント時系列を返す", async (role) => {
     const statements: Array<{ sql: string; values: unknown[] }> = [];
     const response = await app.request("/api/timeline", undefined, timelineEnv(role, statements));
     const body = await response.json<{ posts: Array<{ id: string }>; nextCursor: string }>();

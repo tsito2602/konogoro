@@ -131,7 +131,7 @@ type Props = { identity: string; children: ReactNode };
     its modal dialog, and the page's dock again when the post closes) starts
     from this shape and morphs on, so the islands never vanish and reappear
     (Tsubasa 2026-11-03「ボトムナビは一旦隠れて再登場せず、変形させるだけ」). */
-type Carry = { shape: Shape; width: number; copies: HTMLElement[]; at: number };
+type Carry = { shape: Shape; width: number; copies: HTMLElement[]; at: number; identity: string; moving: boolean };
 let carried: Carry | null = null;
 const CARRY_MS = 600;
 
@@ -201,15 +201,24 @@ export class CartoonDock extends Component<Props> {
       // Pick up where the leaving dock was, fade out its controls, and morph on.
       this.shape = carry.shape;
       this.width = carry.width;
-      for (const copy of carry.copies) {
-        this.ui.current!.appendChild(copy);
-        void anim(copy, [{ opacity: 1 }, { opacity: 0 }], { duration: 120, easing: "ease", fill: "forwards" }).then(
-          () => copy.remove(),
-        );
+      if (carry.identity === this.props.identity) {
+        // The leaving dock already took this form (a post page's dock that turned back into
+        // the tabs before closing): take it over as it is, without fading the controls
+        // out and in again or crouching a second time (Tsubasa 2026-11-03: 「戻った後に
+        // もう一度変形アニメーションが入っている」). Only an unfinished morph carries on.
+        this.paint();
+        this.layout(!carry.moving, true);
+      } else {
+        for (const copy of carry.copies) {
+          this.ui.current!.appendChild(copy);
+          void anim(copy, [{ opacity: 1 }, { opacity: 0 }], { duration: 120, easing: "ease", fill: "forwards" }).then(
+            () => copy.remove(),
+          );
+        }
+        for (const { el } of this.groups()) popIn(el);
+        this.paint();
+        this.layout(false);
       }
-      for (const { el } of this.groups()) popIn(el);
-      this.paint();
-      this.layout(false);
     } else this.layout(true);
     this.observer =
       typeof ResizeObserver === "undefined"
@@ -260,6 +269,8 @@ export class CartoonDock extends Component<Props> {
       carried = {
         shape: this.shape,
         width: this.width,
+        identity: this.props.identity,
+        moving: Boolean(this.morph),
         at: performance.now(),
         copies: this.groups().map(({ el }) => {
           const copy = el.cloneNode(true) as HTMLElement;
@@ -325,7 +336,8 @@ export class CartoonDock extends Component<Props> {
     };
   }
 
-  layout(instant: boolean) {
+  /** quiet: a morph carried over from another dock goes on without crouching again. */
+  layout(instant: boolean, quiet = false) {
     const root = this.root.current;
     if (!root) return;
     cancelAnimationFrame(this.retry);
@@ -370,6 +382,10 @@ export class CartoonDock extends Component<Props> {
     // The dock crouches as the material starts to move and rises with it,
     // then simply stops: nothing wobbles once the morph has landed
     // (Tsubasa 2026-10-06: 「ドックが変形したあとの勝手にプルンとする動きいらない」).
+    if (quiet) {
+      void this.morphTo(to);
+      return;
+    }
     void this.J.to(0.92, { k: 700, d: 26 });
     const up = setTimeout(() => void this.J.to(1, { k: 420, d: 41 }), 70);
     void this.morphTo(to).then((landed) => {

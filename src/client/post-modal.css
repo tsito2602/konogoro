@@ -109,6 +109,24 @@
   --sheet-bg: #000;
   --sheet-field: #1c1c1f;
 }
+/* 書いている間、キーボードで画面がずれても後ろのタイムラインを見せない（PostDetailPage の postComposing）。 */
+:root[data-post-composing],
+:root[data-post-composing] body {
+  background: #111113;
+}
+:root[data-post-composing] .route-background[inert] {
+  visibility: hidden;
+}
+@media (prefers-color-scheme: dark) {
+  :root[data-post-composing]:not([data-theme="light"]),
+  :root[data-post-composing]:not([data-theme="light"]) body {
+    background: #000;
+  }
+}
+:root[data-post-composing][data-theme="dark"],
+:root[data-post-composing][data-theme="dark"] body {
+  background: #000;
+}
 .comment-sheet[inert] {
   pointer-events: none;
 }

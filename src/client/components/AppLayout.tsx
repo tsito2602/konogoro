@@ -16,6 +16,7 @@ import { BootSymbol } from "./BootSymbol";
 import { ToastProvider } from "./Toast";
 import { MainDock } from "./MainDock";
 import { UpdateNotice } from "./UpdateNotice";
+import { useRouteEnter } from "../route-motion";
 
 export const mainNavigationItems = [
   { to: "/", label: "タイムライン", description: "未閲覧の思い出と全投稿を見る", icon: Images, end: true },
@@ -50,6 +51,7 @@ export function useCurrentUser(): CurrentUser {
 export function AppLayout() {
   const navigationHeightRef = useMeasuredHeight("--bottom-nav-height");
   const location = useLocation();
+  useRouteEnter();
   const { pathname } = location;
   const invite = pathname.startsWith("/invite/");
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);

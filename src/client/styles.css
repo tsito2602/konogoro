@@ -1056,18 +1056,21 @@ a.icon-button {
   height: 100%;
   object-fit: cover;
 }
-.post-comment-preview > span:last-child {
+/* 押したときの .haptic-touch が最後の子に加わるため、:last-child ではなくクラスで指定する。 */
+.post-comment-text {
   min-width: 0;
   display: grid;
-  gap: 4px;
+  gap: 2px;
   line-height: 1.6;
   font-size: 1.0625rem;
 }
-.post-comment-preview strong {
+.post-comment-name {
+  color: var(--ash);
   font-weight: 600;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
+  line-height: 1.4;
 }
-.post-comment-preview > span:last-child > span {
+.post-comment-body {
   min-width: 0;
   overflow: hidden;
   display: -webkit-box;

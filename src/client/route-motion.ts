@@ -1,17 +1,27 @@
 import { useLayoutEffect } from "react";
 import { useLocation, useNavigationType } from "react-router-dom";
+import { spring } from "./cartoon/cartoon";
 
 // kondo のページ遷移（kondo src/web/motion.ts）を移したもの。
-// 前のページは 6px 浮いて 170ms で消え、次のページはフェードで現れ、その中の部品が少しずつずらして下から上がる。
+// 前のページは 6px 浮いて 170ms で消え、次のページはフェードで現れ、その中の部品が下から上がる。
 // ボトムナビのタブどうしはページを入れ替えたうえで部品だけを上げる（kondo のタブと同じ）。
 
 const viewerPattern = /^\/posts\/[^/]+\/media\//;
-const ENTER_CLASS = "route-page-enter";
-let enterTimer = 0;
-let enterGeneration = 0;
-// Content that replaced a skeleton while the page was rising: it runs only its own reveal, never page-rise too.
-const revealedDuringEnter = new Set<HTMLElement>();
 let pendingLink: { pathname: string; dock: boolean; time: number } | null = null;
+
+// 部品の出現は kondo のしおり（itinerary-screen.tsx の cascadeRows）と同じ。
+// 画面に見えている行だけが 34px 下で 0.95 倍の大きさから、boing のばね（k420/d14）で 40ms ずつずれて上がる。
+export const CASCADE_ROWS = [
+  "[data-reading-item]",
+  ".event-list-section-title",
+  ".member-last-viewed",
+  ".settings-section",
+  ".settings-app-info",
+  ".album-cover",
+  ".album-month-heading",
+  ".empty-state",
+  ".error-state",
+].join(", ");
 
 export const reduceMotion = () =>
   typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -38,32 +48,48 @@ function pinSnapshot(side: "old" | "new") {
   root.setProperty(`--route-${side}-height`, `${bounds?.height ?? 0}px`);
 }
 
-/** The pieces of the page that just came in rise in a short stagger; the class goes once that is over. */
+/** The rows of `scope`: the outermost CASCADE_ROWS matches, or the page's own blocks when it has none (forms). */
+function rowsOf(scope: HTMLElement): HTMLElement[] {
+  const matches = [
+    ...(scope.matches(CASCADE_ROWS) ? [scope] : []),
+    ...scope.querySelectorAll<HTMLElement>(CASCADE_ROWS),
+  ].filter((element) => !element.parentElement?.closest(CASCADE_ROWS) || element === scope);
+  if (matches.length) return matches;
+  const blocks = scope.matches(".page-content") ? scope : scope.querySelector<HTMLElement>(".page-content");
+  return blocks
+    ? Array.from(blocks.children).filter((child): child is HTMLElement => child instanceof HTMLElement)
+    : [scope];
+}
+
+/** kondo cascadeRows(): the rows in view rise in one by one. */
+export function cascadeRows(rows: HTMLElement[]) {
+  if (reduceMotion()) return;
+  const height = window.innerHeight;
+  rows
+    .filter((row) => {
+      const top = row.getBoundingClientRect().top;
+      // 画面に留まる帯（保存バーなど）は動かさない。
+      const position = getComputedStyle(row).position;
+      return top < height + 20 && top > -200 && position !== "fixed" && position !== "sticky";
+    })
+    .forEach((row, index) =>
+      spring(
+        row,
+        [
+          { transform: "translateY(34px) scale(.95)", opacity: 0 },
+          { transform: "none", opacity: 1 },
+        ],
+        "boing",
+        { delay: 60 + index * 40, fill: "backwards" },
+      ),
+    );
+}
+
+/** A page that just came in: its rows cascade, or, while a skeleton stands in, the content does once it loads. */
 export function markPageEnter() {
   const page = document.querySelector<HTMLElement>(".route-background");
-  if (!page || reduceMotion()) return;
-  page.classList.remove(ENTER_CLASS);
-  void page.offsetWidth;
-  page.classList.add(ENTER_CLASS);
-  window.clearTimeout(enterTimer);
-  const generation = ++enterGeneration;
-  // 上がっている途中の部品があれば、終わるのを待ってから外す（途中で外すと元の位置へ跳ぶ）。
-  const finish = () => {
-    if (generation !== enterGeneration) return;
-    const rising = page
-      .getAnimations({ subtree: true })
-      .filter(
-        (animation) => (animation as CSSAnimation).animationName === "page-rise" && animation.playState === "running",
-      );
-    if (rising.length) {
-      void Promise.allSettled(rising.map((animation) => animation.finished)).then(finish);
-      return;
-    }
-    page.classList.remove(ENTER_CLASS);
-    for (const element of revealedDuringEnter) element.style.removeProperty("animation");
-    revealedDuringEnter.clear();
-  };
-  enterTimer = window.setTimeout(finish, 1100);
+  if (!page || page.querySelector(".page-skeleton")) return;
+  cascadeRows(rowsOf(page));
 }
 
 /** Remembers the link a click is about to follow, so the router's navigate can tell a page link from a dock tab. */
@@ -109,7 +135,7 @@ export function installRouteMotion(router: { navigate: Navigate }) {
   };
 }
 
-/** Runs inside the router's view-transition update: top of the new page, pin its snapshot, start the stagger. */
+/** Runs inside the router's view-transition update: top of the new page, pin its snapshot, start the cascade. */
 export function useRouteEnter() {
   const location = useLocation();
   const type = useNavigationType();
@@ -133,14 +159,7 @@ const isSkeleton = (node: Node) =>
   node instanceof HTMLElement &&
   (node.matches(".page-skeleton") || node.querySelector(":scope > .page-skeleton") !== null);
 
-/** The elements to raise where a skeleton went: the new siblings, or the rows of a single new list. */
-export function revealTargets(added: HTMLElement[]): HTMLElement[] {
-  if (added.length !== 1) return added;
-  const rows = Array.from(added[0].children).filter((child): child is HTMLElement => child instanceof HTMLElement);
-  return rows.length > 1 ? rows : added;
-}
-
-/** When a skeleton is replaced by the loaded content, the content rises in its place in a short stagger. */
+/** When a skeleton is replaced by the loaded content, the content's rows cascade in its place. */
 export function installSkeletonReveal() {
   if (typeof MutationObserver === "undefined") return () => {};
   const observer = new MutationObserver((records) => {
@@ -155,25 +174,17 @@ export function installSkeletonReveal() {
         .filter((record) => record.target === parent)
         .flatMap((record) => Array.from(record.addedNodes))
         .filter((node): node is HTMLElement => node instanceof HTMLElement && node.isConnected && !isSkeleton(node));
-      // ページの上昇（CSS）と重なると、片方が終わったときにもう片方の途中の位置へ跳ぶ。中身は reveal だけで動かす。
-      if (document.querySelector(`.route-background.${ENTER_CLASS}`))
-        for (const element of [...added, ...revealTargets(added)]) {
-          element.style.animation = "none";
-          revealedDuringEnter.add(element);
-        }
-      revealTargets(added)
-        .slice(0, 12)
-        .forEach((element, index) =>
-          element.animate?.(
-            [
-              { opacity: 0, transform: "translateY(8px)" },
-              { opacity: 1, transform: "none" },
-            ],
-            { duration: 420, delay: Math.min(index, 6) * 45, easing: "cubic-bezier(.22,.72,.18,1)", fill: "backwards" },
-          ),
-        );
+      cascadeRows(added.flatMap((element) => (element.matches(CASCADE_ROWS) ? [element] : rowsOrSelf(element))));
     }
   });
   observer.observe(document.body, { childList: true, subtree: true });
   return () => observer.disconnect();
+}
+
+function rowsOrSelf(element: HTMLElement): HTMLElement[] {
+  const rows = Array.from(element.querySelectorAll<HTMLElement>(CASCADE_ROWS)).filter((row) => {
+    const outer = row.parentElement?.closest(CASCADE_ROWS);
+    return !outer || !element.contains(outer);
+  });
+  return rows.length ? rows : [element];
 }

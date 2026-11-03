@@ -1,7 +1,7 @@
 import { rememberPostOrigin } from "../post-modal";
 import { VideoBadge } from "./VideoBadge";
 import { commentNavigationState } from "../comment-navigation";
-import { CalendarDays, Camera, MessageCircle, Upload } from "lucide-react";
+import { CalendarDays, Camera, ChevronRight, MessageCircle, Upload } from "lucide-react";
 import { Link } from "react-router-dom";
 import type { Post } from "../../shared/types";
 import { useSeenTracking } from "../hooks/useSeenTracking";
@@ -37,7 +37,6 @@ export function PostCard({
   const latestComment = post.comments.at(-1);
   const commentCount = post.commentCount ?? post.comments.length;
   const mediaCount = post.mediaCount ?? post.media.length;
-  const commentLinkLabel = commentCount === 0 ? "コメントを書く" : `コメント${commentCount}件`;
   const date = post.capturedAt ?? post.publishedAt;
   const dateLabel = post.capturedAt ? "撮影日" : "投稿日";
   return (
@@ -62,6 +61,10 @@ export function PostCard({
             {post.authorAvatarUrl ? <img src={post.authorAvatarUrl} alt="" /> : post.authorName.slice(0, 1)}
           </span>
           <strong className="post-author-name">{post.authorName}</strong>
+          <time className="post-date" dateTime={date ?? undefined} aria-label={`${dateLabel} ${formatPostDate(date)}`}>
+            {post.capturedAt ? <Camera aria-hidden /> : <Upload aria-hidden />}
+            <span>{formatPostDate(date)}</span>
+          </time>
         </span>
         {(showContext ? post.eventTitle || post.sceneTitle : post.sceneTitle) && (
           <span className="post-context">
@@ -97,21 +100,28 @@ export function PostCard({
             {post.caption}
           </Link>
         )}
+        {/* 書く入口と読む入口を分ける。どちらもカードが投稿ページへ広がり、書くときはそのまま持ち上がる。 */}
         <div className="post-engagement">
           <Link
-            className="comment-count-link"
+            className="comment-write-link"
             to={`/posts/${post.id}`}
-            state={commentNavigationState(commentCount === 0 ? "write" : "read", postPageState)}
-            aria-label={commentCount === 0 ? commentLinkLabel : `${commentLinkLabel}を開く`}
+            state={commentNavigationState("write", postPageState)}
           >
             <MessageCircle aria-hidden />
-            <span>{commentLinkLabel}</span>
+            <span>コメントする</span>
           </Link>
+          {commentCount > 0 && (
+            <Link
+              className="comment-count-link"
+              to={`/posts/${post.id}`}
+              state={commentNavigationState("read", postPageState)}
+              aria-label={`コメント${commentCount}件を開く`}
+            >
+              <span>コメント{commentCount}件</span>
+              <ChevronRight aria-hidden />
+            </Link>
+          )}
           <SeenBy users={post.seenBy} />
-          <time className="post-date" dateTime={date ?? undefined} aria-label={`${dateLabel} ${formatPostDate(date)}`}>
-            {post.capturedAt ? <Camera aria-hidden /> : <Upload aria-hidden />}
-            <span>{formatPostDate(date)}</span>
-          </time>
         </div>
         {latestComment && (
           <div className="post-comment-section">

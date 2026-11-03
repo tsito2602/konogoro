@@ -28,6 +28,14 @@ export const mainNavigationItems = [
   { to: "/settings", label: "設定", description: "表示や通知などを変更する", icon: Settings },
 ] as const;
 
+/** ドックに渡すタブ。投稿ページのドックも同じタブへ形を戻すので共有する。 */
+export const mainDockItems = mainNavigationItems.map(({ icon: Icon, ...item }) => ({
+  to: item.to,
+  label: item.label,
+  end: "end" in item && item.end,
+  icon: <Icon />,
+}));
+
 const viewerPattern = /^\/posts\/[^/]+\/media\//;
 export function outletKey(pathname: string, locationKey: string): string {
   return viewerPattern.test(pathname) ? "media-viewer" : locationKey;
@@ -96,6 +104,8 @@ export function AppLayout() {
     postPageNavigation && showPostPage && !!backgroundContent && backgroundSnapshot.routeIdentity !== routeIdentity;
   const modal = showPostPage && retainBackground;
   const hideNavigation = viewerPattern.test(pathname);
+  // 投稿ページは自分のドックを持つ（ダイアログの上に出すため）。同じ形を引き継ぐので画面のドックは1つに見える。
+  const postDock = /^\/posts\/(?!new$)[^/]+$/.test(pathname);
   usePageJelly(Boolean(currentUser) && !hideNavigation);
   const viewerEntryRef = useRef<{ path: string; rect: DOMRect } | null>(null);
   useLayoutEffect(() => {
@@ -230,17 +240,7 @@ export function AppLayout() {
           </nav>
         )}
         {!hideNavigation && <UpdateNotice />}
-        {!hideNavigation && (
-          <MainDock
-            measureRef={navigationHeightRef}
-            items={mainNavigationItems.map(({ icon: Icon, ...item }) => ({
-              to: item.to,
-              label: item.label,
-              end: "end" in item && item.end,
-              icon: <Icon />,
-            }))}
-          />
-        )}
+        {!hideNavigation && !postDock && <MainDock measureRef={navigationHeightRef} items={mainDockItems} />}
         {!hideNavigation &&
           canCreatePost(currentUser) &&
           canManageEvent(currentUser) &&

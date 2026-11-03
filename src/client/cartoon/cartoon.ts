@@ -352,19 +352,22 @@ export function morph(from: Box, to: Box, o: MorphOptions = {}) {
 
 // ===== poof: flatten, then burst into the logo's dots =====
 
-let fxLayer: SVGSVGElement | null = null;
-function fx() {
-  if (fxLayer?.isConnected) return fxLayer;
-  fxLayer = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  fxLayer.setAttribute("class", "cartoon-fx");
-  fxLayer.setAttribute("aria-hidden", "true");
-  document.body.appendChild(fxLayer);
-  return fxLayer;
+const fxLayers = new WeakMap<Element, SVGSVGElement>();
+/** The dots' layer in `parent` (the body, or an open modal dialog, which sits above the body). */
+function fx(parent: Element = document.body) {
+  const existing = fxLayers.get(parent);
+  if (existing?.isConnected) return existing;
+  const layer = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+  layer.setAttribute("class", "cartoon-fx");
+  layer.setAttribute("aria-hidden", "true");
+  parent.appendChild(layer);
+  fxLayers.set(parent, layer);
+  return layer;
 }
 /** Dots fly out from (cx, cy) in viewport px and shrink away (520 ms). */
-export function burst(cx: number, cy: number, n = 10, spread = 70, color = "var(--p-ink)") {
+export function burst(cx: number, cy: number, n = 10, spread = 70, color = "var(--p-ink)", parent?: Element) {
   if (RM()) return;
-  const layer = fx();
+  const layer = fx(parent);
   for (let i = 0; i < n; i++) {
     const a = (i / n) * Math.PI * 2 + Math.random() * 0.5,
       d = spread * (0.6 + Math.random() * 0.6),

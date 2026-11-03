@@ -229,3 +229,34 @@ body:has(.fuse-add-overlay) .floating-add-button {
     transition: none;
   }
 }
+
+/* 投稿ページのドック（pages/PostDetailPage.tsx）。ダイアログの上に出すため投稿ページが自分で持つが、
+   画面のドックの形を引き継ぐので1つのドックが形を変えるように見える。
+   左＝戻る、中央＝コメントする（墨色の島）、右＝…。書いているあいだは中央の送信ボタンだけになる。 */
+@media (max-width: 1023px) {
+  .main-dock-host.post-dock {
+    z-index: 52;
+    bottom: var(--keyboard-inset, 0px);
+    transition: bottom 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+}
+.cdock-group.cdock-center {
+  left: 0;
+  right: 0;
+  width: max-content;
+  margin: 0 auto;
+}
+.cdock-group.cdock-center > :is(button, a) {
+  gap: 7px;
+  padding: 0 24px 0 20px;
+}
+.cdock-group.cdock-send > button {
+  min-width: 132px;
+  padding: 0 28px;
+  letter-spacing: 0.1em;
+}
+@media (prefers-reduced-motion: reduce) {
+  .main-dock-host.post-dock {
+    transition: none;
+  }
+}

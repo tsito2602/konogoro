@@ -682,19 +682,6 @@ a.icon-button {
 .skeleton-post-detail .conversation h2 {
   width: 100%;
 }
-.skeleton-comment-composer {
-  display: grid;
-  grid-template-columns: 34px minmax(0, 1fr) 40px;
-  gap: 8px;
-  align-items: center;
-}
-.skeleton-comment-composer .skeleton-circle:last-child {
-  width: 40px;
-  height: 40px;
-}
-.skeleton-comment-composer .skeleton-line {
-  height: 40px;
-}
 .skeleton-form-group {
   display: flex;
   flex-direction: column;
@@ -4088,66 +4075,6 @@ textarea:focus {
 .comment-list .comment > button svg {
   width: 17px;
 }
-.comment-composer {
-  position: relative;
-  z-index: 3;
-  flex: 0 0 auto;
-  width: 100%;
-  padding: 8px 12px max(8px, env(safe-area-inset-bottom));
-  border-top: 1px solid var(--separator);
-  background: var(--header-background);
-  backdrop-filter: blur(20px) saturate(180%);
-}
-.comment-composer .form-error {
-  margin: 0 44px 6px;
-  font-size: 0.75rem;
-}
-.comment-form {
-  display: grid;
-  grid-template-columns: 34px minmax(0, 1fr) 40px;
-  gap: 8px;
-  align-items: center;
-}
-.comment-composer-avatar {
-  width: 34px;
-  height: 34px;
-  display: grid;
-  place-items: center;
-  overflow: hidden;
-  border-radius: 50%;
-  background: var(--placeholder);
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-.comment-composer-avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-.comment-form input {
-  min-height: 40px;
-  padding: 8px 13px;
-  border-radius: var(--pill);
-  background: var(--surface-muted);
-}
-.comment-form button {
-  width: 40px;
-  height: 40px;
-  padding: 0;
-  display: grid;
-  place-items: center;
-  border: 0;
-  border-radius: 50%;
-  color: var(--accent-contrast);
-  background: var(--accent);
-  cursor: pointer;
-}
-.comment-form button svg {
-  width: 19px;
-  height: 19px;
-  transform: translateX(1px);
-}
-
 .media-viewer {
   --viewer-thumbnail-height: calc(68px + env(safe-area-inset-bottom));
   height: 100dvh;
@@ -4946,8 +4873,7 @@ textarea:focus {
     filter: none;
     transform: none;
   }
-  .page-skeleton *,
-  .skeleton-comment-composer * {
+  .page-skeleton * {
     animation: none !important;
   }
   *,
@@ -4982,6 +4908,44 @@ textarea:focus {
 }
 .post-date {
   margin-left: 0;
+}
+/* カードの日付は投稿者の行の右端。 */
+.post-author-row > .post-date {
+  min-height: 0;
+  margin-left: auto;
+  flex: none;
+  gap: 5px;
+  font-size: 0.8125rem;
+}
+.post-author-row > .post-date svg {
+  width: 14px;
+  height: 14px;
+}
+/* 書く入口（コメントする）と読む入口（コメントn件 ›）。 */
+.comment-write-link {
+  min-height: 44px;
+  padding: 4px 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--carbon);
+  font-size: 0.9375rem;
+  font-weight: 700;
+}
+.comment-write-link svg {
+  width: 21px;
+  height: 21px;
+  stroke-width: 2;
+}
+.post-card .post-engagement .comment-count-link {
+  gap: 2px;
+  color: var(--ash);
+  font-size: 0.875rem;
+  font-weight: 700;
+}
+.post-card .post-engagement .comment-count-link svg {
+  width: 15px;
+  height: 15px;
 }
 .post-card :is(.post-head, .media-cell):focus-visible {
   outline-offset: -3px;

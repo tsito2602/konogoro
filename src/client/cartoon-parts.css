@@ -114,11 +114,6 @@
   outline-offset: 0;
   box-shadow: none;
 }
-:root .comment-form input {
-  min-height: 44px;
-  border-radius: 999px;
-  padding: 10px 16px;
-}
 :root :is(.form-field, .settings-field, .field) > span:first-child,
 :root .form-label,
 :root form label > span:first-child:not(:only-child) {

@@ -21,6 +21,7 @@ import { SettingsPage } from "./pages/SettingsPage";
 import { installPromptStore } from "./install-prompt";
 import { initializeTheme } from "./theme";
 import { installSpringTokens } from "./cartoon/cartoon";
+import { installRouteMotion, installSkeletonReveal } from "./route-motion";
 import "./cartoon/fonts.css";
 import "./cartoon/theme.css";
 import "./cartoon/dock.css";
@@ -40,6 +41,7 @@ import "./invitation-material.css";
 import "./common-material.css";
 import "./entry-material.css";
 import "./dock-layout.css";
+import "./route-motion.css";
 import { initializeInteractionFeedback } from "./interaction-feedback";
 import { startUpdateChecks } from "./app-update";
 
@@ -53,6 +55,8 @@ const stopInteractionFeedback = initializeInteractionFeedback();
 hotModule?.dispose(stopInteractionFeedback);
 const stopUpdateChecks = startUpdateChecks();
 hotModule?.dispose(stopUpdateChecks);
+const stopSkeletonReveal = installSkeletonReveal();
+hotModule?.dispose(stopSkeletonReveal);
 
 const router = createBrowserRouter([
   {
@@ -79,6 +83,7 @@ const router = createBrowserRouter([
     ],
   },
 ]);
+installRouteMotion(router as unknown as Parameters<typeof installRouteMotion>[0]);
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

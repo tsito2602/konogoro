@@ -1,0 +1,174 @@
+/* ページ遷移（kondo src/web/styles.css の route-content と page-rise を移したもの）。
+   ボトムナビ、＋ボタン、更新のお知らせは動かさず、ページの中身だけを入れ替える。 */
+:root {
+  view-transition-name: none;
+}
+.route-background {
+  view-transition-name: route-content;
+  background: var(--p-paper);
+}
+.floating-add-button {
+  view-transition-name: floating-add;
+}
+.update-notice-host {
+  view-transition-name: update-notice;
+}
+::view-transition-group(floating-add),
+::view-transition-group(update-notice) {
+  animation: none;
+  z-index: 1;
+}
+::view-transition-old(floating-add),
+::view-transition-old(update-notice) {
+  display: none;
+}
+::view-transition-new(floating-add),
+::view-transition-new(update-notice) {
+  animation: none;
+  mix-blend-mode: normal;
+}
+::view-transition-group(route-content) {
+  animation: none;
+  transform: none;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+::view-transition-image-pair(route-content) {
+  isolation: isolate;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+::view-transition-old(route-content) {
+  top: var(--route-old-top);
+  left: var(--route-old-left);
+  width: var(--route-old-width);
+  height: var(--route-old-height);
+  animation: route-out 170ms cubic-bezier(0.33, 1, 0.68, 1) both;
+  mix-blend-mode: normal;
+}
+::view-transition-new(route-content) {
+  top: var(--route-new-top);
+  left: var(--route-new-left);
+  width: var(--route-new-width);
+  height: var(--route-new-height);
+  animation: route-in 170ms cubic-bezier(0.33, 1, 0.68, 1) both;
+  mix-blend-mode: normal;
+}
+/* スナップショットは固定表示の部品より上に描かれるため、ボトムナビの範囲には描かない。 */
+::view-transition {
+  pointer-events: none;
+  clip-path: inset(0 0 var(--route-clip-bottom, 0px) 0);
+}
+@media (max-width: 1023px) {
+  :root {
+    --route-clip-bottom: var(--bottom-nav-height, 0px);
+  }
+}
+@keyframes route-out {
+  to {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+@keyframes route-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* 入ってきたページの部品が、少しずつずれて下から上がる。
+   一覧はまとめて上げずに、中の1件ずつを上げる。 */
+@keyframes page-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+.route-page-enter .page-content > :not(.feed, .event-list-section, .activity-list, .change-save-bar),
+.route-page-enter .page-content > :is(.feed, .event-list-section, .activity-list) > * {
+  animation: page-rise 640ms cubic-bezier(0.22, 0.72, 0.18, 1) both;
+  animation-delay: 330ms;
+}
+.route-page-enter .page-content > :nth-child(1),
+.route-page-enter .page-content > * > :nth-child(1) {
+  animation-delay: 50ms;
+}
+.route-page-enter .page-content > :nth-child(2),
+.route-page-enter .page-content > * > :nth-child(2) {
+  animation-delay: 100ms;
+}
+.route-page-enter .page-content > :nth-child(3),
+.route-page-enter .page-content > * > :nth-child(3) {
+  animation-delay: 150ms;
+}
+.route-page-enter .page-content > :nth-child(4),
+.route-page-enter .page-content > * > :nth-child(4) {
+  animation-delay: 200ms;
+}
+.route-page-enter .page-content > :nth-child(5),
+.route-page-enter .page-content > * > :nth-child(5) {
+  animation-delay: 245ms;
+}
+.route-page-enter .page-content > :nth-child(6),
+.route-page-enter .page-content > * > :nth-child(6) {
+  animation-delay: 290ms;
+}
+
+/* スケルトン：すぐ読み終わるときは出さず、120ms 待ってから静かに現れる。
+   光の帯は画面全体で1本にそろえて流す（kondo の bk-shimmer と同じ色と速さ）。 */
+@keyframes skeleton-appear {
+  from {
+    opacity: 0;
+  }
+}
+.page-skeleton {
+  animation: skeleton-appear 240ms ease-out 120ms both;
+}
+.skeleton-line,
+.skeleton-circle,
+.skeleton-square,
+.skeleton-field,
+.skeleton-tile,
+.skeleton-viewers .member-last-viewed-avatar {
+  background: linear-gradient(90deg, var(--p-soft) 30%, var(--p-line) 50%, var(--p-soft) 70%) var(--p-soft);
+  background-size: 200vw 100%;
+  background-attachment: fixed;
+  animation: skeleton-sweep 1.2s linear infinite;
+}
+@keyframes skeleton-sweep {
+  from {
+    background-position: 100vw 0;
+  }
+  to {
+    background-position: -100vw 0;
+  }
+}
+
+/* イベントカードのスケルトンには写真が無いので、文字を読ませるための暗い影も付けない。 */
+.page-skeleton .event-card::after {
+  display: none;
+}
+
+/* 写真ビューアーは暗い面なので、帯も白の薄い重ねにする。 */
+.skeleton-viewer :is(.skeleton-line, .skeleton-circle, .skeleton-square, .skeleton-field, .skeleton-tile) {
+  background-image: linear-gradient(90deg, #ffffff12 30%, #ffffff26 50%, #ffffff12 70%);
+  background-color: #ffffff12;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*),
+  .route-page-enter *,
+  .page-skeleton,
+  .skeleton-line,
+  .skeleton-circle,
+  .skeleton-square,
+  .skeleton-field,
+  .skeleton-tile,
+  .skeleton-viewers .member-last-viewed-avatar {
+    animation: none !important;
+  }
+}

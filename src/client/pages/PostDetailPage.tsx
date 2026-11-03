@@ -485,15 +485,13 @@ function PostPage({
     const origin = postOrigin(postId);
     const card = modal ? postOriginCard(postId) : null;
     const write = startComposing && canCompose;
-    const lift = () => {
-      if (!write) return null;
-      setComposing(true);
-      return motion.liftHeight();
-    };
+    const height = write ? motion.liftHeight() : null;
+    // ドックが送信ボタンに変わるのも、ページが画面を覆って持ち上がり始めてから。
+    const startLift = () => setComposing(true);
     if (card && !RM()) {
-      // カードの四辺が広がって投稿ページになり、書くときはそのまま持ち上がる。
+      // カードの四辺が広がって投稿ページになり、書くときは覆いきったところから止まらずに持ち上がる。
       backdrop(0, 1, 360);
-      void motion.enter(card, lift);
+      void motion.enter(card, height, startLift);
     } else {
       if (modal && panel.animate && !RM()) {
         const transform = origin
@@ -512,8 +510,17 @@ function PostPage({
           { duration: 260, easing: "cubic-bezier(.2,.8,.2,1)" },
         );
       }
-      const height = lift();
-      if (height) void motion.lift(height);
+      if (height) {
+        // ズームで開くときも、ページが開ききってから持ち上げる（下にタイムラインを見せない）。
+        const opened = animationRef.current?.finished ?? Promise.resolve();
+        void opened
+          .catch(() => {})
+          .then(() => {
+            if (motionRef.current !== motion) return;
+            startLift();
+            void motion.lift(height);
+          });
+      }
     }
     return () => {
       animationRef.current?.cancel();
@@ -534,7 +541,7 @@ function PostPage({
   // キーボードが出入りしたら、書き込み欄とページをその上へ載せ直す。
   useEffect(() => {
     const motion = motionRef.current;
-    if (!composing || !motion) return;
+    if (!composing || !motion || motion.entering) return;
     void motion.lift(motion.liftHeight(keyboard));
   }, [composing, keyboard]);
   useEffect(() => {

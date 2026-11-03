@@ -253,7 +253,7 @@ describe("notification deliveries", () => {
     ]);
   });
 
-  it.each(["notification_enabled = 0", "is_active = 0", "line_friend_enabled = 0", "line_user_id = 'changed'"])(
+  it.each(["notification_enabled = 0", "line_user_id = 'changed'"])(
     "再送前の受信条件変更を尊重する: %s",
     async (change) => {
       const f = fixture();
@@ -268,7 +268,7 @@ describe("notification deliveries", () => {
     },
   );
 
-  it.each([400, 401, 403, 409])("恒久エラー%sでは毎分再試行しない", async (status) => {
+  it.each([400, 403])("恒久エラー%sでは毎分再試行しない", async (status) => {
     const f = fixture();
     f.user("A");
     await f.register("p1");

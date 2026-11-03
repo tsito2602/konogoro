@@ -1,34 +1,17 @@
-/* Shared press feedback. Individual scale preserves existing translate/rotate transforms. */
+/* Shared press feedback. The squish itself (scale 2-v, v on springs) comes from cartoon-kit via
+   interaction-feedback.ts; this file keeps the colour/opacity states that go with it. */
 :root {
   --feedback-press: 100ms;
   --feedback-release: 160ms;
-  --feedback-scale: 0.97;
 }
 :is(button, a[href], label, summary, [role="button"], [role="tab"]) {
   transition:
-    scale var(--feedback-release) ease-out,
     opacity var(--feedback-release) ease-out,
     background-color var(--feedback-release) ease-out,
     border-color var(--feedback-release) ease-out,
     color var(--feedback-release) ease-out;
 }
-:where(
-  .event-card,
-  .media-cell,
-  .album-grid a,
-  .album-cover,
-  .thumbnail-strip a,
-  .thumbnail-strip button,
-  .post-head,
-  .post-caption,
-  .post-comment-preview,
-  .settings-menu-row,
-  .photo-add
-) {
-  --feedback-scale: 0.985;
-}
 [data-feedback-pressed]:where(:not(:disabled, [aria-disabled="true"], [aria-busy="true"])) {
-  scale: var(--feedback-scale);
   opacity: 0.88;
   transition-duration: var(--feedback-press);
 }
@@ -42,17 +25,6 @@
   .thumbnail-strip button
 )[data-feedback-pressed] {
   opacity: 1;
-}
-:where(
-  .notification-toggle,
-  .theme-setting label,
-  .role-guide label,
-  .text-button,
-  .more-comments-link,
-  .comment-count-link,
-  p a
-)[data-feedback-pressed] {
-  scale: 1;
 }
 :where(.theme-setting label, .role-guide label)[data-feedback-pressed] {
   background-color: var(--surface-muted);
@@ -79,24 +51,14 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  [data-feedback-pressed] {
-    scale: 1 !important;
-  }
   .toast-success svg {
     animation: none;
   }
 }
 
-/* Preserve readable text and all suppressed/native gesture states. */
-:is(.post-caption, .post-comment-preview)[data-feedback-pressed] {
-  scale: 1;
-}
+/* Preserve all suppressed/native gesture states. */
 :is([aria-busy="true"], [aria-disabled="true"], [inert], fieldset:disabled) [data-feedback-pressed] {
-  scale: 1;
   opacity: 1;
-}
-.cover-grid button {
-  --feedback-scale: 0.985;
 }
 .cover-grid button[data-feedback-pressed] {
   opacity: 1;
@@ -106,4 +68,38 @@
   [data-feedback-pressed]:where(:not(:disabled, [aria-disabled="true"], [aria-busy="true"])) {
     opacity: 0.88;
   }
+}
+
+/* 振動（haptics.ts、kondo から移したもの）。
+   iPhone haptics: a transparent label over each tappable surface toggles a
+   hidden switch the finger never touches, so touches on it can still scroll. */
+:where([data-haptic-host]) {
+  position: relative;
+}
+[data-haptic-host] > label.haptic-touch {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: block;
+  margin: 0;
+  padding: 0;
+  border-radius: inherit;
+  background: none;
+  cursor: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+label.haptic-touch > input.haptic-touch {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 1px;
+  min-width: 0;
+  height: 1px;
+  min-height: 0;
+  margin: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+:disabled > label.haptic-touch {
+  display: none;
 }

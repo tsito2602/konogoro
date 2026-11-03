@@ -20,10 +20,6 @@ export function selectRangeDate(range: DateRange, phase: "start" | "end", date: 
   return { startDate: range.startDate, endDate: date };
 }
 
-export function previewRange(range: DateRange, phase: "start" | "end", hover: string): DateRange {
-  return phase === "end" && range.startDate && hover ? selectRangeDate(range, phase, hover) : range;
-}
-
 export function rangeRows(days: (string | null)[], range: DateRange) {
   return Array.from({ length: 6 }, (_, row) => {
     const columns = Array.from({ length: 7 }, (_, col) => col).filter((col) => {

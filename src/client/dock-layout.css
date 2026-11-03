@@ -1,0 +1,231 @@
+/* スマホ・タブレットのボトムナビは cartoon-kit の親指ドック（components/MainDock.tsx）。
+   寸法は cartoon-kit docs/DOCK.md：島の高さ 56px、左右 16px、下は max(8px, safe area)。
+   PC の左ナビ（.tab-bar）は 1024px 以上だけで使う。 */
+:root {
+  --dock-height: 56px;
+  --dock-safe-bottom: max(8px, env(safe-area-inset-bottom));
+  --dock-bottom-gap: 0px;
+  --dock-max-width: 100%;
+}
+.main-dock-host {
+  display: none;
+}
+@media (max-width: 1023px) {
+  .tab-bar {
+    display: none;
+  }
+  .main-dock-host {
+    display: block;
+    position: fixed;
+    z-index: 30;
+    left: env(safe-area-inset-left);
+    right: env(safe-area-inset-right);
+    bottom: 0;
+    height: calc(var(--dock-height) + var(--dock-safe-bottom));
+    padding-bottom: var(--dock-safe-bottom);
+    pointer-events: none;
+  }
+  .main-dock-host .thumb-dock {
+    position: relative;
+    width: min(100%, var(--dock-max-width));
+    height: var(--dock-height);
+    margin: 0 auto;
+    color: var(--p-ink);
+  }
+  /* アイコンの下にページ名（cartoon-kit はアイコンだけだが、このごろは親の世代も使うため）。 */
+  .main-dock-host .cdock-tabs > a {
+    flex-direction: column;
+    gap: 2px;
+    line-height: 1;
+  }
+  .main-dock-host .cdock-tabs svg {
+    width: 22px;
+    height: 22px;
+  }
+  .main-dock-label {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0;
+    white-space: nowrap;
+  }
+  /* ドックと ＋ の後ろで画面がふわっと消える（cartoon-kit の dock.css と同じ）。 */
+  .app-shell:has(> .main-dock-host)::after {
+    content: "";
+    position: fixed;
+    z-index: 23;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: calc(var(--dock-height) + var(--dock-safe-bottom) + 22px + 58px + 16px);
+    background: linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--p-paper) 0%, transparent) 0%,
+      color-mix(in srgb, var(--p-paper) 55%, transparent) 45%,
+      color-mix(in srgb, var(--p-paper) 92%, transparent) 100%
+    );
+    pointer-events: none;
+  }
+}
+
+/* 更新のお知らせ（components/UpdateNotice.tsx）：kondo と同じく、ドックの 12px 上に浮かぶ黒い帯。 */
+:root {
+  --update-notice-space: 72px;
+}
+.update-notice-host {
+  position: fixed;
+  z-index: 35;
+  left: max(16px, env(safe-area-inset-left));
+  right: max(16px, env(safe-area-inset-right));
+  bottom: calc(var(--bottom-nav-height, 64px) + 12px);
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+.update-notice {
+  pointer-events: auto;
+  width: min(100%, 520px);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 10px 10px 16px;
+  border: 0;
+  border-radius: 24px;
+  background: var(--p-ink);
+  color: var(--p-paper);
+  font: inherit;
+  font-family: var(--f-body);
+  line-height: 1.7;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 14px 30px -12px #0007;
+}
+.update-notice-spark {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--p-paper);
+  color: var(--p-ink);
+}
+.update-notice-spark svg {
+  width: 18px;
+  height: 18px;
+}
+.update-notice-text {
+  flex: 1;
+  min-width: 0;
+}
+.update-notice-text b {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+}
+.update-notice-text small {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 700;
+  opacity: 0.7;
+}
+.update-notice-action {
+  flex: none;
+  height: 40px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  border-radius: 99px;
+  background: var(--p-paper);
+  color: var(--p-ink);
+  font-size: 13.5px;
+  font-weight: 700;
+}
+/* お知らせが出ているあいだ、＋ボタン・追加メニュー・トーストはその上へ移る。 */
+:root[data-app-update="waiting"] :is(.floating-add-button, .add-menu, .add-menu-dialog, .toast) {
+  margin-bottom: var(--update-notice-space);
+}
+@media (min-width: 1024px) {
+  .update-notice-host {
+    left: calc(216px + 32px);
+    right: 32px;
+    bottom: 24px;
+  }
+}
+
+/* ＋メニュー（components/FuseAddMenu.tsx、uchiwake の fuse-add-menu を移したもの）。
+   箱を使わず、名前とアイコンだけを右にそろえて＋の上へ積む。 */
+.fuse-add-overlay {
+  position: fixed;
+  z-index: 100;
+  inset: 0;
+}
+.fuse-add-veil {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--p-paper) 46%, transparent);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+.fuse-add-options {
+  position: absolute;
+  right: max(16px, env(safe-area-inset-right));
+  bottom: calc(var(--bottom-nav-height, 64px) + 22px);
+  max-width: calc(100vw - 32px);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  pointer-events: none;
+}
+.fuse-add-options:focus {
+  outline: none;
+}
+.fuse-add-options a {
+  width: max-content;
+  max-width: 100%;
+  min-height: var(--fuse-column, 58px);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px;
+  color: var(--p-ink);
+  font-size: 17px;
+  font-weight: 700;
+  pointer-events: auto;
+}
+.fuse-add-options a:focus-visible {
+  outline: 2px solid var(--p-ink);
+  outline-offset: -2px;
+  border-radius: 12px;
+}
+.fuse-label {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  text-align: right;
+  transform-origin: right center;
+}
+.fuse-drop {
+  width: var(--fuse-column, 58px);
+  display: grid;
+  place-items: center;
+  flex: none;
+  font-style: normal;
+  will-change: transform;
+}
+.fuse-drop svg {
+  width: 27px;
+  height: 27px;
+  stroke-width: 1.8;
+}
+.floating-add-button {
+  transition: opacity 160ms;
+}
+body:has(.fuse-add-overlay) .floating-add-button {
+  opacity: 0;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .floating-add-button {
+    transition: none;
+  }
+}

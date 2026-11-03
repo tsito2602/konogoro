@@ -488,12 +488,12 @@ app.get("/auth/line/callback", async (c) => {
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <title>ログイン完了 — このごろ</title>
   <style>
-    :root { color: #1d1d1f; background: #f5f5f7; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    :root { color: #000; background: #fff; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", Meiryo, sans-serif; }
     body { min-height: 100dvh; margin: 0; display: grid; place-items: center; }
     main { max-width: 360px; padding: 32px 24px; text-align: center; }
     img { width: 112px; height: 112px; margin: -20px; }
     h1 { margin: 20px 0 10px; font-size: 24px; letter-spacing: -.02em; }
-    p { margin: 0; color: #707070; font-size: 16px; line-height: 1.6; }
+    p { margin: 0; color: #77726b; font-size: 16px; line-height: 1.6; }
   </style>
 </head>
 <body><main>

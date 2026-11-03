@@ -1,0 +1,399 @@
+/* cartoon-kit の部品の形（kondo / uchiwake の実物と同じ値）をこのごろの部品にかぶせる。
+   値の出どころ：kondo src/web/styles.css、styles/chrome.css、styles/settings.css、cartoon-kit theme.css。
+   ほかの CSS より後に読み込み、:root を付けて上書きする。 */
+:root {
+  --r-card: 20px;
+  --r-sheet: 30px;
+  --r-field: 16px;
+  --r-group: 22px;
+  --p-sheet-shadow: 0 0 0 1px var(--p-line), 0 24px 60px -20px #0005;
+}
+
+/* ── 画面の見出し（PageTop）：タブの画面は左寄せの大きな見出し、下の画面は中央の見出しと丸い戻る ── */
+:root .page-header::after {
+  display: none;
+}
+:root .page-header h1 {
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+:root .page-header.root-page .page-header-inner {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+:root .page-header.root-page .header-side:first-child {
+  display: none;
+}
+:root .page-header.root-page h1 {
+  justify-self: start;
+  text-align: left;
+  font-size: 28px;
+  font-weight: 900;
+  line-height: 1.25;
+  padding-inline: 6px;
+}
+/* 戻る・…・編集・絞り込み：44px の丸い面（kondo の .page-plus と ← の島）。 */
+:root :is(.page-header, .post-page-header) .icon-button {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--p-soft);
+  color: var(--p-ink);
+}
+:root :is(.page-header, .post-page-header) .icon-button svg {
+  width: 20px;
+  height: 20px;
+}
+:root .page-header.inverse .icon-button {
+  background: color-mix(in srgb, var(--p-paper) 22%, transparent);
+  color: #fff;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* ── ボタン（Button）：黒の丸薬形。押せないときは 50% の薄さ。枠ボタンは線のない面の丸薬形 ── */
+:root :is(.primary-button, .outline-button, .danger-button) {
+  min-height: 44px;
+  border-radius: 999px;
+  padding: 10px 20px;
+  font-size: 15px;
+  font-weight: 700;
+  box-shadow: none;
+}
+:root .primary-button {
+  background: var(--p-ink);
+  background-image: none;
+  color: var(--p-paper);
+  border: 0;
+}
+:root .primary-button.wide {
+  min-height: 50px;
+}
+:root .outline-button {
+  background: var(--p-soft);
+  color: var(--p-ink);
+  border: 0;
+}
+:root .danger-button {
+  background: var(--p-soft);
+  color: var(--p-danger);
+  border: 0;
+}
+:root :is(.primary-button, .outline-button, .danger-button):disabled {
+  background: var(--p-ink);
+  background-image: none;
+  color: var(--p-paper);
+  opacity: 0.5;
+}
+:root :is(.outline-button, .danger-button):disabled {
+  background: var(--p-soft);
+  color: var(--p-ink);
+}
+
+/* ── 入力欄（Field）：紙より少し濃い面、線なし、角丸16。ラベルは12px ── */
+:root
+  :is(input:not([type="checkbox"], [type="radio"], [type="range"], [type="file"], [type="color"]), select, textarea) {
+  border: 0;
+  border-radius: var(--r-field);
+  background-color: var(--p-soft);
+  color: var(--p-ink);
+  box-shadow: none;
+  min-height: 50px;
+  padding: 12px 14px;
+  font-size: 16px;
+}
+:root textarea {
+  min-height: 110px;
+}
+:root :is(input, select, textarea)::placeholder {
+  color: var(--p-mute);
+}
+:root :is(input:not([type="checkbox"], [type="radio"]), select, textarea):focus-visible,
+:root :is(input:not([type="checkbox"], [type="radio"]), select, textarea):focus {
+  outline: 2px solid var(--p-ink);
+  outline-offset: 0;
+  box-shadow: none;
+}
+:root .comment-form input {
+  min-height: 44px;
+  border-radius: 999px;
+  padding: 10px 16px;
+}
+:root :is(.form-field, .settings-field, .field) > span:first-child,
+:root .form-label,
+:root form label > span:first-child:not(:only-child) {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--p-ink);
+}
+
+/* ── 区切りの見出し（settings-label）：13px の太い mute、線なし ── */
+:root :is(.settings-section > h2, .event-list-section-title, .member-last-viewed > h2) {
+  margin: 20px 4px 8px;
+  padding: 0;
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1.7;
+  letter-spacing: 0;
+  color: var(--p-mute);
+  background: none;
+  border: 0;
+}
+:root .event-list-section-title::after,
+:root .event-list-section-title::before {
+  display: none;
+}
+
+/* ── 設定の行（Settings rows）：面のまとまり（角丸22）に 56px の行、区切りは細い線 ── */
+:root .settings-card {
+  border: 0;
+  border-radius: var(--r-group);
+  background: var(--p-soft);
+  box-shadow: none;
+  overflow: hidden;
+}
+:root .settings-card:not(.settings-profile, .theme-setting) > * + * {
+  border-top: 0;
+  box-shadow: 0 -1px 0 var(--p-line);
+}
+:root :is(.settings-menu-row, .setting-status, .member-row, .notification-toggle) {
+  min-height: 56px;
+  padding: 10px 16px;
+  border: 0;
+  background: none;
+}
+:root .settings-menu-row strong,
+:root .member-copy strong,
+:root .notification-toggle-copy strong {
+  font-size: 15px;
+  font-weight: 800;
+}
+:root .settings-menu-row small,
+:root .member-copy span,
+:root .notification-toggle-copy > span {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--p-mute);
+}
+:root .settings-menu-row.bordered {
+  border: 0;
+}
+:root .settings-logout strong {
+  color: var(--p-danger);
+}
+/* ログアウトはアイコンが1つだけなので「最後のアイコン（›）」の18px指定にもかかり、余白9pxで中身が0になる。行頭のアイコンと同じ40pxに戻す。 */
+:root .settings-logout > svg:first-child {
+  width: 40px;
+  height: 40px;
+  padding: 9px;
+  color: var(--p-danger);
+  background: none;
+}
+:root .settings-profile input {
+  background-color: var(--p-paper);
+}
+
+/* ── 切り替え（SegmentSelection / 外観）：面の中で選んだものだけが紙の面になる ── */
+:root .theme-setting {
+  padding: 4px;
+  border-radius: 18px;
+  background: var(--p-soft);
+}
+:root .theme-setting > div {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+}
+:root .theme-setting label {
+  height: 46px;
+  min-height: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 0;
+  border-radius: 14px;
+  background: none;
+  box-shadow: none;
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--p-mute);
+  cursor: pointer;
+}
+:root .theme-setting label > svg {
+  width: 17px;
+  height: 17px;
+  margin: 0;
+}
+:root .theme-setting label.selected {
+  background: var(--p-paper);
+  color: var(--p-ink);
+  box-shadow:
+    0 1px 0 var(--p-line),
+    0 4px 10px -6px #0005;
+}
+:root .theme-setting .theme-preview,
+:root .theme-setting label small {
+  display: none;
+}
+:root .theme-setting label strong {
+  font: inherit;
+  color: inherit;
+}
+
+/* ── 表紙のカード（TripCover）：角丸20、白い丸薬形のバッジ ── */
+:root :is(.event-card, .album-cover, .event-card-image) {
+  border-radius: var(--r-card);
+}
+:root .event-status {
+  border-radius: 999px;
+  background: #fff;
+  color: #000;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 800;
+  box-shadow: none;
+}
+
+/* ── まだないとき（Empty）：線のアイコン32、見出し17、本文13 ── */
+:root .empty-state {
+  min-height: 240px;
+  padding: 44px 16px;
+  gap: 12px;
+  color: var(--p-mute);
+}
+:root .empty-state-art {
+  width: auto;
+  height: auto;
+  margin-bottom: 8px;
+  background: none;
+  box-shadow: none;
+  transform: none;
+  border-radius: 0;
+}
+:root .empty-state-art::before,
+:root .empty-state-art::after {
+  display: none;
+}
+:root .empty-state-art svg {
+  width: 32px;
+  height: 32px;
+  stroke-width: 1.5;
+  color: var(--p-mute);
+}
+:root .empty-state h2 {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--p-ink);
+}
+:root .empty-state p {
+  font-size: 13px;
+  color: var(--p-mute);
+}
+
+/* ── お知らせ（Toast）：黒の面、角丸の島 ── */
+:root .toast {
+  border-radius: 999px;
+  background: var(--p-ink);
+  color: var(--p-paper);
+  padding: 13px 20px;
+  font-size: 13px;
+  font-weight: 700;
+  box-shadow: var(--p-dock-shadow);
+}
+
+/* ── パネル（シート・確認・期間）：角丸30、シートの影 ── */
+:root :is(.event-filter-modal, .confirmation-modal, .date-range-dialog, .pwa-guide-modal) {
+  border: 0;
+  border-radius: var(--r-sheet);
+  background: var(--p-paper);
+  box-shadow: var(--p-sheet-shadow);
+}
+:root .modal-backdrop,
+:root :is(.confirmation-modal, .date-range-dialog, .pwa-guide-modal)::backdrop {
+  background: var(--p-scrim);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* ── 「…」メニュー（TripMenuButton）：ぼかした幕の上に、名前とアイコンを右にそろえて並べる ── */
+:root .post-menu-backdrop {
+  background: var(--p-scrim);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+:root .post-menu-backdrop {
+  z-index: 70;
+  animation: cartoon-veil 300ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+:root .post-action-menu {
+  position: fixed;
+  z-index: 71;
+  width: auto;
+  display: grid;
+  justify-items: end;
+  animation: none;
+  border: 0;
+  background: none;
+  box-shadow: none;
+  padding: 0;
+  min-width: 0;
+}
+:root .post-action-menu > :is(a, button) {
+  flex-direction: row-reverse;
+  justify-content: flex-start;
+  gap: 14px;
+  min-height: 52px;
+  padding: 8px 4px 8px 16px;
+  background: none;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--p-ink);
+}
+:root .post-action-menu > button:last-child:has(.lucide-trash-2, .lucide-trash2) {
+  color: var(--p-danger);
+}
+:root .post-action-menu > * {
+  animation: cartoon-menu-item 420ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+:root .post-action-menu > :nth-child(2) {
+  animation-delay: 40ms;
+}
+@keyframes cartoon-veil {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes cartoon-menu-item {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.92);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  :root .post-menu-backdrop,
+  :root .post-action-menu > * {
+    animation: none;
+  }
+}
+:root .post-action-menu svg {
+  width: 22px;
+  height: 22px;
+}
+
+/* ── 招待のカード：面の角丸 ── */
+:root .invitation-card,
+:root .family-invite-card {
+  border-radius: var(--r-card);
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  :root .modal-backdrop,
+  :root .post-menu-backdrop {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    background: color-mix(in srgb, var(--p-paper) 88%, transparent);
+  }
+}

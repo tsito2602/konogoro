@@ -46,6 +46,7 @@ export function EventsPage() {
   ).length;
   const invalidRange = Boolean(draftFilters.from && draftFilters.to && draftFilters.from > draftFilters.to);
   const eventGroups = filteredEvents ? groupEvents(filteredEvents) : [];
+  const filterKey = JSON.stringify(filters);
   const openFilters = () => {
     setDraftFilters(filters);
     setFilterClosing(false);
@@ -89,7 +90,12 @@ export function EventsPage() {
           />
         )}
         {eventGroups.map((group) => (
-          <section className="event-list-section" aria-labelledby={`event-list-${group.key}`} key={group.key}>
+          // 絞り込みを変えたら一覧を作り直し、残ったカードも含めて出現の動きで並べ直す。
+          <section
+            className="event-list-section"
+            aria-labelledby={`event-list-${group.key}`}
+            key={`${group.key}:${filterKey}`}
+          >
             <h2 className="event-list-section-title" id={`event-list-${group.key}`}>
               {group.title}
             </h2>

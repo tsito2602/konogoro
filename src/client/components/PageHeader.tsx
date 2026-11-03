@@ -19,7 +19,7 @@ export function PageHeader({
   const location = useLocation();
   const backPath = location.pathname.startsWith("/events/") ? "/events" : "/";
   return (
-    <header ref={heightRef} className={`page-header${inverse ? " inverse" : ""}`}>
+    <header ref={heightRef} className={`page-header${inverse ? " inverse" : ""}${back ? "" : " root-page"}`}>
       <div className="page-header-inner">
         <div className="header-side">
           {back && (

@@ -20,6 +20,12 @@ import { UnreadPostsPage } from "./pages/UnreadPostsPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { installPromptStore } from "./install-prompt";
 import { initializeTheme } from "./theme";
+import { installSpringTokens } from "./cartoon/cartoon";
+import { installRouteMotion, installSkeletonReveal } from "./route-motion";
+import { installHaptics } from "./haptics";
+import "./cartoon/fonts.css";
+import "./cartoon/theme.css";
+import "./cartoon/dock.css";
 import "./styles.css";
 import "./media-status.css";
 import "./video-experience.css";
@@ -35,15 +41,25 @@ import "./conversation-material.css";
 import "./invitation-material.css";
 import "./common-material.css";
 import "./entry-material.css";
+import "./dock-layout.css";
+import "./route-motion.css";
+import "./cartoon-parts.css";
 import { initializeInteractionFeedback } from "./interaction-feedback";
+import { startUpdateChecks } from "./app-update";
 
 const stopInstallPromptCapture = installPromptStore.start(window);
 const hotModule = (import.meta as ImportMeta & { hot?: { dispose: (callback: () => void) => void } }).hot;
 hotModule?.dispose(stopInstallPromptCapture);
 
 initializeTheme();
+installSpringTokens();
+installHaptics();
 const stopInteractionFeedback = initializeInteractionFeedback();
 hotModule?.dispose(stopInteractionFeedback);
+const stopUpdateChecks = startUpdateChecks();
+hotModule?.dispose(stopUpdateChecks);
+const stopSkeletonReveal = installSkeletonReveal();
+hotModule?.dispose(stopSkeletonReveal);
 
 const router = createBrowserRouter([
   {
@@ -70,6 +86,7 @@ const router = createBrowserRouter([
     ],
   },
 ]);
+installRouteMotion(router as unknown as Parameters<typeof installRouteMotion>[0]);
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

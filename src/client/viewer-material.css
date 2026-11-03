@@ -1,7 +1,15 @@
-/* Quiet controls around the media; motion follows the user's action. */
+/* 写真・動画ビューアー：cartoon-kit の暗い面の部品（kondo の資料プレビュー、親指ドックの島）。
+   写真の外はいつも黒。操作は浮いた島（--v-dock）で、主な操作は明るい丸薬形。数字は Bricolage。 */
 .media-viewer {
   --viewer-thumbnail-height: calc(80px + env(safe-area-inset-bottom));
+  --v-ink: #f5f1e9;
+  --v-mute: #aaa49b;
+  --v-dock: #262522;
+  --v-soft: #3a3835;
+  --v-island: color-mix(in srgb, var(--v-dock) 86%, transparent);
+  --v-island-shadow: 0 0 0 1px #ffffff14, 0 12px 26px -10px #000a;
 }
+/* 上：閉じると保存は 44px の丸い島、真ん中に枚数の島。 */
 .video-viewer .viewer-header {
   padding: calc(10px + env(safe-area-inset-top)) 12px 0;
   background: none;
@@ -10,46 +18,107 @@
 .video-viewer .viewer-header > * {
   pointer-events: auto;
 }
-.video-viewer .viewer-header .viewer-button {
-  background: #121714b8;
+.video-viewer .viewer-header .viewer-button,
+.video-viewer .viewer-comments .viewer-button {
+  border: 0;
+  color: var(--v-ink);
+  background: var(--v-island);
+  box-shadow: var(--v-island-shadow);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+.video-viewer .viewer-button svg {
+  width: 20px;
+  height: 20px;
 }
 .video-viewer .viewer-header > span {
   justify-self: center;
-  padding: 6px 12px;
+  min-height: 36px;
+  display: grid;
+  place-items: center;
+  padding: 0 14px;
   border-radius: 999px;
-  background: #121714b8;
+  background: var(--v-island);
+  box-shadow: var(--v-island-shadow);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  color: var(--v-ink);
+  font-family: var(--f-num);
+  font-size: 15px;
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.02em;
 }
+/* 下：箱で囲わず、写真の上の暗い影に一言と日付、その下にドックの島を並べる。 */
 .video-viewer .viewer-info {
-  inset: auto 12px 8px;
-  padding: 12px 14px 6px;
-  border-radius: 18px;
-  background: #101512bd;
+  inset: auto 0 0;
+  padding: 48px 16px 12px;
+  gap: 2px;
+  border-radius: 0;
+  background: linear-gradient(transparent, #000000a6 38%, #000000d9);
 }
 .video-viewer .viewer-info strong {
-  font-weight: 650;
+  color: var(--v-ink);
+  font-size: 17px;
+  font-weight: 800;
   line-height: 1.5;
 }
 .video-viewer .viewer-info > span {
-  color: #e0e4df;
-  line-height: 1.5;
+  color: var(--v-mute);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.6;
 }
 .video-viewer .viewer-controls {
-  gap: 8px;
-  margin-top: 8px;
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr) 56px;
+  gap: 10px;
+  margin-top: 12px;
 }
-.video-viewer .viewer-controls button {
+.video-viewer .viewer-controls > button {
+  height: 56px;
+  min-height: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0;
   border: 0;
   border-radius: 999px;
-  background: #ffffff14;
+  color: var(--v-ink);
+  background: var(--v-island);
+  box-shadow: var(--v-island-shadow);
+  font-size: 15px;
+  font-weight: 800;
 }
-.video-viewer .viewer-comment-button {
+.video-viewer .viewer-controls > button:disabled {
+  opacity: 0.35;
+}
+.video-viewer .viewer-controls > button svg {
+  width: 22px;
+  height: 22px;
+}
+/* 主な操作（コメント）は明るい丸薬形。件数は数字の書体で小さな島に入れる。 */
+.video-viewer .viewer-controls > .viewer-comment-button {
+  margin: 0;
+  color: #000;
+  background: var(--v-ink);
+}
+.video-viewer .viewer-comment-button b {
+  min-width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  padding: 0 7px;
   border-radius: 999px;
-  margin: 2px 0 0;
+  color: var(--v-ink);
+  background: #000;
+  font-family: var(--f-num);
+  font-size: 13px;
+  font-weight: 700;
 }
 .video-viewer .viewer-comment-button[aria-expanded="true"] {
-  background: #ffffff18;
+  background: var(--v-ink);
 }
 .video-viewer.comments-open .viewer-info {
   opacity: 0;
@@ -62,71 +131,100 @@
 .video-viewer .viewer-media-frame.dragging {
   transition: none;
 }
+/* 並び：角丸12の粒。選んだものは明るい縁で少し浮く。 */
 .media-viewer .thumbnail-strip {
   height: var(--viewer-thumbnail-height);
   padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
   gap: 8px;
 }
 .media-viewer .thumbnail-strip a {
-  border-radius: 8px;
-  opacity: 0.65;
+  flex-basis: 52px;
+  border-radius: 12px;
+  opacity: 0.5;
   transition:
     translate 180ms ease-out,
-    opacity 180ms ease-out,
-    scale 160ms ease-out;
+    opacity 180ms ease-out;
 }
 .media-viewer .thumbnail-strip a.selected {
   translate: 0 -4px;
   opacity: 1;
 }
 .media-viewer .thumbnail-strip a.selected::after {
-  inset: auto 8px 3px;
-  height: 2px;
-  border: 0;
-  border-radius: 2px;
-  background: #fff4d6;
+  inset: 0;
+  border: 2px solid var(--v-ink);
+  border-radius: inherit;
+  background: none;
 }
+/* コメント：角丸30の暗いシートが浮く。入力は面、送信は明るい丸。 */
 .video-viewer .viewer-comments {
-  right: 10px;
-  left: 10px;
-  padding: 10px 16px 16px;
-  border: 1px solid #ffffff18;
-  border-radius: 20px 20px 0 0;
-  background: #202521;
-  box-shadow: none;
-  animation: viewer-comments-enter 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  right: 8px;
+  left: 8px;
+  bottom: 8px;
+  padding: 14px 16px 16px;
+  border: 0;
+  border-radius: 30px;
+  color: var(--v-ink);
+  background: var(--v-dock);
+  box-shadow: var(--v-island-shadow);
+  animation: viewer-comments-enter 320ms cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 .video-viewer .viewer-comments > header {
   flex-shrink: 0;
   margin-bottom: 8px;
 }
+:root .video-viewer .viewer-comments > header h2,
+.video-viewer .viewer-comments > header strong {
+  font-size: 15px;
+  font-weight: 800;
+}
+.video-viewer .viewer-comments > header h2 span {
+  margin-left: 4px;
+  color: var(--v-mute);
+  font-size: 13px;
+  font-weight: 700;
+}
+.video-viewer .viewer-comments .viewer-button {
+  background: var(--v-soft);
+  box-shadow: none;
+}
+.video-viewer .viewer-comments .comment-avatar {
+  background: var(--v-soft);
+  color: var(--v-ink);
+}
 .video-viewer .viewer-comments form {
   flex-shrink: 0;
 }
-.video-viewer .viewer-comment-input textarea {
-  border-color: #737d74;
-  border-radius: 14px;
-  background: #ffffff08;
+:root .video-viewer .viewer-comment-input textarea {
+  min-height: 50px;
+  max-height: 120px;
+  border: 0;
+  border-radius: 16px;
+  color: var(--v-ink);
+  background: var(--v-soft);
+}
+:root .video-viewer .viewer-comment-input textarea::placeholder {
+  color: var(--v-mute);
+}
+:root .video-viewer .viewer-comment-input textarea:focus {
+  outline: 2px solid var(--v-ink);
 }
 .video-viewer .viewer-comment-input button {
   border: 0;
-  color: #27342a;
-  background: #f2d28a;
+  border-radius: 50%;
+  color: #000;
+  background: var(--v-ink);
 }
 @keyframes viewer-comments-enter {
   from {
     opacity: 0;
-  }
-  to {
-    opacity: 1;
+    transform: translateY(24px) scale(0.96);
   }
 }
 @media (min-width: 760px) {
-  .video-viewer .viewer-info {
-    right: auto;
-    left: 50%;
-    width: min(calc(100% - 32px), 560px);
-    transform: translateX(-50%);
+  .video-viewer .viewer-info > * {
+    width: 100%;
+    max-width: 520px;
+    margin-inline: auto;
   }
 }
 @media (min-width: 960px) {
@@ -138,7 +236,6 @@
     width: 360px;
     max-height: none;
     margin: 0;
-    border-radius: 20px;
     animation-name: viewer-comments-enter-side;
   }
   .video-viewer .viewer-comment-list {
@@ -148,9 +245,7 @@
 @keyframes viewer-comments-enter-side {
   from {
     opacity: 0;
-  }
-  to {
-    opacity: 1;
+    transform: translateX(16px) scale(0.98);
   }
 }
 @media (orientation: landscape) and (max-height: 560px) {
@@ -161,7 +256,14 @@
     padding: 8px 16px;
   }
   .video-viewer .viewer-info {
-    padding: 8px 12px 4px;
+    padding: 24px 12px 8px;
+  }
+  .video-viewer .viewer-controls {
+    grid-template-columns: 44px minmax(0, 1fr) 44px;
+    margin-top: 6px;
+  }
+  .video-viewer .viewer-controls > button {
+    height: 44px;
   }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -170,6 +272,13 @@
   .video-viewer .viewer-comments {
     transition: none;
     animation: none;
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .video-viewer :is(.viewer-header .viewer-button, .viewer-header > span, .viewer-controls > button) {
+    background: var(--v-dock);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
   }
 }
 
@@ -209,8 +318,9 @@
   flex-shrink: 0;
   border: 0;
   border-radius: 50%;
-  color: white;
-  background: #ffffff14;
+  color: var(--v-ink, white);
+  background: var(--v-island, #ffffff14);
+  box-shadow: var(--v-island-shadow, none);
 }
 .viewer-video-buttons button:disabled {
   opacity: 0.4;
@@ -238,6 +348,8 @@
 }
 .viewer-video-seek span {
   flex-shrink: 0;
+  font-family: var(--f-num);
+  font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
 .video-viewer .video-player-status {

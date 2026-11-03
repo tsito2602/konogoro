@@ -126,6 +126,15 @@ const keyOf = (el: HTMLElement, identity: string) => {
 
 type Props = { identity: string; children: ReactNode };
 
+/** What a dock looked like as it left the screen. A dock that mounts in the
+    same place right after (the post page's own dock, which has to live inside
+    its modal dialog, and the page's dock again when the post closes) starts
+    from this shape and morphs on, so the islands never vanish and reappear
+    (Tsubasa 2026-11-03「ボトムナビは一旦隠れて再登場せず、変形させるだけ」). */
+type Carry = { shape: Shape; width: number; copies: HTMLElement[]; at: number };
+let carried: Carry | null = null;
+const CARRY_MS = 600;
+
 /** Dispatched on window when the dock moves into another dialog or the page. */
 export const DOCK_MOVED = "kondo:dock-moved";
 
@@ -186,7 +195,22 @@ export class CartoonDock extends Component<Props> {
 
   componentDidMount() {
     const root = this.root.current!;
-    this.layout(true);
+    const carry = carried;
+    carried = null;
+    if (carry && !RM() && performance.now() - carry.at < CARRY_MS && carry.shape.islands.length) {
+      // Pick up where the leaving dock was, fade out its controls, and morph on.
+      this.shape = carry.shape;
+      this.width = carry.width;
+      for (const copy of carry.copies) {
+        this.ui.current!.appendChild(copy);
+        void anim(copy, [{ opacity: 1 }, { opacity: 0 }], { duration: 120, easing: "ease", fill: "forwards" }).then(
+          () => copy.remove(),
+        );
+      }
+      for (const { el } of this.groups()) popIn(el);
+      this.paint();
+      this.layout(false);
+    } else this.layout(true);
     this.observer =
       typeof ResizeObserver === "undefined"
         ? undefined
@@ -232,6 +256,21 @@ export class CartoonDock extends Component<Props> {
   }
 
   componentWillUnmount() {
+    if (this.shape && this.width)
+      carried = {
+        shape: this.shape,
+        width: this.width,
+        at: performance.now(),
+        copies: this.groups().map(({ el }) => {
+          const copy = el.cloneNode(true) as HTMLElement;
+          copy.inert = true;
+          copy.dataset.outgoing = "true";
+          copy.setAttribute("aria-hidden", "true");
+          for (const node of [copy, ...copy.querySelectorAll("*")])
+            for (const attribute of ["id", "name", "form", "href", "autofocus"]) node.removeAttribute(attribute);
+          return copy;
+        }),
+      };
     this.observer?.disconnect();
     cancelAnimationFrame(this.retry);
     cancelAnimationFrame(this.frame);

@@ -18,6 +18,7 @@ function edges(element: HTMLElement) {
     L: new Live(0, (value) => ((left = value), draw())),
     R: new Live(0, (value) => ((right = value), draw())),
     timer: 0 as ReturnType<typeof setTimeout> | 0,
+    indicator: element,
   };
 }
 type Edges = ReturnType<typeof edges>;
@@ -39,16 +40,25 @@ function isActive(item: MainDockItem, pathname: string) {
   return pathname === item.to || pathname.startsWith(`${item.to}/`);
 }
 
-/** スマホ・タブレットのボトムナビ：cartoon-kit の親指ドック。家族の誰でも分かるよう、アイコンの下にページ名を出す。 */
+/** スマホ・タブレットのボトムナビ：cartoon-kit の親指ドック。家族の誰でも分かるよう、アイコンの下にページ名を出す。
+    children を渡すと、タブの代わりにその画面の操作（DockGroup）を島にする。
+    投稿ページはモーダルの中に自分のドックを置くが、島は前のドックの形から変形して続く（CartoonDock の carry）。 */
 export function MainDock({
   items,
   measureRef,
+  className,
+  label = "メインナビゲーション",
+  children,
 }: {
   items: readonly MainDockItem[];
   measureRef?: (element: HTMLElement | null) => void;
+  className?: string;
+  label?: string;
+  children?: ReactNode;
 }) {
   const { pathname } = useLocation();
   const active = items.findIndex((item) => isActive(item, pathname));
+  const showTabs = children == null;
   const group = useRef<HTMLDivElement>(null);
   const pill = useRef<HTMLSpanElement>(null);
   const springs = useRef<Edges | null>(null);
@@ -58,7 +68,7 @@ export function MainDock({
     const node = group.current;
     const indicator = pill.current;
     if (!node || !indicator) return;
-    springs.current ??= edges(indicator);
+    if (springs.current?.indicator !== indicator) springs.current = edges(indicator);
     const place = (animate: boolean) => {
       const link = node.querySelectorAll<HTMLElement>("a")[active];
       if (!link) {
@@ -83,28 +93,30 @@ export function MainDock({
           });
     observer?.observe(node);
     return () => observer?.disconnect();
-  }, [active]);
+  }, [active, showTabs]);
 
   return (
-    <nav ref={measureRef} className="main-dock-host" aria-label="メインナビゲーション">
+    <nav ref={measureRef} className={`main-dock-host${className ? ` ${className}` : ""}`} aria-label={label}>
       <div className="thumb-dock">
-        <CartoonDock identity="tabs">
-          <div ref={group} className="cdock-group cdock-tabs" data-slot="tabs" data-full="">
-            <span ref={pill} className="cdock-ind" aria-hidden="true" />
-            {items.map((item, index) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.end}
-                data-on={index === active}
-                draggable={false}
-                onClick={() => window.scrollTo(0, 0)}
-              >
-                {item.icon}
-                <span className="main-dock-label">{item.label}</span>
-              </NavLink>
-            ))}
-          </div>
+        <CartoonDock identity={showTabs ? "tabs" : "context"}>
+          {children ?? (
+            <div ref={group} className="cdock-group cdock-tabs" data-slot="tabs" data-full="">
+              <span ref={pill} className="cdock-ind" aria-hidden="true" />
+              {items.map((item, index) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  end={item.end}
+                  data-on={index === active}
+                  draggable={false}
+                  onClick={() => window.scrollTo(0, 0)}
+                >
+                  {item.icon}
+                  <span className="main-dock-label">{item.label}</span>
+                </NavLink>
+              ))}
+            </div>
+          )}
         </CartoonDock>
       </div>
     </nav>

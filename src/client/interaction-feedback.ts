@@ -26,7 +26,7 @@ function pressTarget(target: EventTarget | null): HTMLElement | null {
     入れ子では最も内側の操作だけをつぶす。1 は形を変えない（読む文や選択の面）。 */
 const squishAmounts: [selector: string, amount: number][] = [
   [
-    ".notification-toggle, .theme-setting label, .role-guide label, .text-button, .more-comments-link, .comment-count-link, .post-caption, .post-comment-preview, p a",
+    ".notification-toggle, .theme-setting label, .role-guide label, .text-button, .more-comments-link, .comment-count-link, .comment-write-link, .post-header-comment, .post-caption, .post-comment-preview, p a",
     1,
   ],
   [".floating-add-button, .desktop-add-button", 0.88],

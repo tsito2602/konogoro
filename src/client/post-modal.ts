@@ -1,14 +1,23 @@
 import { createContext } from "react";
 
 export const PostModalContext = createContext(false);
-let origin: { postId: string; photo: HTMLElement; trigger: HTMLElement } | null = null;
+let origin: { postId: string; card: HTMLElement; photo: HTMLElement; trigger: HTMLElement } | null = null;
 
 export function rememberPostOrigin(postId: string, card: HTMLElement, trigger: HTMLElement) {
-  origin = { postId, photo: card.querySelector<HTMLElement>(".media-grid") ?? card, trigger };
+  origin = { postId, card, photo: card.querySelector<HTMLElement>(".media-grid") ?? card, trigger };
 }
 
 export function postOrigin(postId: string) {
   return origin?.postId === postId && origin.photo.isConnected ? origin : null;
+}
+
+/** The card's box on screen, when it is still there to grow from or shrink back into. */
+export function postOriginCard(postId: string): DOMRect | null {
+  const found = postOrigin(postId);
+  if (!found?.card.isConnected) return null;
+  const box = found.card.getBoundingClientRect();
+  if (box.width <= 0 || box.height <= 0 || box.bottom <= 0 || box.top >= window.innerHeight) return null;
+  return box;
 }
 
 type Rect = { left: number; top: number; width: number; height: number };

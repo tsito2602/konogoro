@@ -55,17 +55,6 @@ export function AlbumContentSkeleton({ allYear = false }: { allYear?: boolean })
   );
 }
 
-export function CommentComposerSkeleton() {
-  return (
-    <div className="comment-composer skeleton-comment-composer" role="status" aria-busy="true">
-      <span className="visually-hidden">コメント欄を読み込み中</span>
-      <div className="skeleton-circle" aria-hidden />
-      <div className="skeleton-line" aria-hidden />
-      <div className="skeleton-circle" aria-hidden />
-    </div>
-  );
-}
-
 export function UnreadSummarySkeleton() {
   return (
     <div className="unread-summary skeleton-unread-summary" role="status" aria-busy="true">

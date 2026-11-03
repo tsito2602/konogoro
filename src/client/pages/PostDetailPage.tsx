@@ -1,19 +1,8 @@
-import { PostModalContext, postOrigin, modalTransform } from "../post-modal";
+import { PostModalContext, postOrigin, postOriginCard, modalTransform } from "../post-modal";
 import { VideoBadge } from "../components/VideoBadge";
 import { commentIntent, commentTargetId, revealComment } from "../comment-navigation";
 import { canReturnInApp, removeReadingPost, restorePanelPosition, updateReadingPost } from "../reading-context";
-import {
-  CalendarDays,
-  Camera,
-  ChevronLeft,
-  X,
-  Ellipsis,
-  MessageCircle,
-  Pencil,
-  Send,
-  Trash2,
-  Upload,
-} from "lucide-react";
+import { CalendarDays, Camera, X, Ellipsis, MessageCircle, Pencil, Trash2, Upload } from "lucide-react";
 import {
   useCallback,
   useContext,
@@ -22,21 +11,24 @@ import {
   useRef,
   useState,
   type FormEvent,
+  type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from "react";
-import { createPortal } from "react-dom";
+import { createPortal, flushSync } from "react-dom";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import type { Comment, Post } from "../../shared/types";
 import { api, formatDate } from "../api";
 import { ErrorState } from "../components/AsyncState";
-import { useCurrentUser } from "../components/AppLayout";
-import { CommentComposerSkeleton, PageSkeleton } from "../components/PageSkeleton";
+import { mainDockItems, useCurrentUser } from "../components/AppLayout";
+import { MainDock } from "../components/MainDock";
+import { PageSkeleton } from "../components/PageSkeleton";
 import { SeenBy } from "../components/SeenBy";
 import { useToast } from "../components/Toast";
+import { DockBackIcon, DockGroup } from "../cartoon/cartoon-dock";
+import { RM, SINK, anim, burst } from "../cartoon/cartoon";
+import { PostMotion } from "../post-motion";
 
-export function shouldFocusComment(state: unknown): boolean {
-  return commentIntent(state) === "write";
-}
+type MenuPlace = { host: Element; style: { top?: number; bottom?: number; right: number } };
 
 export function PostDetailPage() {
   const { postId = "" } = useParams();
@@ -47,19 +39,15 @@ export function PostDetailPage() {
     preview?.previewPostId === postId && Array.isArray(preview.previewUrls)
       ? preview.previewUrls.slice(0, 4)
       : undefined;
-  const currentUser = useCurrentUser();
   const showToast = useToast();
   const [post, setPost] = useState<Post | null>(null);
   const [error, setError] = useState("");
-  const [commentError, setCommentError] = useState("");
-  const [commentSending, setCommentSending] = useState(false);
   const [deleteError, setDeleteError] = useState("");
   const [deleting, setDeleting] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   // 「…」メニューは kondo のように画面全体の幕の上に出すため、開いている面（シートか body）へ portal で置く。
-  const [menuHost, setMenuHost] = useState<{ host: Element; top: number; right: number } | null>(null);
+  const [menuHost, setMenuHost] = useState<MenuPlace | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const commentInputRef = useRef<HTMLInputElement>(null);
   const conversationRef = useRef<HTMLElement>(null);
   const sentCommentId = useRef<string | null>(null);
   const fallbackPath = post?.eventId ? `/events/${post.eventId}` : "/";
@@ -67,6 +55,7 @@ export function PostDetailPage() {
     if ((location.state as { postPage?: boolean } | null)?.postPage && canReturnInApp()) navigate(-1);
     else navigate(fallbackPath, { replace: true });
   }, [fallbackPath, location.state, navigate]);
+  const writeIntent = commentIntent(location.state) === "write";
   const load = () => {
     setError("");
     void api<Post>(`/posts/${postId}`)
@@ -85,25 +74,61 @@ export function PostDetailPage() {
     const panel = conversationRef.current?.closest<HTMLElement>(".post-page-scroll");
     if (!post || !panel) return;
     return restorePanelPosition(location.key, panel, () => {
-      const intent = commentIntent(location.state);
-      if (intent === "read") {
-        const conversation = conversationRef.current!;
-        revealComment(conversation, commentTargetId(location.state));
-        conversation.focus({ preventScroll: true });
-      } else if (intent === "write") {
-        commentInputRef.current?.focus({ preventScroll: true });
-      }
+      if (commentIntent(location.state) !== "read") return;
+      const conversation = conversationRef.current!;
+      revealComment(conversation, commentTargetId(location.state));
+      conversation.focus({ preventScroll: true });
     });
   }, [location.key, location.state, post]);
   useEffect(() => {
     if (!post || !sentCommentId.current || !conversationRef.current) return;
-    revealComment(conversationRef.current, sentCommentId.current);
+    // 送ったコメントは上から落ちて、平たくつぶれて着地し、着地点から点がはじける（kondo の sink と burst）。
+    const row = revealComment(conversationRef.current, sentCommentId.current);
     sentCommentId.current = null;
+    row.classList.remove("comment-arrived");
+    if (RM()) return;
+    row.style.transformOrigin = "50% 100%";
+    void anim(row, SINK(-70), { duration: 380, easing: "cubic-bezier(.4,0,.6,1)" });
+    const avatar = row.querySelector(".comment-avatar") ?? row;
+    window.setTimeout(() => {
+      const box = avatar.getBoundingClientRect();
+      burst(box.left + box.width / 2, box.bottom, 9, 46, "var(--p-ink)", row.closest("dialog") ?? undefined);
+    }, 230);
   }, [post]);
+
+  const composer = {
+    authorName: post?.authorName,
+    onSent: (comment: Comment) => {
+      sentCommentId.current = comment.id;
+      // タイムラインのカードの「コメントn件」も合わせる。
+      setPost((current) => {
+        if (!current) return current;
+        const comments = [...current.comments, comment];
+        return { ...current, comments, commentCount: comments.length };
+      });
+    },
+  };
+  const menu =
+    post && (post.canEdit || post.canDelete)
+      ? {
+          expanded: menuOpen,
+          open: (anchor: HTMLElement) => {
+            const box = anchor.getBoundingClientRect();
+            const below = box.top < window.innerHeight / 2;
+            setMenuHost({
+              host: anchor.closest("dialog") ?? document.body,
+              style: below
+                ? { top: box.bottom + 8, right: window.innerWidth - box.right }
+                : { bottom: window.innerHeight - box.top + 10, right: window.innerWidth - box.right },
+            });
+            setMenuOpen((open) => !open);
+          },
+        }
+      : null;
 
   if (!post && !error)
     return (
-      <PostPage onClose={closePage} footer={<CommentComposerSkeleton />}>
+      <PostPage onClose={closePage} composer={composer} startComposing={writeIntent}>
         <PageSkeleton variant="post-detail" previewUrls={previewUrls} />
       </PostPage>
     );
@@ -140,165 +165,97 @@ export function PostDetailPage() {
           : undefined
       }
       onClose={closePage}
+      composer={composer}
+      startComposing={writeIntent}
+      menu={menu}
       overlay={
-        deleteOpen && (
-          <div
-            className="modal-backdrop"
-            onClick={() => {
-              if (!deleting) setDeleteOpen(false);
-            }}
-          >
-            <section
-              className="confirmation-modal"
-              role="dialog"
-              aria-modal="true"
-              aria-labelledby="delete-post-title"
-              onClick={(event) => event.stopPropagation()}
-            >
-              <h2 id="delete-post-title">この投稿を削除する？</h2>
-              <p>写真・動画とコメントもすべて削除される。この操作は元に戻せない。</p>
-              {deleteError && (
-                <p className="form-error" role="alert">
-                  {deleteError}
-                </p>
-              )}
-              <div>
+        <>
+          {menuOpen &&
+            menuHost &&
+            createPortal(
+              <>
                 <button
-                  className="outline-button"
+                  className="post-menu-backdrop"
                   type="button"
-                  disabled={deleting}
-                  onClick={() => setDeleteOpen(false)}
+                  aria-label="投稿メニューを閉じる"
+                  onClick={() => setMenuOpen(false)}
+                />
+                <div
+                  className={`post-action-menu${menuHost.style.bottom !== undefined ? " from-dock" : ""}`}
+                  role="menu"
+                  style={{ top: "auto", ...menuHost.style }}
                 >
-                  キャンセル
-                </button>
-                <button
-                  className="danger-confirm-button"
-                  type="button"
-                  disabled={deleting}
-                  onClick={() => void deletePost()}
-                >
-                  {deleting ? "削除中…" : "削除する"}
-                </button>
-              </div>
-            </section>
-          </div>
-        )
-      }
-      action={
-        (post.canEdit || post.canDelete) && (
-          <div className="post-actions">
-            <button
-              className="icon-button"
-              type="button"
-              onClick={(event) => {
-                const button = event.currentTarget;
-                const box = button.getBoundingClientRect();
-                setMenuHost({
-                  host: button.closest("dialog") ?? document.body,
-                  top: box.bottom + 8,
-                  right: window.innerWidth - box.right,
-                });
-                setMenuOpen((open) => !open);
+                  {post.canEdit && (
+                    <Link
+                      to={`/posts/${post.id}/edit`}
+                      state={{ ...(location.state as object | null), returnToDetail: true }}
+                      role="menuitem"
+                      onClick={() => setMenuOpen(false)}
+                    >
+                      <Pencil />
+                      編集
+                    </Link>
+                  )}
+                  {post.canDelete && (
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        setDeleteOpen(true);
+                      }}
+                    >
+                      <Trash2 />
+                      削除
+                    </button>
+                  )}
+                </div>
+              </>,
+              menuHost.host,
+            )}
+          {deleteOpen && (
+            <div
+              className="modal-backdrop"
+              onClick={() => {
+                if (!deleting) setDeleteOpen(false);
               }}
-              aria-label="投稿メニュー"
-              aria-expanded={menuOpen}
             >
-              <Ellipsis />
-            </button>
-            {menuOpen &&
-              menuHost &&
-              createPortal(
-                <>
+              <section
+                className="confirmation-modal"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="delete-post-title"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <h2 id="delete-post-title">この投稿を削除する？</h2>
+                <p>写真・動画とコメントもすべて削除される。この操作は元に戻せない。</p>
+                {deleteError && (
+                  <p className="form-error" role="alert">
+                    {deleteError}
+                  </p>
+                )}
+                <div>
                   <button
-                    className="post-menu-backdrop"
+                    className="outline-button"
                     type="button"
-                    aria-label="投稿メニューを閉じる"
-                    onClick={() => setMenuOpen(false)}
-                  />
-                  <div className="post-action-menu" role="menu" style={{ top: menuHost.top, right: menuHost.right }}>
-                    {post.canEdit && (
-                      <Link
-                        to={`/posts/${post.id}/edit`}
-                        state={{ ...(location.state as object | null), returnToDetail: true }}
-                        role="menuitem"
-                        onClick={() => setMenuOpen(false)}
-                      >
-                        <Pencil />
-                        編集
-                      </Link>
-                    )}
-                    {post.canDelete && (
-                      <button
-                        type="button"
-                        role="menuitem"
-                        onClick={() => {
-                          setMenuOpen(false);
-                          setDeleteOpen(true);
-                        }}
-                      >
-                        <Trash2 />
-                        削除
-                      </button>
-                    )}
-                  </div>
-                </>,
-                menuHost.host,
-              )}
-          </div>
-        )
-      }
-      footer={
-        <div className="comment-composer">
-          {commentError && (
-            <p className="form-error" role="alert">
-              {commentError}
-            </p>
+                    disabled={deleting}
+                    onClick={() => setDeleteOpen(false)}
+                  >
+                    キャンセル
+                  </button>
+                  <button
+                    className="danger-confirm-button"
+                    type="button"
+                    disabled={deleting}
+                    onClick={() => void deletePost()}
+                  >
+                    {deleting ? "削除中…" : "削除する"}
+                  </button>
+                </div>
+              </section>
+            </div>
           )}
-          <form
-            className="comment-form"
-            onSubmit={async (event: FormEvent<HTMLFormElement>) => {
-              event.preventDefault();
-              if (commentSending) return;
-              setCommentError("");
-              setCommentSending(true);
-              const form = event.currentTarget;
-              const body = new FormData(form).get("body");
-              try {
-                const comment = await api<Comment>(`/posts/${post.id}/comments`, {
-                  method: "POST",
-                  body: JSON.stringify({ body }),
-                });
-                sentCommentId.current = comment.id;
-                setPost((current) => (current ? { ...current, comments: [...current.comments, comment] } : current));
-                form.reset();
-              } catch (reason) {
-                setCommentError((reason as Error).message);
-              } finally {
-                setCommentSending(false);
-              }
-            }}
-          >
-            <span className="comment-composer-avatar" aria-hidden>
-              {currentUser.avatarUrl ? <img src={currentUser.avatarUrl} alt="" /> : currentUser.displayName.slice(0, 1)}
-            </span>
-            <input
-              ref={commentInputRef}
-              name="body"
-              aria-label="この投稿へのコメント"
-              placeholder="この投稿にコメント"
-              maxLength={1000}
-              required
-              disabled={commentSending}
-            />
-            <button
-              type="submit"
-              aria-label={commentSending ? "コメントを送信中" : "コメントを送信"}
-              disabled={commentSending}
-            >
-              <Send aria-hidden />
-            </button>
-          </form>
-        </div>
+        </>
       }
     >
       <main className="post-detail">
@@ -366,7 +323,11 @@ export function PostDetailPage() {
                   await api(`/comments/${comment.id}`, { method: "DELETE" });
                   setPost((current) =>
                     current
-                      ? { ...current, comments: current.comments.filter((item) => item.id !== comment.id) }
+                      ? {
+                          ...current,
+                          comments: current.comments.filter((item) => item.id !== comment.id),
+                          commentCount: current.comments.filter((item) => item.id !== comment.id).length,
+                        }
                       : current,
                   );
                 }}
@@ -379,34 +340,112 @@ export function PostDetailPage() {
   );
 }
 
+type Composer = { authorName?: string; onSent: (comment: Comment) => void };
+type Menu = { expanded: boolean; open: (anchor: HTMLElement) => void } | null;
+
+/** キーボードが下から覆っている高さ（visualViewport）。書き込み欄とドックをその上へ載せる。 */
+function useKeyboardInset(active: boolean) {
+  const [inset, setInset] = useState(0);
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    if (!active || !viewport) return;
+    const measure = () => setInset(Math.max(0, Math.round(window.innerHeight - viewport.height - viewport.offsetTop)));
+    const frame = requestAnimationFrame(measure);
+    viewport.addEventListener("resize", measure);
+    viewport.addEventListener("scroll", measure);
+    return () => {
+      cancelAnimationFrame(frame);
+      viewport.removeEventListener("resize", measure);
+      viewport.removeEventListener("scroll", measure);
+    };
+  }, [active]);
+  return active ? inset : 0;
+}
+
 function PostPage({
   children,
-  action,
-  footer,
   overlay,
   onClose,
   onEscape,
+  composer,
+  startComposing = false,
+  menu = null,
 }: {
   children: ReactNode;
-  action?: ReactNode;
-  footer?: ReactNode;
   overlay?: ReactNode;
   onClose: () => void;
   onEscape?: () => void;
+  composer?: Composer;
+  startComposing?: boolean;
+  menu?: Menu;
 }) {
   const modal = useContext(PostModalContext);
   const { postId = "" } = useParams();
+  const currentUser = useCurrentUser();
   const dialogRef = useRef<HTMLDialogElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const sheetRef = useRef<HTMLFormElement>(null);
+  const textRef = useRef<HTMLTextAreaElement>(null);
+  const motionRef = useRef<PostMotion | null>(null);
   const animationRef = useRef<Animation | null>(null);
+  const dragRef = useRef<{ start: number; moved: number } | null>(null);
   const [closing, setClosing] = useState(false);
+  const [composing, setComposing] = useState(false);
+  const [text, setText] = useState("");
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState("");
+  const keyboard = useKeyboardInset(composing);
+  const formId = `post-comment-${postId}`;
+  const canCompose = Boolean(composer);
 
-  const close = useCallback(() => {
+  const backdrop = (from: number, to: number, duration: number) => {
+    const dialog = dialogRef.current;
+    if (!dialog?.animate || RM()) return;
+    try {
+      dialog.animate([{ opacity: from }, { opacity: to }], {
+        duration,
+        easing: "ease-out",
+        fill: "forwards",
+        pseudoElement: "::backdrop",
+      });
+    } catch {
+      // ::backdrop を動かせない環境では、幕はそのまま出る。
+    }
+  };
+
+  const openComposer = useCallback(() => {
+    const motion = motionRef.current;
+    if (!motion || closing || !canCompose) return;
+    // iPhone はタップの中で focus しないとキーボードが出ない。欄の inert を先に外してから focus する。
+    flushSync(() => {
+      setComposing(true);
+      setSendError("");
+    });
+    textRef.current?.focus({ preventScroll: true });
+    void motion.lift(motion.liftHeight());
+  }, [canCompose, closing]);
+
+  const closeComposer = useCallback(() => {
+    setComposing(false);
+    textRef.current?.blur();
+    return motionRef.current?.drop() ?? Promise.resolve();
+  }, []);
+
+  const close = useCallback(async () => {
     if (closing) return;
     const panel = panelRef.current;
-    if (!modal || !panel?.animate || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return onClose();
+    if (composing) await closeComposer();
+    // ドックは閉じ始めた時点でタブへ変形を始め、タイムラインのドックがその形から続ける。
     setClosing(true);
+    const card = modal ? postOriginCard(postId) : null;
+    const motion = motionRef.current;
+    if (card && motion && panel && !RM()) {
+      backdrop(1, 0, 320);
+      await motion.exit(card);
+      return onClose();
+    }
+    if (!modal || !panel?.animate || RM()) return onClose();
     animationRef.current?.cancel();
     const origin = postOrigin(postId);
     const transform = origin
@@ -426,38 +465,87 @@ function PostPage({
     );
     animationRef.current = animation;
     animation.finished.then(onClose).catch(() => {});
-  }, [closing, modal, onClose, postId]);
+  }, [closeComposer, closing, composing, modal, onClose, postId]);
 
   useLayoutEffect(() => {
     const dialog = dialogRef.current;
     const panel = panelRef.current;
-    if (!modal || !dialog || !panel) return;
-    dialog.showModal();
-    closeButtonRef.current?.focus({ preventScroll: true });
+    if (!panel) return;
+    const motion = new PostMotion(
+      panel,
+      () => panel.querySelector<HTMLElement>(".post-page-scroll > *"),
+      () => sheetRef.current,
+    );
+    motionRef.current = motion;
+    motion.paint();
+    if (modal && dialog) {
+      dialog.showModal();
+      closeButtonRef.current?.focus({ preventScroll: true });
+    }
     const origin = postOrigin(postId);
-    const transform = origin
-      ? modalTransform(
-          origin.photo.getBoundingClientRect(),
-          panel.getBoundingClientRect(),
-          window.innerWidth,
-          window.innerHeight,
-        )
-      : null;
-    if (panel.animate && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-      animationRef.current = panel.animate(
-        [
-          { transform: transform ?? "scale(.96)", opacity: 0 },
-          { transform: "none", opacity: 1 },
-        ],
-        { duration: 260, easing: "cubic-bezier(.2,.8,.2,1)" },
-      );
+    const card = modal ? postOriginCard(postId) : null;
+    const write = startComposing && canCompose;
+    const lift = () => {
+      if (!write) return null;
+      setComposing(true);
+      return motion.liftHeight();
+    };
+    if (card && !RM()) {
+      // カードの四辺が広がって投稿ページになり、書くときはそのまま持ち上がる。
+      backdrop(0, 1, 360);
+      void motion.enter(card, lift);
+    } else {
+      if (modal && panel.animate && !RM()) {
+        const transform = origin
+          ? modalTransform(
+              origin.photo.getBoundingClientRect(),
+              panel.getBoundingClientRect(),
+              window.innerWidth,
+              window.innerHeight,
+            )
+          : null;
+        animationRef.current = panel.animate(
+          [
+            { transform: transform ?? "scale(.96)", opacity: 0 },
+            { transform: "none", opacity: 1 },
+          ],
+          { duration: 260, easing: "cubic-bezier(.2,.8,.2,1)" },
+        );
+      }
+      const height = lift();
+      if (height) void motion.lift(height);
     }
     return () => {
       animationRef.current?.cancel();
-      dialog.close();
+      motion.reset();
+      motionRef.current = null;
+      if (modal && dialog) dialog.close();
       if (origin?.trigger.isConnected) origin.trigger.focus({ preventScroll: true });
     };
+    // 開いたときに一度だけ動かす（書く意図も開いた時点のもの）。
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modal, postId]);
+
+  // タイムラインの「コメントする」から開いたときも、欄が出たら入力できるようにする。
+  useEffect(() => {
+    const field = textRef.current;
+    if (composing && field && document.activeElement !== field) field.focus({ preventScroll: true });
+  }, [composing]);
+  // キーボードが出入りしたら、書き込み欄とページをその上へ載せ直す。
+  useEffect(() => {
+    const motion = motionRef.current;
+    if (!composing || !motion) return;
+    void motion.lift(motion.liftHeight(keyboard));
+  }, [composing, keyboard]);
+  useEffect(() => {
+    const root = document.documentElement.style;
+    if (keyboard) root.setProperty("--keyboard-inset", `${keyboard}px`);
+    else root.removeProperty("--keyboard-inset");
+    return () => {
+      root.removeProperty("--keyboard-inset");
+    };
+  }, [keyboard]);
+
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -465,20 +553,166 @@ function PostPage({
       document.body.style.overflow = previousOverflow;
     };
   }, []);
+  const escape = useCallback(() => {
+    if (composing) void closeComposer();
+    else if (onEscape) onEscape();
+    else void close();
+  }, [close, closeComposer, composing, onEscape]);
   useEffect(() => {
     if (modal) return;
     const keydown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !event.defaultPrevented) {
-        if (onEscape) onEscape();
-        else close();
-      }
+      if (event.key === "Escape" && !event.defaultPrevented) escape();
     };
     window.addEventListener("keydown", keydown);
     return () => window.removeEventListener("keydown", keydown);
-  }, [close, modal, onEscape]);
+  }, [escape, modal]);
+
+  // 持ち上がったページ：押すと下ろす、下へ引くと指についてくる。
+  const pointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!composing) return;
+    event.preventDefault();
+    dragRef.current = { start: event.clientY, moved: 0 };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+  const pointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const drag = dragRef.current;
+    const motion = motionRef.current;
+    if (!drag || !motion) return;
+    drag.moved = Math.max(0, event.clientY - drag.start);
+    const height = motion.liftHeight(keyboard);
+    motion.follow(-height + Math.min(drag.moved, height));
+  };
+  const pointerUp = () => {
+    const drag = dragRef.current;
+    const motion = motionRef.current;
+    dragRef.current = null;
+    if (!drag || !motion) return;
+    if (drag.moved < 6 || drag.moved > 70) void closeComposer();
+    else void motion.lift(motion.liftHeight(keyboard));
+  };
+
+  const send = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const body = text.trim();
+    if (!composer || sending || !body) return;
+    setSendError("");
+    setSending(true);
+    try {
+      const comment = await api<Comment>(`/posts/${postId}/comments`, {
+        method: "POST",
+        body: JSON.stringify({ body }),
+      });
+      setText("");
+      await closeComposer();
+      composer.onSent(comment);
+    } catch (reason) {
+      setSendError((reason as Error).message);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const avatar = currentUser.avatarUrl ? (
+    <img src={currentUser.avatarUrl} alt="" />
+  ) : (
+    currentUser.displayName.slice(0, 1)
+  );
+  const sheet = composer && (
+    <form
+      id={formId}
+      ref={sheetRef}
+      className="comment-sheet"
+      inert={!composing || undefined}
+      aria-hidden={!composing || undefined}
+      aria-label="コメントする"
+      onSubmit={(event) => void send(event)}
+    >
+      <div className="comment-sheet-head">
+        <span className="comment-sheet-who">
+          <span className="comment-sheet-avatar" aria-hidden>
+            {avatar}
+          </span>
+          {currentUser.displayName}としてコメント
+        </span>
+        {composer.authorName && <span>{composer.authorName}さんの投稿</span>}
+      </div>
+      {sendError && (
+        <p className="form-error" role="alert">
+          {sendError}
+        </p>
+      )}
+      <label className="comment-sheet-field">
+        <textarea
+          ref={textRef}
+          name="body"
+          aria-label="この投稿へのコメント"
+          placeholder="この投稿にコメント"
+          maxLength={1000}
+          value={text}
+          disabled={sending}
+          onChange={(event) => setText(event.target.value)}
+        />
+        <span className="comment-sheet-count" aria-hidden>
+          {text.length} / 1000
+        </span>
+      </label>
+      <button className="comment-sheet-send" type="submit" disabled={sending || !text.trim()}>
+        {sending ? "送信中…" : "送信"}
+      </button>
+    </form>
+  );
+
+  // 画面に1つのドック：戻る・コメントする・…、書くときは送信ボタン、閉じるときはタブへ形を変える。
+  const dockControls = closing ? undefined : composing ? (
+    <DockGroup slot="r" className="cdock-center cdock-send">
+      <button type="submit" form={formId} disabled={sending || !text.trim()}>
+        {sending ? "送信中…" : "送信"}
+      </button>
+    </DockGroup>
+  ) : (
+    <>
+      <DockGroup slot="l">
+        <button type="button" onClick={() => void close()} aria-label={modal ? "投稿を閉じる" : "戻る"}>
+          <DockBackIcon />
+        </button>
+      </DockGroup>
+      {canCompose && (
+        <DockGroup slot={menu ? "m" : "r"} tone="ink" className="cdock-center">
+          <button type="button" onClick={openComposer}>
+            <MessageCircle aria-hidden />
+            コメントする
+          </button>
+        </DockGroup>
+      )}
+      {menu && (
+        <DockGroup slot="r">
+          <button
+            type="button"
+            aria-label="投稿メニュー"
+            aria-expanded={menu.expanded}
+            onClick={(event) => menu.open(event.currentTarget)}
+          >
+            <Ellipsis />
+          </button>
+        </DockGroup>
+      )}
+    </>
+  );
+  const dock = (
+    <MainDock items={mainDockItems} className="post-dock" label={closing ? undefined : "投稿の操作"}>
+      {dockControls}
+    </MainDock>
+  );
 
   const content = (
-    <div ref={panelRef} className={`post-page-layer${modal ? " post-modal-panel" : ""}`}>
+    <div
+      ref={panelRef}
+      className={`post-page-layer${modal ? " post-modal-panel" : ""}${composing ? " composing" : ""}`}
+      onPointerDown={pointerDown}
+      onPointerMove={pointerMove}
+      onPointerUp={pointerUp}
+      onPointerCancel={pointerUp}
+    >
       <header className="page-header post-page-header">
         <div className="page-header-inner">
           <div className="header-side">
@@ -486,19 +720,36 @@ function PostPage({
               ref={closeButtonRef}
               className="icon-button"
               type="button"
-              onClick={close}
+              onClick={() => void close()}
               aria-label={modal ? "投稿を閉じる" : "戻る"}
             >
-              {modal ? <X /> : <ChevronLeft />}
+              <X />
             </button>
           </div>
-          <span aria-hidden />
-          <div className="header-side header-action">{action}</div>
+          {canCompose ? (
+            <button className="post-header-comment" type="button" onClick={openComposer}>
+              <MessageCircle aria-hidden />
+              コメントする
+            </button>
+          ) : (
+            <span aria-hidden />
+          )}
+          <div className="header-side header-action">
+            {menu && (
+              <button
+                className="icon-button"
+                type="button"
+                onClick={(event) => menu.open(event.currentTarget)}
+                aria-label="投稿メニュー"
+                aria-expanded={menu.expanded}
+              >
+                <Ellipsis />
+              </button>
+            )}
+          </div>
         </div>
       </header>
       <div className="post-page-scroll">{children}</div>
-      {footer}
-      {overlay}
     </div>
   );
   return modal ? (
@@ -508,17 +759,24 @@ function PostPage({
       aria-label="投稿詳細"
       onCancel={(event) => {
         event.preventDefault();
-        if (onEscape) onEscape();
-        else close();
+        escape();
       }}
       onClick={(event) => {
-        if (event.target === event.currentTarget) close();
+        if (event.target === event.currentTarget) void close();
       }}
     >
+      {sheet}
       {content}
+      {dock}
+      {overlay}
     </dialog>
   ) : (
-    content
+    <>
+      {sheet}
+      {content}
+      {dock}
+      {overlay}
+    </>
   );
 }
 

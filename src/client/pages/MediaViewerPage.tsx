@@ -597,7 +597,17 @@ export function MediaViewerPage() {
               aria-label="前の写真・動画"
             >
               <ChevronLeft aria-hidden />
-              前へ
+            </button>
+            <button
+              ref={commentButtonRef}
+              className="viewer-comment-button"
+              type="button"
+              disabled={!post || !current}
+              aria-expanded={commentsOpen}
+              onClick={() => setCommentsOpen((open) => !open)}
+            >
+              <MessageCircle aria-hidden />
+              コメント{post && post.comments.length > 0 && <b>{post.comments.length}</b>}
             </button>
             <button
               type="button"
@@ -605,7 +615,6 @@ export function MediaViewerPage() {
               disabled={index >= navigationItems.length - 1}
               aria-label="次の写真・動画"
             >
-              次へ
               <ChevronRight aria-hidden />
             </button>
           </div>
@@ -614,17 +623,6 @@ export function MediaViewerPage() {
               {index === navigationItems.length - 1 ? "最後の動画の再生が終わりました" : "再生が終わりました"}
             </p>
           )}
-          <button
-            ref={commentButtonRef}
-            className="viewer-comment-button"
-            type="button"
-            disabled={!post || !current}
-            aria-expanded={commentsOpen}
-            onClick={() => setCommentsOpen((open) => !open)}
-          >
-            <MessageCircle aria-hidden />
-            この投稿にコメント {post && post.comments.length > 0 ? `· ${post.comments.length}件` : ""}
-          </button>
         </div>
       </div>
       <div className="thumbnail-strip" ref={thumbnailStripRef}>

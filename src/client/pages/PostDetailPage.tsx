@@ -14,7 +14,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from "react";
-import { createPortal, flushSync } from "react-dom";
+import { createPortal } from "react-dom";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import type { Comment, Post } from "../../shared/types";
 import { api, formatDate } from "../api";
@@ -417,12 +417,9 @@ function PostPage({
   const openComposer = useCallback(() => {
     const motion = motionRef.current;
     if (!motion || closing || !canCompose) return;
-    // iPhone はタップの中で focus しないとキーボードが出ない。欄の inert を先に外してから focus する。
-    flushSync(() => {
-      setComposing(true);
-      setSendError("");
-    });
-    textRef.current?.focus({ preventScroll: true });
+    // 欄を見せるだけで focus はしない。キーボードは欄を押したときに出す（Tsubasa 2026-11-03）。
+    setComposing(true);
+    setSendError("");
     void motion.lift(motion.liftHeight());
   }, [canCompose, closing]);
 
@@ -533,11 +530,6 @@ function PostPage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modal, postId]);
 
-  // タイムラインの「コメントする」から開いたときも、欄が出たら入力できるようにする。
-  useEffect(() => {
-    const field = textRef.current;
-    if (composing && field && document.activeElement !== field) field.focus({ preventScroll: true });
-  }, [composing]);
   // キーボードが出入りしたら、書き込み欄とページをその上へ載せ直す。
   useEffect(() => {
     const motion = motionRef.current;

@@ -57,6 +57,7 @@ export class PostMotion {
     const content = this.content();
     if (content) content.style.translate = Math.abs(this.s.off) > 0.3 ? `0 ${this.s.off.toFixed(2)}px` : "";
     const bottom = 30 * progress;
+    panel.style.setProperty("--lift", progress.toFixed(3));
     if (this.clip) {
       const box = panel.getBoundingClientRect();
       // 四辺は持ち上げる前のページの座標で動かし、持ち上げ（y）はページごと動かす。
@@ -170,6 +171,7 @@ export class PostMotion {
     for (const live of Object.values(this.live)) live.stop();
     this.panel.style.translate = "";
     this.panel.style.clipPath = "";
+    this.panel.style.removeProperty("--lift");
     const content = this.content();
     if (content) content.style.translate = "";
   }

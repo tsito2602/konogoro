@@ -677,7 +677,7 @@ function PostPage({
         </button>
       </DockGroup>
       {canCompose && (
-        <DockGroup slot={menu ? "m" : "r"} tone="ink" className="cdock-center">
+        <DockGroup slot={menu ? "m" : "r"} tone="ink" stretch>
           <button type="button" onClick={openComposer}>
             <MessageCircle aria-hidden />
             コメントする
@@ -750,6 +750,8 @@ function PostPage({
         </div>
       </header>
       <div className="post-page-scroll">{children}</div>
+      {/* 持ち上がったページの下端のつまみ。押すか下へ引くと欄を閉じられることを示す。 */}
+      <span className="post-lift-handle" aria-hidden />
     </div>
   );
   return modal ? (

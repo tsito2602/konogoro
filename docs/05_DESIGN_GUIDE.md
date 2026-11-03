@@ -44,7 +44,7 @@
 
 ## 3. 日本語の文字組み
 
-書体は cartoon-kit と同じく `@fontsource` で自前に持つ（`src/client/cartoon/fonts.css`）。本文は Noto Sans JP（`--f-body`、400と700を同梱）、年月などの数字の見出しは Bricolage Grotesque（`--f-num`）、番号やコードは IBM Plex Mono（`--f-mono`）。本文は `palt` で字間を詰める。日本語に負の字間や細字300を一律指定しない。本文は400、見出しと操作は600（表示は700）を基本とする。
+本文は端末の標準フォント（`--f-body`。iPhone はヒラギノ、Android は Noto Sans CJK、Windows は Yu Gothic UI）で、書体ファイルを読み込まない。年月などの数字の見出しは Bricolage Grotesque（`--f-num`、漢字は標準フォントへ落ちる）、番号やコードは IBM Plex Mono（`--f-mono`）で、この2つは cartoon-kit と同じく `@fontsource` で自前に持つ（`src/client/cartoon/fonts.css`）。本文は `palt` で字間を詰める。日本語に負の字間や細字300を一律指定しない。本文は400、見出しと操作は600（表示は700）を基本とする。
 
 | 役割                   | 基準サイズ       | 行高 | 備考                                           |
 | ---------------------- | ---------------- | ---- | ---------------------------------------------- |

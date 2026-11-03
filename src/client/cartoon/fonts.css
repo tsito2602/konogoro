@@ -1,9 +1,7 @@
 /* The mocks' faces, self-hosted so the installed app keeps them offline.
    --f-num: Bricolage Grotesque (opsz + wght axes, as the mocks request 12..96). --f-mono: IBM Plex Mono.
-   konogoro: 本文は cartoon-kit の Zen Kaku Gothic New ではなく Noto Sans JP（Tsubasa 2026-11-02）。
-   1 太さで約 110 KB の @font-face になるため 400 と 700 だけを読む（500 は 400、600〜900 は 700 で表示）。 */
-@import "@fontsource/noto-sans-jp/400.css";
-@import "@fontsource/noto-sans-jp/700.css";
+   konogoro: 本文は cartoon-kit の Zen Kaku Gothic New ではなく端末の標準フォント（Tsubasa 2026-11-03）。
+   本文の書体はここでは読まない（styles.css の --f-body）。 */
 @import "@fontsource/ibm-plex-mono/400.css";
 @import "@fontsource/ibm-plex-mono/500.css";
 

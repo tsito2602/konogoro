@@ -138,9 +138,10 @@ export function PostCard({
                   latestComment.authorName.slice(0, 1)
                 )}
               </span>
-              <span>
-                <strong>{latestComment.authorName}</strong>
-                <span>{latestComment.body}</span>
+              {/* 名前と本文は別の行に分ける（並べると「つばさコメント」のように続けて読めてしまう）。 */}
+              <span className="post-comment-text">
+                <strong className="post-comment-name">{latestComment.authorName}</strong>
+                <span className="post-comment-body">{latestComment.body}</span>
               </span>
             </Link>
             {commentCount > 1 && (

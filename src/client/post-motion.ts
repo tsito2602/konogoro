@@ -2,8 +2,8 @@ import { Live, RM, anim, sleep } from "./cartoon/cartoon";
 
 // 投稿ページの動き（案C、Tsubasa 2026-11-03）。
 // タイムラインのカードの四辺がそれぞれのばねで広がって投稿ページになり（上 lead、下 split、左右 boing）、
-// 中身はカードと同じ位置から動き出す。コメントを書くときは、そのまま止まらずにページが dock のばねで
-// 持ち上がり、下から書き込み欄が出る。戻るときはページがカードへ縮んで戻る。
+// 中身はカードと同じ位置から動き出す。コメントを書くときは、ページが画面を覆いきった瞬間から止まらずに
+// dock のばねで持ち上がり、ページの外（下の面）にある書き込み欄が見える。戻るときはページがカードへ縮んで戻る。
 
 type Edges = { t: number; b: number; l: number; r: number };
 const EDGES = ["t", "b", "l", "r"] as const;
@@ -15,6 +15,8 @@ export class PostMotion {
   frame = 0;
   /** reset 後は何も描かない（遅れて来るタイマーが、次のページの動きを上書きしないように）。 */
   dead = false;
+  /** カードから広がるページが画面（パネルの枠）を覆いきったら呼ぶ。 */
+  private covered: (() => void) | null = null;
   live: Record<(typeof EDGES)[number] | "y" | "off", Live>;
 
   constructor(
@@ -70,14 +72,27 @@ export class PostMotion {
         r: Math.max(0, box.right - this.s.r),
       };
       const round = Math.min(20, Math.max(inset.t, inset.b, inset.l, inset.r) * 0.4);
-      const radiusBottom = Math.max(round, bottom);
-      panel.style.clipPath = `inset(${inset.t.toFixed(1)}px ${inset.r.toFixed(1)}px ${inset.b.toFixed(1)}px ${inset.l.toFixed(1)}px round ${round.toFixed(1)}px ${round.toFixed(1)}px ${radiusBottom.toFixed(1)}px ${radiusBottom.toFixed(1)}px)`;
-    } else
-      panel.style.clipPath = progress > 0.001 ? `inset(0 round 0 0 ${bottom.toFixed(1)}px ${bottom.toFixed(1)}px)` : "";
+      panel.style.clipPath = `inset(${inset.t.toFixed(1)}px ${inset.r.toFixed(1)}px ${inset.b.toFixed(1)}px ${inset.l.toFixed(1)}px round ${round.toFixed(1)}px)`;
+      panel.style.borderRadius = "";
+      // 四辺が一度ずつ枠に届いたら覆いきった。あとの小さな揺れは捨てて、枠いっぱいのページにする。
+      if (this.covered && Math.max(inset.t, inset.b, inset.l, inset.r) < 0.5) {
+        this.clip = false;
+        panel.style.clipPath = "";
+        const done = this.covered;
+        this.covered = null;
+        done();
+      }
+    } else {
+      // 持ち上がったページは角を丸め、下の面へ影を落とす（clip-path だと影が切れるので border-radius）。
+      panel.style.clipPath = "";
+      panel.style.borderRadius = progress > 0.001 ? `0 0 ${bottom.toFixed(1)}px ${bottom.toFixed(1)}px` : "";
+    }
+    // 書き込み欄はページの外（下の面）にずっとあるもの。ページが覆っている間だけ隠し、
+    // 持ち上がり始めたら不透明のまま見せて、中身だけ少し遅れて上がる。
     const sheet = this.sheet();
     if (sheet) {
-      sheet.style.opacity = progress.toFixed(3);
-      sheet.style.translate = `0 ${((1 - progress) * 28).toFixed(1)}px`;
+      sheet.style.opacity = y < -0.5 ? "1" : "0";
+      sheet.style.setProperty("--sheet-shift", `${((1 - progress) * 18).toFixed(1)}px`);
     }
     this.onLift(progress);
   }
@@ -97,11 +112,13 @@ export class PostMotion {
     return { t: top, b: top + box.height, l: box.left, r: box.right };
   }
 
-  /** カード → 投稿ページ。lift なら広がりきる前に、そのまま持ち上げまでつなぐ。 */
-  async enter(card: DOMRect, lift: () => number | null) {
+  /** カード → 投稿ページ。lift なら覆いきったところから、止まらずに持ち上げまでつなぐ。 */
+  async enter(card: DOMRect, height: number | null, onLift: () => void) {
     if (RM()) {
-      const height = lift();
-      if (height) this.live.y.set(-height);
+      if (height) {
+        onLift();
+        this.live.y.set(-height);
+      }
       return;
     }
     const content = this.content();
@@ -111,17 +128,28 @@ export class PostMotion {
     this.live.y.set(0);
     this.clip = true;
     this.paint();
-    const height = lift();
     const target = this.panelEdges();
-    await Promise.all([
+    const covered = new Promise<void>((resolve) => (this.covered = resolve));
+    const edges = Promise.all([
       this.live.t.to(target.t, "lead"),
       this.live.l.to(target.l, "boing"),
       this.live.r.to(target.r, "boing"),
       this.later(35, () => this.live.b.to(target.b, "split")),
+    ]).then(() => this.covered?.());
+    await Promise.all([
+      edges,
       this.live.off.to(0, "split"),
-      height ? this.later(110, () => this.live.y.to(-height, "dock")) : Promise.resolve(),
+      // 持ち上げは、ページが画面を覆いきった瞬間に止まらずに続ける（下にタイムラインを見せない）。
+      height
+        ? covered.then(() => {
+            if (this.dead) return;
+            onLift();
+            return this.live.y.to(-height, "dock");
+          })
+        : Promise.resolve(),
     ]);
     if (this.dead) return;
+    this.covered = null;
     this.clip = false;
     this.paint();
   }
@@ -160,6 +188,11 @@ export class PostMotion {
     this.live.y.set(y);
   }
 
+  /** カードから広がっている途中（持ち上げは覆いきってから enter が始める）。 */
+  get entering() {
+    return this.covered !== null;
+  }
+
   get lifted() {
     return this.s.y < -1;
   }
@@ -171,7 +204,9 @@ export class PostMotion {
     for (const live of Object.values(this.live)) live.stop();
     this.panel.style.translate = "";
     this.panel.style.clipPath = "";
+    this.panel.style.borderRadius = "";
     this.panel.style.removeProperty("--lift");
+    this.covered = null;
     const content = this.content();
     if (content) content.style.translate = "";
   }

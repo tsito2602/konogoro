@@ -11,6 +11,7 @@ import { ErrorState } from "./AsyncState";
 import { PwaGuide } from "./PwaGuide";
 import { WelcomePhotos } from "./WelcomePhotos";
 import { AddMenu } from "./AddMenu";
+import { FuseAddMenu } from "./FuseAddMenu";
 import { remainingBootMotion } from "../boot-motion";
 import { BootSymbol } from "./BootSymbol";
 import { ToastProvider } from "./Toast";
@@ -240,9 +241,15 @@ export function AppLayout() {
             }))}
           />
         )}
-        {!hideNavigation && canCreatePost(currentUser) && canManageEvent(currentUser) && addMenuOpen && (
-          <AddMenu postPath={addPostPath} close={() => setAddMenuOpen(false)} />
-        )}
+        {!hideNavigation &&
+          canCreatePost(currentUser) &&
+          canManageEvent(currentUser) &&
+          addMenuOpen &&
+          (window.matchMedia("(max-width: 1023px)").matches ? (
+            <FuseAddMenu postPath={addPostPath} close={() => setAddMenuOpen(false)} />
+          ) : (
+            <AddMenu postPath={addPostPath} close={() => setAddMenuOpen(false)} />
+          ))}
         {!hideNavigation &&
           !hideAddButton &&
           canCreatePost(currentUser) &&

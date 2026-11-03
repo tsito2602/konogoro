@@ -184,11 +184,12 @@ export function installSkeletonReveal() {
       if (!(target instanceof HTMLElement) || target.matches(".route-background, .app-shell, #root")) continue;
       // ページの外（ビューアー、シート、メニュー）や、行の中の小さな書き換えは動かさない。
       if (!target.closest(".route-background") || target.closest(CASCADE_ROWS)) continue;
-      const fromSkeleton = revealed.has(target);
+      // スケルトンの後と、ページの直下に入った塊（空の表示、次の投稿など）は、行が無ければその塊ごと上げる。
+      const orSelf = revealed.has(target) || target.matches("main, .page-content");
       for (const node of record.addedNodes) {
         if (!(node instanceof HTMLElement) || !node.isConnected || isSkeleton(node)) continue;
         if (node.matches(CASCADE_ROWS)) rows.push(node);
-        else rows.push(...rowsIn(node, fromSkeleton));
+        else rows.push(...rowsIn(node, orSelf));
       }
     }
     cascadeRows(resting([...new Set(rows)]));
@@ -197,7 +198,7 @@ export function installSkeletonReveal() {
   return () => observer.disconnect();
 }
 
-/** The outermost rows inside `element`; after a skeleton, the element itself when it has none (forms). */
+/** The outermost rows inside `element`, or the element itself when it has none and `orSelf` is set. */
 function rowsIn(element: HTMLElement, orSelf: boolean): HTMLElement[] {
   const rows = Array.from(element.querySelectorAll<HTMLElement>(CASCADE_ROWS)).filter((row) => {
     const outer = row.parentElement?.closest(CASCADE_ROWS);

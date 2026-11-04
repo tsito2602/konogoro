@@ -295,3 +295,10 @@ body:has(.fuse-add-overlay) .floating-add-button {
     display: none;
   }
 }
+/* その画面の操作をボトムナビに移した画面では、スマホのページ内の同じボタンを出さない。 */
+@media (max-width: 1023px) {
+  .dock-owned-action,
+  .change-save-bar.dock-owned-action {
+    display: none !important;
+  }
+}

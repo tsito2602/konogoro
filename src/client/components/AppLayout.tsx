@@ -16,6 +16,7 @@ import { remainingBootMotion } from "../boot-motion";
 import { BootSymbol } from "./BootSymbol";
 import { ToastProvider } from "./Toast";
 import { MainDock } from "./MainDock";
+import { contextDock } from "./ContextDock";
 import { UpdateNotice } from "./UpdateNotice";
 import { useRouteEnter } from "../route-motion";
 import { usePageJelly } from "../jelly-scroll";
@@ -179,6 +180,7 @@ export function AppLayout() {
   if (!authenticated) return <LoginScreen returnTo={`${location.pathname}${location.search}${location.hash}`} />;
   if (!currentUser) return <BootScreen />;
   if (!canAccessPath(currentUser, pathname)) return <Navigate to="/" replace />;
+  const baseDock = contextDock(pathname, currentUser);
 
   return (
     <ToastProvider>
@@ -241,7 +243,11 @@ export function AppLayout() {
           </nav>
         )}
         {!hideNavigation && <UpdateNotice />}
-        {!hideNavigation && !postDock && <MainDock measureRef={navigationHeightRef} items={mainDockItems} />}
+        {!hideNavigation && !postDock && (
+          <MainDock measureRef={navigationHeightRef} items={mainDockItems} identity={baseDock?.identity}>
+            {baseDock?.controls}
+          </MainDock>
+        )}
         {!hideNavigation &&
           canCreatePost(currentUser) &&
           canManageEvent(currentUser) &&

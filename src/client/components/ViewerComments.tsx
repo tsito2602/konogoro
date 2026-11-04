@@ -8,10 +8,18 @@ export function ViewerComments({
   post,
   onClose,
   onComment,
+  formId,
+  onComposerChange,
+  onHeight,
 }: {
   post: Post;
   onClose: () => void;
   onComment: (comment: Comment) => void;
+  /** The form's id, so the dock's 送信 can submit it. */
+  formId?: string;
+  onComposerChange?: (state: { canSend: boolean; sending: boolean }) => void;
+  /** How far the viewer above lifts (the sheet's height above the dock). */
+  onHeight?: (height: number) => void;
 }) {
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
@@ -32,6 +40,25 @@ export function ViewerComments({
     closeAnimation.current = animation;
     animation.finished.then(onClose).catch(() => {});
   };
+  useEffect(() => {
+    onComposerChange?.({ canSend: !!body.trim(), sending });
+  }, [body, sending, onComposerChange]);
+  useEffect(() => {
+    const region = regionRef.current;
+    if (!region || !onHeight || typeof ResizeObserver === "undefined") return;
+    const measure = () => {
+      // 欄の下にはボトムナビの帯がある。持ち上げるのはその上に出る分だけ。
+      const dockZone = parseFloat(getComputedStyle(region).getPropertyValue("--viewer-dock-zone")) || 0;
+      onHeight(Math.max(0, region.offsetHeight - dockZone));
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(region);
+    return () => {
+      observer.disconnect();
+      onHeight(0);
+    };
+  }, [onHeight]);
   const listRef = useRef<HTMLDivElement>(null);
   const sentCommentId = useRef<string | null>(null);
   useEffect(() => {
@@ -40,6 +67,7 @@ export function ViewerComments({
     sentCommentId.current = null;
   }, [post.comments]);
   useEffect(() => {
+    // スマホではキーボードを勝手に出さないよう欄そのものにフォーカスし、入力欄は押したときだけ開く。
     regionRef.current?.focus({ preventScroll: true });
     return () => {
       closeAnimation.current?.cancel();
@@ -100,7 +128,7 @@ export function ViewerComments({
           </article>
         ))}
       </div>
-      <form onSubmit={(event) => void send(event)}>
+      <form id={formId} onSubmit={(event) => void send(event)}>
         {error && (
           <p role="alert" className="form-error">
             {error}
@@ -120,6 +148,7 @@ export function ViewerComments({
             rows={2}
           />
           <button
+            className="viewer-comment-send"
             type="submit"
             disabled={sending || !body.trim()}
             aria-label={sending ? "コメントを送信中" : "コメントを送信"}

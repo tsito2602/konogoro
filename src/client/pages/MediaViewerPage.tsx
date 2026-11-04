@@ -4,7 +4,10 @@ import { clearPreparedVideo, prepareNextVideo, useVideoPreparation } from "../vi
 import { VideoPlayer } from "../components/VideoPlayer";
 import { commentNavigationState } from "../comment-navigation";
 import { canReturnInApp, rememberAlbumMedia, updateReadingPost } from "../reading-context";
-import { ChevronLeft, ChevronRight, Download, MessageCircle, X } from "lucide-react";
+import { Download, MessageCircle, X } from "lucide-react";
+import { mainDockItems } from "../components/AppLayout";
+import { MainDock } from "../components/MainDock";
+import { DockGroup } from "../cartoon/cartoon-dock";
 import {
   useCallback,
   useEffect,
@@ -12,6 +15,7 @@ import {
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
@@ -144,6 +148,10 @@ export function MediaViewerPage() {
   const [retry, setRetry] = useState(0);
   const postCache = useRef(new Map<string, Post>());
   const [commentsOpen, setCommentsOpen] = useState(false);
+  // コメント欄は閉じるときも、写真の面が下りきるまで下に残す。
+  const [sheetMounted, setSheetMounted] = useState(false);
+  const [composer, setComposer] = useState({ canSend: false, sending: false });
+  const [liftHeight, setLiftHeight] = useState(0);
   const [viewerOverlayVisible, setViewerOverlayVisible] = useState(true);
   const [videoControlsContainer, setVideoControlsContainer] = useState<HTMLDivElement | null>(null);
   const [finishedMedia, setFinishedMedia] = useState<string | null>(null);
@@ -358,6 +366,19 @@ export function MediaViewerPage() {
     window.addEventListener("keydown", keydown);
     return () => window.removeEventListener("keydown", keydown);
   }, [animateToMedia, closeViewer, commentsOpen, index, post]);
+  useEffect(() => {
+    if (commentsOpen) return;
+    const timer = window.setTimeout(() => setSheetMounted(false), 420);
+    return () => window.clearTimeout(timer);
+  }, [commentsOpen]);
+  const openComments = () => {
+    setSheetMounted(true);
+    setCommentsOpen(true);
+  };
+  const closeComments = () => {
+    setCommentsOpen(false);
+    commentButtonRef.current?.focus({ preventScroll: true });
+  };
   const cancelSwipe = () => {
     swipeStart.current = null;
     setDragging(false);
@@ -511,8 +532,20 @@ export function MediaViewerPage() {
   };
   const overlayVisible = isViewerOverlayVisible(current?.kind, viewerOverlayVisible);
   return (
-    <main className={`media-viewer video-viewer${commentsOpen ? " comments-open" : ""}`}>
-      <div className={`viewer-viewport${overlayVisible ? " overlay-visible" : " overlay-hidden"}`}>
+    <main
+      className={`media-viewer video-viewer${commentsOpen ? " comments-open" : ""}`}
+      style={{ "--viewer-lift": `${liftHeight}px` } as CSSProperties}
+    >
+      <div
+        className={`viewer-viewport${overlayVisible ? " overlay-visible" : " overlay-hidden"}`}
+        onClickCapture={(event) => {
+          // 持ち上がった写真の面を押すと、コメント欄を閉じて下ろす。
+          if (!commentsOpen) return;
+          event.preventDefault();
+          event.stopPropagation();
+          closeComments();
+        }}
+      >
         <header
           className="viewer-header viewer-overlay"
           aria-hidden={!overlayVisible}
@@ -591,31 +624,15 @@ export function MediaViewerPage() {
           )}
           <div className="viewer-controls">
             <button
-              type="button"
-              onClick={() => animateToMedia(index - 1, "previous")}
-              disabled={index <= 0}
-              aria-label="前の写真・動画"
-            >
-              <ChevronLeft aria-hidden />
-            </button>
-            <button
               ref={commentButtonRef}
               className="viewer-comment-button"
               type="button"
               disabled={!post || !current}
               aria-expanded={commentsOpen}
-              onClick={() => setCommentsOpen((open) => !open)}
+              onClick={() => (commentsOpen ? closeComments() : openComments())}
             >
               <MessageCircle aria-hidden />
               コメント{post && post.comments.length > 0 && <b>{post.comments.length}</b>}
-            </button>
-            <button
-              type="button"
-              onClick={() => animateToMedia(index + 1, "next")}
-              disabled={index >= navigationItems.length - 1}
-              aria-label="次の写真・動画"
-            >
-              <ChevronRight aria-hidden />
             </button>
           </div>
           {current && finishedMedia === current.id && (
@@ -625,7 +642,16 @@ export function MediaViewerPage() {
           )}
         </div>
       </div>
-      <div className="thumbnail-strip" ref={thumbnailStripRef}>
+      <div
+        className="thumbnail-strip"
+        ref={thumbnailStripRef}
+        onClickCapture={(event) => {
+          if (!commentsOpen) return;
+          event.preventDefault();
+          event.stopPropagation();
+          closeComments();
+        }}
+      >
         {navigationItems.map((media, mediaIndex) => (
           <Link
             className={media.id === mediaId && media.postId === postId ? "selected" : ""}
@@ -650,14 +676,14 @@ export function MediaViewerPage() {
           </Link>
         ))}
       </div>
-      {commentsOpen && post && (
+      {(commentsOpen || sheetMounted) && post && (
         <ViewerComments
           key={post.id}
           post={post}
-          onClose={() => {
-            setCommentsOpen(false);
-            commentButtonRef.current?.focus();
-          }}
+          formId={VIEWER_COMMENT_FORM}
+          onComposerChange={setComposer}
+          onHeight={setLiftHeight}
+          onClose={closeComments}
           onComment={(comment) => {
             const nextPost = { ...post, comments: [...post.comments, comment], commentCount: post.comments.length + 1 };
             setLoadedPost((loaded) => (loaded?.postId === post.id ? { postId: post.id, post: nextPost } : loaded));
@@ -666,6 +692,45 @@ export function MediaViewerPage() {
           }}
         />
       )}
+      {/* スマホ・タブレットのボトムナビ：閉じる・コメントする・保存。コメント欄を開くと、閉じると送信になる。 */}
+      <MainDock items={mainDockItems} className="viewer-dock" identity="viewer" label="写真・動画の操作">
+        {commentsOpen ? (
+          <>
+            <DockGroup slot="l">
+              <button type="button" onClick={closeComments} aria-label="コメントを閉じて写真・動画に戻る">
+                <X />
+              </button>
+            </DockGroup>
+            <DockGroup slot="r" tone="ink" stretch>
+              <button type="submit" form={VIEWER_COMMENT_FORM} disabled={!composer.canSend || composer.sending}>
+                {composer.sending ? "送信中…" : "送信"}
+              </button>
+            </DockGroup>
+          </>
+        ) : (
+          <>
+            <DockGroup slot="l">
+              <button type="button" onClick={closeViewer} aria-label="閉じる">
+                <X />
+              </button>
+            </DockGroup>
+            <DockGroup slot="m" tone="ink" stretch>
+              <button type="button" disabled={!post || !current} onClick={openComments}>
+                <MessageCircle aria-hidden />
+                コメントする
+                {post && post.comments.length > 0 && <b className="viewer-dock-count">{post.comments.length}</b>}
+              </button>
+            </DockGroup>
+            <DockGroup slot="r">
+              <a href={current?.downloadUrl} aria-disabled={!current} aria-label="保存">
+                <Download />
+              </a>
+            </DockGroup>
+          </>
+        )}
+      </MainDock>
     </main>
   );
 }
+
+const VIEWER_COMMENT_FORM = "viewer-comment-form";

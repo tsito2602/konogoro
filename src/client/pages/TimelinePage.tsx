@@ -64,6 +64,10 @@ export function TimelinePage() {
             <UnreadSummary count={unreadCount} previewUrl={unreadPreview(posts)} />
           </aside>
         )}
+        {/* スマホ・タブレットでは上のカードの代わりに、親指の届くドックのすぐ上へ帯で出す（閲覧者だけ）。 */}
+        {currentUser.role === "viewer" && posts && unreadCount > 0 && (
+          <UnreadBand count={unreadCount} previewUrl={unreadPreview(posts)} />
+        )}
         <section className="feed" aria-label="タイムライン">
           {!posts && !error && <PageSkeleton variant="timeline" />}
           {error && <ErrorState message={error} retry={load} />}
@@ -155,6 +159,20 @@ export function UnreadSummary({ count, previewUrl }: { count: number; previewUrl
         <ArrowUpRight aria-hidden="true" />
       </Link>
     </section>
+  );
+}
+
+export function UnreadBand({ count, previewUrl }: { count: number; previewUrl?: string }) {
+  return (
+    <Link className="unread-band" to="/unread">
+      <span className="unread-band-art" aria-hidden="true">
+        {previewUrl ? <img src={previewUrl} alt="" /> : <Bookmark />}
+      </span>
+      <span className="unread-band-text">新しい思い出が{count}件あります</span>
+      <span className="unread-band-action" aria-hidden="true">
+        見る
+      </span>
+    </Link>
   );
 }
 

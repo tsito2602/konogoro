@@ -391,8 +391,14 @@
   }
   .media-viewer.comments-open .viewer-viewport,
   .media-viewer.comments-open .thumbnail-strip {
-    transform: translateY(calc(-1 * var(--viewer-lift, 0px)));
-    cursor: pointer;
+    transform: translateY(calc(var(--viewer-drag, 0px) - var(--viewer-lift, 0px)));
+    cursor: s-resize;
+    touch-action: none;
+  }
+  /* 指で引いている間はばねを止め、指にそのままついてくる。 */
+  .media-viewer.lift-dragging .viewer-viewport,
+  .media-viewer.lift-dragging .thumbnail-strip {
+    transition: none;
   }
   /* 持ち上がった面は投稿ページの面と同じ色にし、下の黒い書き込み欄と分けて見せる。 */
   .media-viewer .viewer-viewport,

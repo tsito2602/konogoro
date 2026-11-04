@@ -18,6 +18,7 @@ import {
   useState,
   type CSSProperties,
   type FormEvent,
+  type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
@@ -384,7 +385,9 @@ export function MediaViewerPage() {
     if (!sheet || typeof ResizeObserver === "undefined") return;
     // 持ち上げるのは、欄のうちボトムナビの帯より上に出る分だけ。
     const measure = () => {
-      const zone = parseFloat(getComputedStyle(sheet).getPropertyValue("--viewer-dock-zone")) || 0;
+      // カスタムプロパティは calc のまま返るので、計算済みの main の下余白（= ボトムナビの帯）を使う。
+      const main = sheet.parentElement;
+      const zone = main ? parseFloat(getComputedStyle(main).paddingBottom) || 0 : 0;
       setLiftHeight(Math.max(0, sheet.offsetHeight - zone));
     };
     measure();
@@ -419,6 +422,48 @@ export function MediaViewerPage() {
     } finally {
       setSending(false);
     }
+  };
+  // 持ち上がった面：押すと下ろす、つまみなどを持って下へ引くと指についてくる（投稿ページと同じ）。
+  const mainRef = useRef<HTMLElement>(null);
+  const liftDrag = useRef<{ start: number; moved: number } | null>(null);
+  const setDrag = (moved: number | null) => {
+    const main = mainRef.current;
+    if (!main) return;
+    main.classList.toggle("lift-dragging", moved !== null);
+    main.style.setProperty("--viewer-drag", `${moved ?? 0}px`);
+  };
+  const liftHandlers = {
+    onPointerDownCapture: (event: ReactPointerEvent<HTMLElement>) => {
+      if (!commentsOpen) return;
+      event.preventDefault();
+      event.stopPropagation();
+      liftDrag.current = { start: event.clientY, moved: 0 };
+      event.currentTarget.setPointerCapture(event.pointerId);
+    },
+    onPointerMoveCapture: (event: ReactPointerEvent<HTMLElement>) => {
+      const drag = liftDrag.current;
+      if (!drag) return;
+      event.stopPropagation();
+      drag.moved = Math.min(Math.max(0, event.clientY - drag.start), liftHeight);
+      setDrag(drag.moved);
+    },
+    onPointerUpCapture: (event: ReactPointerEvent<HTMLElement>) => {
+      const drag = liftDrag.current;
+      if (!drag) return;
+      event.stopPropagation();
+      liftDrag.current = null;
+      setDrag(null);
+      if (drag.moved < 6 || drag.moved > 70) closeComments();
+    },
+    onPointerCancelCapture: () => {
+      liftDrag.current = null;
+      setDrag(null);
+    },
+    onClickCapture: (event: ReactMouseEvent<HTMLElement>) => {
+      if (!commentsOpen) return;
+      event.preventDefault();
+      event.stopPropagation();
+    },
   };
   const openComments = () => {
     setCompact(window.matchMedia("(max-width: 1023px)").matches);
@@ -583,19 +628,11 @@ export function MediaViewerPage() {
   const overlayVisible = isViewerOverlayVisible(current?.kind, viewerOverlayVisible);
   return (
     <main
+      ref={mainRef}
       className={`media-viewer video-viewer${commentsOpen ? " comments-open" : ""}`}
       style={{ "--viewer-lift": `${liftHeight}px` } as CSSProperties}
     >
-      <div
-        className={`viewer-viewport${overlayVisible ? " overlay-visible" : " overlay-hidden"}`}
-        onClickCapture={(event) => {
-          // 持ち上がった写真の面を押すと、コメント欄を閉じて下ろす。
-          if (!commentsOpen) return;
-          event.preventDefault();
-          event.stopPropagation();
-          closeComments();
-        }}
-      >
+      <div className={`viewer-viewport${overlayVisible ? " overlay-visible" : " overlay-hidden"}`} {...liftHandlers}>
         <header
           className="viewer-header viewer-overlay"
           aria-hidden={!overlayVisible}
@@ -692,16 +729,7 @@ export function MediaViewerPage() {
           )}
         </div>
       </div>
-      <div
-        className="thumbnail-strip"
-        ref={thumbnailStripRef}
-        onClickCapture={(event) => {
-          if (!commentsOpen) return;
-          event.preventDefault();
-          event.stopPropagation();
-          closeComments();
-        }}
-      >
+      <div className="thumbnail-strip" ref={thumbnailStripRef} {...liftHandlers}>
         {navigationItems.map((media, mediaIndex) => (
           <Link
             className={media.id === mediaId && media.postId === postId ? "selected" : ""}

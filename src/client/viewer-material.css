@@ -367,7 +367,7 @@
     --viewer-dock-zone: calc(var(--dock-height) + var(--dock-safe-bottom) + 8px);
     --viewer-thumbnail-height: 76px;
     padding-bottom: var(--viewer-dock-zone);
-    background: var(--v-dock);
+    background: #000;
   }
   .media-viewer .viewer-viewport {
     z-index: 2;
@@ -409,21 +409,10 @@
   .video-viewer .viewer-controls {
     visibility: hidden;
   }
-  .video-viewer .viewer-comments {
+  /* コメント欄は投稿ページと同じ書き込み欄（components/CommentSheet.tsx）。持ち上がった面の下に出る。 */
+  .media-viewer > .comment-sheet.viewer-comment-sheet {
     z-index: 1;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    max-height: min(56dvh, 460px);
-    padding: 18px 16px var(--viewer-dock-zone);
-    border-radius: 0;
-    background: var(--v-dock);
-    box-shadow: none;
-    animation: none;
-  }
-  .video-viewer .viewer-comments > header .viewer-button,
-  .video-viewer .viewer-comments .viewer-comment-send {
-    display: none;
+    opacity: 1;
   }
   /* ドックは暗い面の島（cartoon-kit の島の色をビューアーの暗い色に置き換える）。 */
   .main-dock-host.viewer-dock {

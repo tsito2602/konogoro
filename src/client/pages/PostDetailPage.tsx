@@ -27,6 +27,7 @@ import { api, formatDate } from "../api";
 import { ErrorState } from "../components/AsyncState";
 import { mainDockItems, useCurrentUser } from "../components/AppLayout";
 import { MainDock, lastBasePath } from "../components/MainDock";
+import { CommentSheet } from "../components/CommentSheet";
 import { contextDock } from "../components/ContextDock";
 import { PageSkeleton } from "../components/PageSkeleton";
 import { SeenBy } from "../components/SeenBy";
@@ -499,54 +500,20 @@ function PostPage({
     }
   };
 
-  const avatar = currentUser.avatarUrl ? (
-    <img src={currentUser.avatarUrl} alt="" />
-  ) : (
-    currentUser.displayName.slice(0, 1)
-  );
   const sheet = composer && (
-    <form
-      id={formId}
-      ref={sheetRef}
-      className="comment-sheet"
-      inert={!composing || undefined}
-      aria-hidden={!composing || undefined}
-      aria-label="コメントする"
+    <CommentSheet
+      formId={formId}
+      sheetRef={sheetRef}
+      textRef={textRef}
+      open={composing}
+      user={currentUser}
+      authorName={composer.authorName}
+      error={sendError}
+      text={text}
+      sending={sending}
+      onText={setText}
       onSubmit={(event) => void send(event)}
-    >
-      <div className="comment-sheet-head">
-        <span className="comment-sheet-who">
-          <span className="comment-sheet-avatar" aria-hidden>
-            {avatar}
-          </span>
-          {currentUser.displayName}としてコメント
-        </span>
-        {composer.authorName && <span>{composer.authorName}さんの投稿</span>}
-      </div>
-      {sendError && (
-        <p className="form-error" role="alert">
-          {sendError}
-        </p>
-      )}
-      <label className="comment-sheet-field">
-        <textarea
-          ref={textRef}
-          name="body"
-          aria-label="この投稿へのコメント"
-          placeholder="この投稿にコメント"
-          maxLength={1000}
-          value={text}
-          disabled={sending}
-          onChange={(event) => setText(event.target.value)}
-        />
-        <span className="comment-sheet-count" aria-hidden>
-          {text.length} / 1000
-        </span>
-      </label>
-      <button className="comment-sheet-send" type="submit" disabled={sending || !text.trim()}>
-        {sending ? "送信中…" : "送信"}
-      </button>
-    </form>
+    />
   );
 
   // 画面に1つのドック：戻る・コメントする・編集、書くときは送信ボタン、閉じるときは下の画面のドック

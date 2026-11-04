@@ -1,11 +1,12 @@
 import "../viewer-material.css";
 import { ViewerComments } from "../components/ViewerComments";
+import { CommentSheet } from "../components/CommentSheet";
 import { clearPreparedVideo, prepareNextVideo, useVideoPreparation } from "../video-experience";
 import { VideoPlayer } from "../components/VideoPlayer";
 import { commentNavigationState } from "../comment-navigation";
 import { canReturnInApp, rememberAlbumMedia, updateReadingPost } from "../reading-context";
 import { Download, MessageCircle, X } from "lucide-react";
-import { mainDockItems } from "../components/AppLayout";
+import { mainDockItems, useCurrentUser } from "../components/AppLayout";
 import { MainDock } from "../components/MainDock";
 import { DockGroup } from "../cartoon/cartoon-dock";
 import {
@@ -16,10 +17,11 @@ import {
   useRef,
   useState,
   type CSSProperties,
+  type FormEvent,
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
-import type { AlbumMedia, Media, Post } from "../../shared/types";
+import type { AlbumMedia, Comment, Media, Post } from "../../shared/types";
 import { api, formatDate } from "../api";
 import { ViewerImage, type ViewerImageTransform } from "../components/ViewerImage";
 import { ErrorState, Loading } from "../components/AsyncState";
@@ -150,8 +152,14 @@ export function MediaViewerPage() {
   const [commentsOpen, setCommentsOpen] = useState(false);
   // コメント欄は閉じるときも、写真の面が下りきるまで下に残す。
   const [sheetMounted, setSheetMounted] = useState(false);
-  const [composer, setComposer] = useState({ canSend: false, sending: false });
+  // スマホでは投稿ページと同じ書き込み欄がせり上がる。PC は横に浮くコメント一覧のまま。
+  const [compact, setCompact] = useState(false);
+  const [text, setText] = useState("");
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState("");
   const [liftHeight, setLiftHeight] = useState(0);
+  const sheetRef = useRef<HTMLFormElement>(null);
+  const currentUser = useCurrentUser();
   const [viewerOverlayVisible, setViewerOverlayVisible] = useState(true);
   const [videoControlsContainer, setVideoControlsContainer] = useState<HTMLDivElement | null>(null);
   const [finishedMedia, setFinishedMedia] = useState<string | null>(null);
@@ -371,7 +379,49 @@ export function MediaViewerPage() {
     const timer = window.setTimeout(() => setSheetMounted(false), 420);
     return () => window.clearTimeout(timer);
   }, [commentsOpen]);
+  useLayoutEffect(() => {
+    const sheet = sheetRef.current;
+    if (!sheet || typeof ResizeObserver === "undefined") return;
+    // 持ち上げるのは、欄のうちボトムナビの帯より上に出る分だけ。
+    const measure = () => {
+      const zone = parseFloat(getComputedStyle(sheet).getPropertyValue("--viewer-dock-zone")) || 0;
+      setLiftHeight(Math.max(0, sheet.offsetHeight - zone));
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(sheet);
+    return () => observer.disconnect();
+  }, [sheetMounted, compact]);
+  const addComment = (comment: Comment) => {
+    if (!post) return;
+    const nextPost = { ...post, comments: [...post.comments, comment], commentCount: post.comments.length + 1 };
+    setLoadedPost((loaded) => (loaded?.postId === post.id ? { postId: post.id, post: nextPost } : loaded));
+    postCache.current.set(post.id, nextPost);
+    updateReadingPost(nextPost);
+  };
+  const sendComment = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const body = text.trim();
+    if (!post || sending || !body) return;
+    setSendError("");
+    setSending(true);
+    try {
+      const comment = await api<Comment>(`/posts/${post.id}/comments`, {
+        method: "POST",
+        body: JSON.stringify({ body }),
+      });
+      setText("");
+      addComment(comment);
+      // 投稿ページと同じく、送ったら欄を下ろす。
+      closeComments();
+    } catch (reason) {
+      setSendError((reason as Error).message);
+    } finally {
+      setSending(false);
+    }
+  };
   const openComments = () => {
+    setCompact(window.matchMedia("(max-width: 1023px)").matches);
     setSheetMounted(true);
     setCommentsOpen(true);
   };
@@ -676,22 +726,25 @@ export function MediaViewerPage() {
           </Link>
         ))}
       </div>
-      {(commentsOpen || sheetMounted) && post && (
-        <ViewerComments
-          key={post.id}
-          post={post}
-          formId={VIEWER_COMMENT_FORM}
-          onComposerChange={setComposer}
-          onHeight={setLiftHeight}
-          onClose={closeComments}
-          onComment={(comment) => {
-            const nextPost = { ...post, comments: [...post.comments, comment], commentCount: post.comments.length + 1 };
-            setLoadedPost((loaded) => (loaded?.postId === post.id ? { postId: post.id, post: nextPost } : loaded));
-            postCache.current.set(post.id, nextPost);
-            updateReadingPost(nextPost);
-          }}
-        />
-      )}
+      {(commentsOpen || sheetMounted) &&
+        post &&
+        (compact ? (
+          <CommentSheet
+            formId={VIEWER_COMMENT_FORM}
+            sheetRef={sheetRef}
+            open={commentsOpen}
+            user={currentUser}
+            authorName={post.authorName}
+            error={sendError}
+            text={text}
+            sending={sending}
+            onText={setText}
+            onSubmit={(event) => void sendComment(event)}
+            className="viewer-comment-sheet"
+          />
+        ) : (
+          <ViewerComments key={post.id} post={post} onClose={closeComments} onComment={addComment} />
+        ))}
       {/* スマホ・タブレットのボトムナビ：閉じる・コメントする・保存。コメント欄を開くと、閉じると送信になる。 */}
       <MainDock items={mainDockItems} className="viewer-dock" identity="viewer" label="写真・動画の操作">
         {commentsOpen ? (
@@ -702,8 +755,8 @@ export function MediaViewerPage() {
               </button>
             </DockGroup>
             <DockGroup slot="r" tone="ink" stretch>
-              <button type="submit" form={VIEWER_COMMENT_FORM} disabled={!composer.canSend || composer.sending}>
-                {composer.sending ? "送信中…" : "送信"}
+              <button type="submit" form={VIEWER_COMMENT_FORM} disabled={!text.trim() || sending}>
+                {sending ? "送信中…" : "送信"}
               </button>
             </DockGroup>
           </>

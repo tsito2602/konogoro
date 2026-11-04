@@ -340,8 +340,9 @@ body:has(.fuse-add-overlay) .floating-add-button {
   .event-filter-in-header {
     display: none;
   }
-  /* 設定の最初の見出しは、お知らせの最初の見出しと同じ高さから始める（一覧の上余白は見出しの上余白に任せる）。 */
-  :root .settings-page.page-content {
+  /* 設定とイベントの最初の見出しは、お知らせの最初の見出しと同じ高さから始める（一覧の上余白は見出しの上余白に任せる）。 */
+  :root .settings-page.page-content,
+  :root .event-list.page-content {
     padding-top: 0;
   }
   /* ヘッダーは余白だけになったので、その下に貼り付けていたものは画面の上端へ付ける。 */
@@ -353,8 +354,8 @@ body:has(.fuse-add-overlay) .floating-add-button {
   :root .icon-button.event-filter-floating {
     position: fixed;
     z-index: 25;
-    /* 上端を最初の見出し（これまで など）の上端にそろえる：上の余白24px＋一覧の上余白16px＋見出しの上20px＋行の高さと文字の差の半分4px。 */
-    top: calc(env(safe-area-inset-top) + 64px);
+    /* 上端を最初の見出し（これまで など）の上端にそろえる：上の余白24px＋見出しの上20px＋行の高さと文字の差の半分4px。 */
+    top: calc(env(safe-area-inset-top) + 48px);
     right: max(16px, env(safe-area-inset-right));
     display: grid;
     place-items: center;

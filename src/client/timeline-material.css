@@ -159,9 +159,6 @@
 .unread-complete h2 {
   letter-spacing: -0.03em;
 }
-.timeline-layout .skeleton-unread-summary > .skeleton-field {
-  grid-column: 1 / -1;
-}
 @media (min-width: 960px) {
   .timeline-sidebar .unread-summary {
     grid-template-columns: 1fr;

@@ -8,14 +8,21 @@ import { removeMediaWithReconciliation } from "../remove-media";
 import { uploadMissingParts } from "../upload-parts";
 import { useUnsavedChanges } from "../hooks/useUnsavedChanges";
 import { VideoBadge } from "../components/VideoBadge";
-import { AlertCircle, ImagePlus, LoaderCircle, Plus, RotateCcw, Video, X } from "lucide-react";
-import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import { AlertCircle, ImagePlus, LoaderCircle, Plus, RotateCcw, Trash2, Video, X } from "lucide-react";
+import { useEffect, useLayoutEffect, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import type { EventDetail, EventScene, EventSummary, Post, UploadTarget } from "../../shared/types";
 import { api as request } from "../api";
 import { ErrorState } from "../components/AsyncState";
 import { MediaProcessingStatus } from "../components/MediaProcessingStatus";
 import { PageHeader } from "../components/PageHeader";
+import { useMeasuredHeight } from "../hooks/useMeasuredHeight";
+import { mainDockItems } from "../components/AppLayout";
+import { MainDock } from "../components/MainDock";
+import { DockBackIcon, DockGroup } from "../cartoon/cartoon-dock";
+import { spring } from "../cartoon/cartoon";
+import { canReturnInApp, removeReadingPost } from "../reading-context";
+import { rememberEditLeft } from "../post-modal";
 import { PageSkeleton } from "../components/PageSkeleton";
 import { useToast } from "../components/Toast";
 import { moveMediaItem } from "../media-order";
@@ -27,6 +34,8 @@ import {
   validateMediaFiles,
   type SelectedMediaFile,
 } from "../media-upload";
+
+const FORM_ID = "post-edit-form";
 
 type OrderedMedia = { type: "existing"; media: Post["media"][number] } | { type: "new"; file: SelectedMediaFile };
 
@@ -68,6 +77,12 @@ export function PostEditPage() {
   const { gridRef, announcement } = useMediaReorder(mediaOrder, setMediaOrder, !post || saving || importingPlayback);
   const activeUploadRef = useRef<AbortController | null>(null);
   const [caption, setCaption] = useState<string | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+  const screenRef = useRef<HTMLDivElement>(null);
+  const dockHeightRef = useMeasuredHeight("--bottom-nav-height");
+  const fromPostPage = Boolean((location.state as { returnToDetail?: boolean } | null)?.returnToDetail);
   const markSaved = useUnsavedChanges(
     !!post &&
       (files.length > 0 ||
@@ -78,7 +93,7 @@ export function PostEditPage() {
         eventId !== (post.eventId ?? "") ||
         sceneId !== (post.sceneId ?? "") ||
         mediaOrder.join(",") !== post.media.map((item) => item.id).join(",")),
-    saving,
+    saving || deleting,
     "未保存の入力は失われます。送信・削除・保存がすでに成功した変更は残ります。この画面を離れますか？",
   );
   const filesRef = useRef(files);
@@ -147,20 +162,145 @@ export function PostEditPage() {
     };
   }, []);
 
-  if (!post && !error)
-    return (
-      <>
-        <PageHeader title="投稿を編集" back />
-        <PageSkeleton variant="post-edit" />
-      </>
+  // 投稿ページから来たときは、投稿ページの上に次の紙が下から差し込まれるように現れる。
+  // 中身の行は読み込み後に下から順に上がる（route-motion の installSkeletonReveal）。
+  useLayoutEffect(() => {
+    const screen = screenRef.current;
+    if (!screen || !fromPostPage) return;
+    void spring(
+      screen,
+      [
+        { transform: "translateY(56px) scale(.97)", opacity: 0 },
+        { transform: "none", opacity: 1 },
+      ],
+      { k: 300, d: 24 },
     );
-  if (!post)
-    return (
-      <>
+  }, [fromPostPage]);
+
+  // 閉じたあとに出る投稿ページは、開くときの動きをせずにそのまま現れる。
+  useLayoutEffect(() => () => rememberEditLeft(postId), [postId]);
+
+  const leave = () => {
+    if (canReturnInApp()) navigate(-1);
+    else navigate(`/posts/${postId}`, { replace: true });
+  };
+  const deletePost = async () => {
+    if (!post) return;
+    setDeleting(true);
+    setDeleteError("");
+    try {
+      await request(`/posts/${post.id}`, { method: "DELETE" });
+      markSaved();
+      removeReadingPost(post.id);
+      showToast("投稿を削除しました");
+      // 消した投稿のページには戻らず、その前の画面（タイムラインなど）へ戻る。
+      if (fromPostPage && Number(window.history.state?.idx) > 1) navigate(-2);
+      else navigate(post.eventId ? `/events/${post.eventId}` : "/", { replace: true });
+    } catch (reason) {
+      setDeleteError((reason as Error).message);
+      setDeleting(false);
+    }
+  };
+  const failedUpload = files.some((item) => item.status === "failed");
+  const saveDisabled =
+    !post ||
+    saving ||
+    deleting ||
+    importingPlayback ||
+    files.some((item) => item.status === "preparing" || item.status === "preparation-failed") ||
+    (eventId !== "" && scenesUnavailable) ||
+    scenes.some((scene) => !scene.title.trim());
+  const saveLabel = saving
+    ? regeneratingThumbnail
+      ? "サムネイルを再生成中…"
+      : "保存中…"
+    : failedUpload
+      ? "失敗した項目を再試行"
+      : "変更を保存";
+  // スマホでは、戻る・変更を保存・削除をボトムナビに置く。投稿ページのドックから形を変えて続く。
+  const dock = (
+    <MainDock
+      measureRef={dockHeightRef}
+      items={mainDockItems}
+      className="edit-dock"
+      identity="post-edit"
+      label="投稿の編集"
+    >
+      <DockGroup slot="l">
+        <button type="button" onClick={leave} aria-label="戻る">
+          <DockBackIcon />
+        </button>
+      </DockGroup>
+      <DockGroup slot="m" tone="ink" stretch>
+        <button type="submit" form={FORM_ID} disabled={saveDisabled}>
+          {failedUpload && !saving && <RotateCcw aria-hidden />}
+          {saveLabel}
+        </button>
+      </DockGroup>
+      {(!post || post.canDelete) && (
+        <DockGroup slot="r">
+          <button
+            type="button"
+            className="danger"
+            aria-label="投稿を削除"
+            disabled={!post || saving || deleting}
+            onClick={() => setDeleteOpen(true)}
+          >
+            <Trash2 />
+          </button>
+        </DockGroup>
+      )}
+    </MainDock>
+  );
+  const screen = (body: ReactNode) => (
+    <>
+      <div ref={screenRef} className="post-edit-screen">
         <PageHeader title="投稿を編集" back />
-        <ErrorState message={error} retry={load} />
-      </>
-    );
+        {body}
+      </div>
+      {dock}
+      {deleteOpen && (
+        <div
+          className="modal-backdrop"
+          onClick={() => {
+            if (!deleting) setDeleteOpen(false);
+          }}
+        >
+          <section
+            className="confirmation-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-post-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h2 id="delete-post-title">この投稿を削除する？</h2>
+            <p>写真・動画とコメントもすべて削除される。この操作は元に戻せない。</p>
+            {deleteError && (
+              <p className="form-error" role="alert">
+                {deleteError}
+              </p>
+            )}
+            <div>
+              <button className="outline-button" type="button" disabled={deleting} onClick={() => setDeleteOpen(false)}>
+                キャンセル
+              </button>
+              <button
+                className="danger-confirm-button"
+                type="button"
+                disabled={deleting}
+                onClick={() => void deletePost()}
+              >
+                {deleting ? "削除中…" : "削除する"}
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
+    </>
+  );
+
+  if (!post && !error) return screen(<PageSkeleton variant="post-edit" />);
+  if (!post) return screen(<ErrorState message={error} retry={load} />);
 
   const remainingMedia = post.media.filter((media) => !removedMediaIds.includes(media.id));
   const totalCount = remainingMedia.length + files.length;
@@ -501,7 +641,6 @@ export function PostEditPage() {
     files.filter((item) => item.file.type.startsWith("image/")).length;
   const videoCount = totalCount - photoCount;
   const preparing = importingPlayback || files.some((item) => item.status === "preparing");
-  const hasPreparationFailure = files.some((item) => item.status === "preparation-failed");
   const orderedMedia = mediaOrder.flatMap<OrderedMedia>((id) => {
     const media = remainingMedia.find((item) => item.id === id);
     if (media) return [{ type: "existing" as const, media }];
@@ -509,326 +648,318 @@ export function PostEditPage() {
     return file ? [{ type: "new" as const, file }] : [];
   });
 
-  return (
-    <>
-      <PageHeader title="投稿を編集" back />
-      <main className="form-page page-content">
-        <form className="form-stack post-edit-form" onSubmit={submit}>
-          <MediaProcessingStatus files={files} uploading={saving && files.length > 0} uploadProgress={progress} />
-          <section className="photo-picker">
-            <div className="selected-photos" ref={gridRef}>
-              {orderedMedia.map((entry) => {
-                const id = entry.type === "existing" ? entry.media.id : entry.file.id;
-                const filename = entry.type === "existing" ? entry.media.originalFilename : entry.file.file.name;
-                return (
-                  <div
-                    className={`selected-photo${entry.type === "new" ? ` ${entry.file.status}` : ""}`}
-                    tabIndex={saving || importingPlayback ? -1 : 0}
-                    aria-label={`${filename}。長押し、または矢印キーで並び替え`}
-                    onKeyDown={(event) => {
-                      if (event.target !== event.currentTarget || saving || importingPlayback) return;
-                      if (["ArrowLeft", "ArrowUp", "ArrowRight", "ArrowDown"].includes(event.key)) {
-                        event.preventDefault();
-                        moveMediaByOffset(id, event.key === "ArrowLeft" || event.key === "ArrowUp" ? -1 : 1);
-                      }
-                    }}
-                    data-media-id={id}
-                    key={id}
-                  >
-                    {entry.type === "existing" ? (
-                      <>
-                        <img src={entry.media.thumbnailUrl} alt="" draggable={false} />
-                        {entry.media.kind === "video" && <VideoBadge durationSeconds={entry.media.durationSeconds} />}
-                        {post.canEdit && entry.media.kind === "video" && (
-                          <VideoThumbnailRepair
-                            media={entry.media}
-                            disabled={saving || preparing || importingPlayback}
-                            onBusy={setRegeneratingThumbnail}
-                            onMessage={setThumbnailMessage}
-                            onUpdated={(id, thumbnailUrl) =>
-                              setPost((current) =>
-                                current
-                                  ? {
-                                      ...current,
-                                      media: current.media.map((item) =>
-                                        item.id === id ? { ...item, thumbnailUrl } : item,
-                                      ),
-                                    }
-                                  : current,
-                              )
-                            }
-                          />
-                        )}
+  return screen(
+    <main className="form-page page-content">
+      <form id={FORM_ID} className="form-stack post-edit-form" onSubmit={submit}>
+        <MediaProcessingStatus files={files} uploading={saving && files.length > 0} uploadProgress={progress} />
+        <section className="photo-picker">
+          <div className="selected-photos" ref={gridRef}>
+            {orderedMedia.map((entry) => {
+              const id = entry.type === "existing" ? entry.media.id : entry.file.id;
+              const filename = entry.type === "existing" ? entry.media.originalFilename : entry.file.file.name;
+              return (
+                <div
+                  className={`selected-photo${entry.type === "new" ? ` ${entry.file.status}` : ""}`}
+                  tabIndex={saving || importingPlayback ? -1 : 0}
+                  aria-label={`${filename}。長押し、または矢印キーで並び替え`}
+                  onKeyDown={(event) => {
+                    if (event.target !== event.currentTarget || saving || importingPlayback) return;
+                    if (["ArrowLeft", "ArrowUp", "ArrowRight", "ArrowDown"].includes(event.key)) {
+                      event.preventDefault();
+                      moveMediaByOffset(id, event.key === "ArrowLeft" || event.key === "ArrowUp" ? -1 : 1);
+                    }
+                  }}
+                  data-media-id={id}
+                  key={id}
+                >
+                  {entry.type === "existing" ? (
+                    <>
+                      <img src={entry.media.thumbnailUrl} alt="" draggable={false} />
+                      {entry.media.kind === "video" && <VideoBadge durationSeconds={entry.media.durationSeconds} />}
+                      {post.canEdit && entry.media.kind === "video" && (
+                        <VideoThumbnailRepair
+                          media={entry.media}
+                          disabled={saving || preparing || importingPlayback}
+                          onBusy={setRegeneratingThumbnail}
+                          onMessage={setThumbnailMessage}
+                          onUpdated={(id, thumbnailUrl) =>
+                            setPost((current) =>
+                              current
+                                ? {
+                                    ...current,
+                                    media: current.media.map((item) =>
+                                      item.id === id ? { ...item, thumbnailUrl } : item,
+                                    ),
+                                  }
+                                : current,
+                            )
+                          }
+                        />
+                      )}
+                      <button
+                        className="remove-selected-photo"
+                        type="button"
+                        onClick={() => removeExistingMedia(entry.media.id)}
+                        aria-label={`${filename}を削除`}
+                        disabled={saving || importingPlayback}
+                      >
+                        <X />
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      {entry.file.file.type.startsWith("video/") && !entry.file.thumbnail ? (
+                        <span className="video-preview-placeholder" aria-hidden="true">
+                          <Video />
+                        </span>
+                      ) : (
+                        <img src={entry.file.previewUrl} alt="" loading="lazy" decoding="async" draggable={false} />
+                      )}
+                      {entry.file.file.type.startsWith("video/") && (
+                        <VideoBadge durationSeconds={entry.file.durationSeconds} />
+                      )}
+                      {entry.file.status === "preparing" && (
+                        <span className="preparing-badge" aria-label="準備中">
+                          <LoaderCircle />
+                        </span>
+                      )}
+                      {entry.file.status === "preparation-failed" && (
                         <button
-                          className="remove-selected-photo"
+                          className="preparation-retry"
                           type="button"
-                          onClick={() => removeExistingMedia(entry.media.id)}
-                          aria-label={`${filename}を削除`}
-                          disabled={saving || importingPlayback}
+                          onClick={() => void retryPreparation(entry.file.id)}
                         >
-                          <X />
+                          <RotateCcw />
+                          再試行
                         </button>
-                      </>
-                    ) : (
-                      <>
-                        {entry.file.file.type.startsWith("video/") && !entry.file.thumbnail ? (
-                          <span className="video-preview-placeholder" aria-hidden="true">
-                            <Video />
-                          </span>
-                        ) : (
-                          <img src={entry.file.previewUrl} alt="" loading="lazy" decoding="async" draggable={false} />
-                        )}
-                        {entry.file.file.type.startsWith("video/") && (
-                          <VideoBadge durationSeconds={entry.file.durationSeconds} />
-                        )}
-                        {entry.file.status === "preparing" && (
-                          <span className="preparing-badge" aria-label="準備中">
-                            <LoaderCircle />
-                          </span>
-                        )}
-                        {entry.file.status === "preparation-failed" && (
-                          <button
-                            className="preparation-retry"
-                            type="button"
-                            onClick={() => void retryPreparation(entry.file.id)}
-                          >
-                            <RotateCcw />
-                            再試行
-                          </button>
-                        )}
-                        {entry.file.status === "failed" && (
-                          <span className="failed-badge" aria-label={`${filename}の送信に失敗`}>
-                            <AlertCircle />
-                            <small>送信失敗</small>
-                          </span>
-                        )}
-                        {entry.file.status === "ready" && (
-                          <span className="selected-upload-status">準備できました</span>
-                        )}
-                        {entry.file.status === "uploading" && <span className="selected-upload-status">送信中</span>}
-                        {entry.file.status === "uploaded" && <span className="selected-upload-status">送信済み</span>}
-                        <button
-                          className="remove-selected-photo"
-                          type="button"
-                          onClick={() => void removeNewFile(entry.file.id)}
-                          aria-label={`${filename}を外す`}
-                          disabled={saving || importingPlayback}
-                        >
-                          <X />
-                        </button>
-                      </>
-                    )}
-                    <span className="selected-file-info" title={filename}>
-                      {filename}
-                    </span>
-                  </div>
-                );
-              })}
-              {totalCount < 30 && (
-                <label className="photo-add">
-                  <ImagePlus />
-                  <span>写真・動画を追加</span>
-                  <input
-                    type="file"
-                    accept={acceptedMediaTypes}
-                    multiple
-                    onChange={selectFiles}
-                    disabled={saving || preparing}
-                  />
-                </label>
-              )}
-            </div>
-            <p className="muted media-reorder-hint">写真・動画を長押しして並び替え。</p>
-            <span className="media-reorder-status" role="status">
-              {announcement}
-            </span>
-            <p className="selection-count">
-              {[photoCount ? `写真${photoCount}枚` : "", videoCount ? `動画${videoCount}本` : ""]
-                .filter(Boolean)
-                .join(" · ")}
+                      )}
+                      {entry.file.status === "failed" && (
+                        <span className="failed-badge" aria-label={`${filename}の送信に失敗`}>
+                          <AlertCircle />
+                          <small>送信失敗</small>
+                        </span>
+                      )}
+                      {entry.file.status === "ready" && <span className="selected-upload-status">準備できました</span>}
+                      {entry.file.status === "uploading" && <span className="selected-upload-status">送信中</span>}
+                      {entry.file.status === "uploaded" && <span className="selected-upload-status">送信済み</span>}
+                      <button
+                        className="remove-selected-photo"
+                        type="button"
+                        onClick={() => void removeNewFile(entry.file.id)}
+                        aria-label={`${filename}を外す`}
+                        disabled={saving || importingPlayback}
+                      >
+                        <X />
+                      </button>
+                    </>
+                  )}
+                  <span className="selected-file-info" title={filename}>
+                    {filename}
+                  </span>
+                </div>
+              );
+            })}
+            {totalCount < 30 && (
+              <label className="photo-add">
+                <ImagePlus />
+                <span>写真・動画を追加</span>
+                <input
+                  type="file"
+                  accept={acceptedMediaTypes}
+                  multiple
+                  onChange={selectFiles}
+                  disabled={saving || preparing}
+                />
+              </label>
+            )}
+          </div>
+          <p className="muted media-reorder-hint">写真・動画を長押しして並び替え。</p>
+          <span className="media-reorder-status" role="status">
+            {announcement}
+          </span>
+          <p className="selection-count">
+            {[photoCount ? `写真${photoCount}枚` : "", videoCount ? `動画${videoCount}本` : ""]
+              .filter(Boolean)
+              .join(" · ")}
+          </p>
+          {thumbnailMessage && (
+            <p
+              className={`thumbnail-repair-message ${thumbnailMessage.error ? "form-error" : "muted"}`}
+              role={thumbnailMessage.error ? "alert" : "status"}
+            >
+              {thumbnailMessage.text}
             </p>
-            {thumbnailMessage && (
-              <p
-                className={`thumbnail-repair-message ${thumbnailMessage.error ? "form-error" : "muted"}`}
-                role={thumbnailMessage.error ? "alert" : "status"}
-              >
-                {thumbnailMessage.text}
-              </p>
-            )}
-            <PreparedVideoImport
-              files={files}
-              disabled={saving || preparing}
-              onImport={importPlayback}
-              onBusy={setImportingPlayback}
-            />
-            {saving && files.some((item) => item.status === "uploading") && (
-              <button type="button" className="outline-button" onClick={() => activeUploadRef.current?.abort()}>
-                送信を中断
-              </button>
-            )}
-          </section>
-          <section className="post-edit-details" aria-label="投稿内容">
+          )}
+          <PreparedVideoImport
+            files={files}
+            disabled={saving || preparing}
+            onImport={importPlayback}
+            onBusy={setImportingPlayback}
+          />
+          {saving && files.some((item) => item.status === "uploading") && (
+            <button type="button" className="outline-button" onClick={() => activeUploadRef.current?.abort()}>
+              送信を中断
+            </button>
+          )}
+        </section>
+        <section className="post-edit-details" aria-label="投稿内容">
+          <label>
+            イベント
+            <select
+              value={eventId}
+              onChange={(event) => {
+                if (
+                  (scenesChanged || !!newScene.trim()) &&
+                  !confirm("見出しの未保存の変更を破棄してイベントを変更しますか？")
+                )
+                  return;
+                setEventId(event.target.value);
+                setSceneId("");
+                setScenes([]);
+                setOriginalScenes([]);
+                setNewScene("");
+                setScenesLoading(!!event.target.value);
+                setScenesError("");
+                setShowSceneForm(false);
+              }}
+              disabled={saving || importingPlayback}
+            >
+              <option value="">イベントなし</option>
+              {events.map((item) => (
+                <option value={item.id} key={item.id}>
+                  {item.title}
+                </option>
+              ))}
+            </select>
+          </label>
+          {eventId && (
             <label>
-              イベント
+              見出し
               <select
-                value={eventId}
-                onChange={(event) => {
-                  if (
-                    (scenesChanged || !!newScene.trim()) &&
-                    !confirm("見出しの未保存の変更を破棄してイベントを変更しますか？")
-                  )
-                    return;
-                  setEventId(event.target.value);
-                  setSceneId("");
-                  setScenes([]);
-                  setOriginalScenes([]);
-                  setNewScene("");
-                  setScenesLoading(!!event.target.value);
-                  setScenesError("");
-                  setShowSceneForm(false);
-                }}
+                value={sceneId}
+                onChange={(event) => setSceneId(event.target.value)}
                 disabled={saving || importingPlayback}
               >
-                <option value="">イベントなし</option>
-                {events.map((item) => (
+                <option value="">見出しなし</option>
+                {scenes.map((item) => (
                   <option value={item.id} key={item.id}>
                     {item.title}
                   </option>
                 ))}
               </select>
             </label>
-            {eventId && (
-              <label>
-                見出し
-                <select
-                  value={sceneId}
-                  onChange={(event) => setSceneId(event.target.value)}
-                  disabled={saving || importingPlayback}
-                >
-                  <option value="">見出しなし</option>
-                  {scenes.map((item) => (
-                    <option value={item.id} key={item.id}>
-                      {item.title}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
-            {eventId && (
-              <section className="management-section">
-                <p className="muted">
-                  名前と順序は同じイベントの投稿にも反映されます。変更は保存するまで確定しません。
-                </p>
-                {scenesError ? (
-                  <div role="alert">
-                    <p className="form-error">{scenesError}</p>
-                    <button
-                      type="button"
-                      className="outline-button"
-                      onClick={() => {
-                        setScenesError("");
-                        setScenesLoading(true);
-                        setSceneLoadAttempt((current) => current + 1);
-                      }}
-                    >
-                      見出しの読み込みを再試行
-                    </button>
-                  </div>
-                ) : scenesLoading ? (
-                  <p role="status">見出しを読み込み中…</p>
-                ) : (
-                  <SceneEditorList
-                    key={eventId}
-                    scenes={scenes}
-                    disabled={saving || importingPlayback}
-                    onOrder={(ids) =>
-                      setScenes((current) => ids.flatMap((id) => current.filter((scene) => scene.id === id)))
-                    }
-                    onTitle={(id, title) =>
-                      setScenes((current) => current.map((scene) => (scene.id === id ? { ...scene, title } : scene)))
-                    }
-                    onDelete={(id) => {
-                      if (
-                        !confirm(
-                          "この見出しを削除しますか？関連する投稿は見出しなしになります。保存するまで削除は確定しません。",
-                        )
-                      )
-                        return;
-                      setScenes((current) => current.filter((scene) => scene.id !== id));
-                      if (sceneId === id) setSceneId("");
-                    }}
-                  />
-                )}
-              </section>
-            )}
-            {eventId &&
-              (!showSceneForm ? (
-                <button
-                  className="text-button inline-action"
-                  type="button"
-                  disabled={saving || importingPlayback || scenesUnavailable || scenes.length >= 100}
-                  onClick={() => setShowSceneForm(true)}
-                >
-                  <Plus />
-                  新しい見出し
-                </button>
-              ) : (
-                <div className="inline-form">
-                  <input
-                    value={newScene}
-                    onChange={(event) => setNewScene(event.target.value)}
-                    placeholder="例: 2日目 午前（午後）"
-                    maxLength={100}
-                  />
+          )}
+          {eventId && (
+            <section className="management-section">
+              <p className="muted">名前と順序は同じイベントの投稿にも反映されます。変更は保存するまで確定しません。</p>
+              {scenesError ? (
+                <div role="alert">
+                  <p className="form-error">{scenesError}</p>
                   <button
                     type="button"
                     className="outline-button"
-                    disabled={saving || importingPlayback || scenesUnavailable || !newScene.trim()}
-                    onClick={createScene}
+                    onClick={() => {
+                      setScenesError("");
+                      setScenesLoading(true);
+                      setSceneLoadAttempt((current) => current + 1);
+                    }}
                   >
-                    作成
+                    見出しの読み込みを再試行
                   </button>
                 </div>
-              ))}
-            <label>
-              ひとこと（任意）
-              <textarea
-                name="caption"
-                placeholder="行った場所、やったことなど"
-                rows={4}
-                maxLength={2000}
-                value={caption ?? post.caption}
-                onChange={(event) => setCaption(event.target.value)}
-                disabled={saving || importingPlayback}
-              />
-            </label>
-            {error && (
-              <p className="form-error" role="alert">
-                {error}
-              </p>
-            )}
-            <button
-              className={files.some((item) => item.status === "failed") ? "outline-button wide" : "primary-button wide"}
-              disabled={
-                saving ||
-                preparing ||
-                hasPreparationFailure ||
-                (eventId !== "" && scenesUnavailable) ||
-                scenes.some((scene) => !scene.title.trim())
-              }
-            >
-              {files.some((item) => item.status === "failed") && <RotateCcw />}
-              {saving
-                ? regeneratingThumbnail
-                  ? "サムネイルを再生成中…"
-                  : "保存中…"
-                : files.some((item) => item.status === "failed")
-                  ? "失敗した項目を再試行"
-                  : "変更を保存"}
+              ) : scenesLoading ? (
+                <p role="status">見出しを読み込み中…</p>
+              ) : (
+                <SceneEditorList
+                  key={eventId}
+                  scenes={scenes}
+                  disabled={saving || importingPlayback}
+                  onOrder={(ids) =>
+                    setScenes((current) => ids.flatMap((id) => current.filter((scene) => scene.id === id)))
+                  }
+                  onTitle={(id, title) =>
+                    setScenes((current) => current.map((scene) => (scene.id === id ? { ...scene, title } : scene)))
+                  }
+                  onDelete={(id) => {
+                    if (
+                      !confirm(
+                        "この見出しを削除しますか？関連する投稿は見出しなしになります。保存するまで削除は確定しません。",
+                      )
+                    )
+                      return;
+                    setScenes((current) => current.filter((scene) => scene.id !== id));
+                    if (sceneId === id) setSceneId("");
+                  }}
+                />
+              )}
+            </section>
+          )}
+          {eventId &&
+            (!showSceneForm ? (
+              <button
+                className="text-button inline-action"
+                type="button"
+                disabled={saving || importingPlayback || scenesUnavailable || scenes.length >= 100}
+                onClick={() => setShowSceneForm(true)}
+              >
+                <Plus />
+                新しい見出し
+              </button>
+            ) : (
+              <div className="inline-form">
+                <input
+                  value={newScene}
+                  onChange={(event) => setNewScene(event.target.value)}
+                  placeholder="例: 2日目 午前（午後）"
+                  maxLength={100}
+                />
+                <button
+                  type="button"
+                  className="outline-button"
+                  disabled={saving || importingPlayback || scenesUnavailable || !newScene.trim()}
+                  onClick={createScene}
+                >
+                  作成
+                </button>
+              </div>
+            ))}
+          <label>
+            ひとこと（任意）
+            <textarea
+              name="caption"
+              placeholder="行った場所、やったことなど"
+              rows={4}
+              maxLength={2000}
+              value={caption ?? post.caption}
+              onChange={(event) => setCaption(event.target.value)}
+              disabled={saving || importingPlayback}
+            />
+          </label>
+          {error && (
+            <p className="form-error" role="alert">
+              {error}
+            </p>
+          )}
+          {/* PC ではボトムナビが無いので、保存と削除をフォームの下に置く。 */}
+          <div className="post-edit-actions">
+            <button className={failedUpload ? "outline-button wide" : "primary-button wide"} disabled={saveDisabled}>
+              {failedUpload && !saving && <RotateCcw />}
+              {saveLabel}
             </button>
-          </section>
-        </form>
-      </main>
-    </>
+            {post.canDelete && (
+              <button
+                className="danger-button wide"
+                type="button"
+                disabled={saving || deleting}
+                onClick={() => setDeleteOpen(true)}
+              >
+                <Trash2 />
+                投稿を削除
+              </button>
+            )}
+          </div>
+        </section>
+      </form>
+    </main>,
   );
 }

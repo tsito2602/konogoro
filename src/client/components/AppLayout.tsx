@@ -104,8 +104,9 @@ export function AppLayout() {
     postPageNavigation && showPostPage && !!backgroundContent && backgroundSnapshot.routeIdentity !== routeIdentity;
   const modal = showPostPage && retainBackground;
   const hideNavigation = viewerPattern.test(pathname);
-  // 投稿ページは自分のドックを持つ（ダイアログの上に出すため）。同じ形を引き継ぐので画面のドックは1つに見える。
-  const postDock = /^\/posts\/(?!new$)[^/]+$/.test(pathname);
+  // 投稿ページと投稿を編集画面は自分のドックを持つ（投稿ページはダイアログの上に出すため、編集画面はフォームの操作を置くため）。
+  // 前のドックの形を引き継ぐので、画面のドックは1つに見える。
+  const postDock = /^\/posts\/(?!new$)[^/]+(\/edit)?$/.test(pathname);
   usePageJelly(Boolean(currentUser) && !hideNavigation);
   const viewerEntryRef = useRef<{ path: string; rect: DOMRect } | null>(null);
   useLayoutEffect(() => {

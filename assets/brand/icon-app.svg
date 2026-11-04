@@ -13,7 +13,7 @@
   <defs>
     <mask id="konogoro-sun-gap" maskUnits="userSpaceOnUse" x="-1024" y="-1024" width="3072" height="3072">
       <rect x="-1024" y="-1024" width="3072" height="3072" fill="#FFFFFF"/>
-      <path d="M105 609 C120 566 164 545 209 573 C305 647 381 653 460 633 C549 611 599 557 660 512 C698 482 720 475 750 490 C805 521 851 581 890 622 C930 670 918 711 877 742 C751 844 531 872 347 815 C212 782 156 733 120 680 C109 662 95 635 105 609 Z" transform="translate(54 88) scale(0.91)" fill="#000000" stroke="#000000" stroke-width="66" stroke-linejoin="round"/>
+      <path d="M105 609 C120 566 164 545 209 573 C305 647 381 653 460 633 C549 611 599 557 660 512 C698 482 720 475 750 490 C805 521 851 581 890 622 C930 670 918 711 877 742 C751 844 531 872 347 815 C212 782 156 733 120 680 C109 662 95 635 105 609 Z" transform="translate(54 88) scale(0.91)" fill="#000000" stroke="#000000" stroke-width="40" stroke-linejoin="round"/>
     </mask>
   </defs>
   <g transform="translate(512 512) scale(1.053) translate(-520.3 -531)">

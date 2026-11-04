@@ -24,7 +24,7 @@ export function PostCard({
     postPage: true,
     previewPostId: post.id,
     previewUrls: post.media.slice(0, 4).map((media) => media.thumbnailUrl),
-    previewMenu: post.canEdit || post.canDelete,
+    previewEdit: post.canEdit,
   };
   const { ref: seenRef, viewed } = useSeenTracking(
     post.id,

@@ -51,12 +51,15 @@ export function MainDock({
   measureRef,
   className,
   label = "メインナビゲーション",
+  identity = "context",
   children,
 }: {
   items: readonly MainDockItem[];
   measureRef?: (element: HTMLElement | null) => void;
   className?: string;
   label?: string;
+  /** Which screen's controls these are; another screen's controls fade over while the islands morph. */
+  identity?: string;
   children?: ReactNode;
 }) {
   const { pathname: current } = useLocation();
@@ -108,7 +111,7 @@ export function MainDock({
   return (
     <nav ref={measureRef} className={`main-dock-host${className ? ` ${className}` : ""}`} aria-label={label}>
       <div className="thumb-dock">
-        <CartoonDock identity={showTabs ? "tabs" : "context"}>
+        <CartoonDock identity={showTabs ? "tabs" : identity}>
           {children ?? (
             <div ref={group} className="cdock-group cdock-tabs" data-slot="tabs" data-full="">
               <span ref={pill} className="cdock-ind" aria-hidden="true" />

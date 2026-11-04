@@ -11,6 +11,20 @@ export function postOrigin(postId: string) {
   return origin?.postId === postId && origin.photo.isConnected ? origin : null;
 }
 
+let editLeft: { postId: string; at: number } | null = null;
+
+/** The post's edit page is closing; the post page under it shows at once instead of opening again. */
+export function rememberEditLeft(postId: string) {
+  editLeft = { postId, at: performance.now() };
+}
+
+/** Whether the post page is coming back from its edit page (taken once). */
+export function takeEditLeft(postId: string) {
+  const left = editLeft?.postId === postId && performance.now() - editLeft.at < 1000;
+  editLeft = null;
+  return left;
+}
+
 /** The card's box on screen, when it is still there to grow from or shrink back into. */
 export function postOriginCard(postId: string): DOMRect | null {
   const found = postOrigin(postId);

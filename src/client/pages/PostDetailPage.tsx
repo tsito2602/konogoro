@@ -1,8 +1,8 @@
-import { PostModalContext, postOrigin, postOriginCard, modalTransform } from "../post-modal";
+import { PostModalContext, postOrigin, postOriginCard, modalTransform, takeEditLeft } from "../post-modal";
 import { VideoBadge } from "../components/VideoBadge";
 import { commentIntent, commentTargetId, revealComment } from "../comment-navigation";
-import { canReturnInApp, removeReadingPost, restorePanelPosition, updateReadingPost } from "../reading-context";
-import { CalendarDays, Camera, X, Ellipsis, MessageCircle, Pencil, Trash2, Upload } from "lucide-react";
+import { canReturnInApp, restorePanelPosition, updateReadingPost } from "../reading-context";
+import { CalendarDays, Camera, X, MessageCircle, Pencil, Trash2, Upload } from "lucide-react";
 import {
   useCallback,
   useContext,
@@ -14,7 +14,6 @@ import {
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from "react";
-import { createPortal } from "react-dom";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import type { Comment, Post } from "../../shared/types";
 import { api, formatDate } from "../api";
@@ -23,12 +22,9 @@ import { mainDockItems, useCurrentUser } from "../components/AppLayout";
 import { MainDock } from "../components/MainDock";
 import { PageSkeleton } from "../components/PageSkeleton";
 import { SeenBy } from "../components/SeenBy";
-import { useToast } from "../components/Toast";
 import { DockBackIcon, DockGroup } from "../cartoon/cartoon-dock";
 import { RM, SINK, anim, burst } from "../cartoon/cartoon";
 import { PostMotion } from "../post-motion";
-
-type MenuPlace = { host: Element; style: { top?: number; bottom?: number; right: number } };
 
 export function PostDetailPage() {
   const { postId = "" } = useParams();
@@ -37,21 +33,14 @@ export function PostDetailPage() {
   const preview = location.state as {
     previewPostId?: string;
     previewUrls?: string[];
-    previewMenu?: boolean;
+    previewEdit?: boolean;
   } | null;
   const previewUrls =
     preview?.previewPostId === postId && Array.isArray(preview.previewUrls)
       ? preview.previewUrls.slice(0, 4)
       : undefined;
-  const showToast = useToast();
   const [post, setPost] = useState<Post | null>(null);
   const [error, setError] = useState("");
-  const [deleteError, setDeleteError] = useState("");
-  const [deleting, setDeleting] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-  // 「…」メニューは kondo のように画面全体の幕の上に出すため、開いている面（シートか body）へ portal で置く。
-  const [menuHost, setMenuHost] = useState<MenuPlace | null>(null);
-  const [deleteOpen, setDeleteOpen] = useState(false);
   const conversationRef = useRef<HTMLElement>(null);
   const sentCommentId = useRef<string | null>(null);
   const fallbackPath = post?.eventId ? `/events/${post.eventId}` : "/";
@@ -112,32 +101,17 @@ export function PostDetailPage() {
       });
     },
   };
-  const menu =
-    post && (post.canEdit || post.canDelete)
-      ? {
-          expanded: menuOpen,
-          open: (anchor: HTMLElement) => {
-            const box = anchor.getBoundingClientRect();
-            const below = box.top < window.innerHeight / 2;
-            setMenuHost({
-              host: anchor.closest("dialog") ?? document.body,
-              style: below
-                ? { top: box.bottom + 8, right: window.innerWidth - box.right }
-                : { bottom: window.innerHeight - box.top + 10, right: window.innerWidth - box.right },
-            });
-            setMenuOpen((open) => !open);
-          },
-        }
-      : null;
-
+  // 編集と削除は投稿を編集画面にまとめる（Tsubasa 2026-11-04「３点リーダーは編集ボタンにして」）。
+  const openEdit = () =>
+    navigate(`/posts/${postId}/edit`, { state: { ...(location.state as object | null), returnToDetail: true } });
   if (!post && !error)
     return (
       <PostPage
         onClose={closePage}
         composer={composer}
         startComposing={writeIntent}
-        // カードから開いたときは、読み込み中から…を置いておく（あとから出てドックが組み替わらないように）。
-        menu={preview?.previewPostId === postId && preview.previewMenu ? { expanded: false, open: () => {} } : null}
+        // カードから開いたときは、読み込み中から編集ボタンを置いておく（あとから出てドックが組み替わらないように）。
+        onEdit={preview?.previewPostId === postId && preview.previewEdit ? openEdit : undefined}
       >
         <PageSkeleton variant="post-detail" previewUrls={previewUrls} />
       </PostPage>
@@ -149,124 +123,12 @@ export function PostDetailPage() {
       </PostPage>
     );
   if (!post) return null;
-  const deletePost = async () => {
-    setDeleting(true);
-    setDeleteError("");
-    try {
-      await api(`/posts/${post.id}`, { method: "DELETE" });
-      removeReadingPost(post.id);
-      showToast("投稿を削除しました");
-      closePage();
-    } catch (reason) {
-      setDeleteError((reason as Error).message);
-      setDeleting(false);
-    }
-  };
   return (
     <PostPage
-      onEscape={
-        menuOpen || deleteOpen
-          ? () => {
-              if (!deleting) {
-                setMenuOpen(false);
-                setDeleteOpen(false);
-              }
-            }
-          : undefined
-      }
       onClose={closePage}
       composer={composer}
       startComposing={writeIntent}
-      menu={menu}
-      overlay={
-        <>
-          {menuOpen &&
-            menuHost &&
-            createPortal(
-              <>
-                <button
-                  className="post-menu-backdrop"
-                  type="button"
-                  aria-label="投稿メニューを閉じる"
-                  onClick={() => setMenuOpen(false)}
-                />
-                <div
-                  className={`post-action-menu${menuHost.style.bottom !== undefined ? " from-dock" : ""}`}
-                  role="menu"
-                  style={{ top: "auto", ...menuHost.style }}
-                >
-                  {post.canEdit && (
-                    <Link
-                      to={`/posts/${post.id}/edit`}
-                      state={{ ...(location.state as object | null), returnToDetail: true }}
-                      role="menuitem"
-                      onClick={() => setMenuOpen(false)}
-                    >
-                      <Pencil />
-                      編集
-                    </Link>
-                  )}
-                  {post.canDelete && (
-                    <button
-                      type="button"
-                      role="menuitem"
-                      onClick={() => {
-                        setMenuOpen(false);
-                        setDeleteOpen(true);
-                      }}
-                    >
-                      <Trash2 />
-                      削除
-                    </button>
-                  )}
-                </div>
-              </>,
-              menuHost.host,
-            )}
-          {deleteOpen && (
-            <div
-              className="modal-backdrop"
-              onClick={() => {
-                if (!deleting) setDeleteOpen(false);
-              }}
-            >
-              <section
-                className="confirmation-modal"
-                role="dialog"
-                aria-modal="true"
-                aria-labelledby="delete-post-title"
-                onClick={(event) => event.stopPropagation()}
-              >
-                <h2 id="delete-post-title">この投稿を削除する？</h2>
-                <p>写真・動画とコメントもすべて削除される。この操作は元に戻せない。</p>
-                {deleteError && (
-                  <p className="form-error" role="alert">
-                    {deleteError}
-                  </p>
-                )}
-                <div>
-                  <button
-                    className="outline-button"
-                    type="button"
-                    disabled={deleting}
-                    onClick={() => setDeleteOpen(false)}
-                  >
-                    キャンセル
-                  </button>
-                  <button
-                    className="danger-confirm-button"
-                    type="button"
-                    disabled={deleting}
-                    onClick={() => void deletePost()}
-                  >
-                    {deleting ? "削除中…" : "削除する"}
-                  </button>
-                </div>
-              </section>
-            </div>
-          )}
-        </>
-      }
+      onEdit={post.canEdit ? openEdit : undefined}
     >
       <main className="post-detail">
         <div className="post-detail-head">
@@ -351,7 +213,6 @@ export function PostDetailPage() {
 }
 
 type Composer = { authorName?: string; onSent: (comment: Comment) => void };
-type Menu = { expanded: boolean; open: (anchor: HTMLElement) => void } | null;
 
 /** キーボードが下から覆っている高さ（visualViewport）。書き込み欄とドックをその上へ載せる。 */
 function useKeyboardInset(active: boolean) {
@@ -374,20 +235,16 @@ function useKeyboardInset(active: boolean) {
 
 function PostPage({
   children,
-  overlay,
   onClose,
-  onEscape,
   composer,
   startComposing = false,
-  menu = null,
+  onEdit,
 }: {
   children: ReactNode;
-  overlay?: ReactNode;
   onClose: () => void;
-  onEscape?: () => void;
   composer?: Composer;
   startComposing?: boolean;
-  menu?: Menu;
+  onEdit?: () => void;
 }) {
   const modal = useContext(PostModalContext);
   const { postId = "" } = useParams();
@@ -495,12 +352,14 @@ function PostPage({
     const height = write ? motion.liftHeight() : null;
     // ドックが送信ボタンに変わるのも、ページが画面を覆って持ち上がり始めてから。
     const startLift = () => setComposing(true);
-    if (card && !RM()) {
+    // 投稿を編集画面から戻ったときは、開き直さずにそのまま見せる（下のタイムラインをのぞかせない）。
+    const back = takeEditLeft(postId);
+    if (card && !RM() && !back) {
       // カードの四辺が広がって投稿ページになり、書くときは覆いきったところから止まらずに持ち上がる。
       backdrop(0, 1, 360);
       void motion.enter(card, height, startLift);
     } else {
-      if (modal && panel.animate && !RM()) {
+      if (modal && panel.animate && !RM() && !back) {
         const transform = origin
           ? modalTransform(
               origin.photo.getBoundingClientRect(),
@@ -574,9 +433,8 @@ function PostPage({
   }, []);
   const escape = useCallback(() => {
     if (composing) void closeComposer();
-    else if (onEscape) onEscape();
     else void close();
-  }, [close, closeComposer, composing, onEscape]);
+  }, [close, closeComposer, composing]);
   useEffect(() => {
     if (modal) return;
     const keydown = (event: KeyboardEvent) => {
@@ -696,22 +554,17 @@ function PostPage({
         </button>
       </DockGroup>
       {canCompose && (
-        <DockGroup slot={menu ? "m" : "r"} tone="ink" stretch>
+        <DockGroup slot={onEdit ? "m" : "r"} tone="ink" stretch>
           <button type="button" onClick={openComposer}>
             <MessageCircle aria-hidden />
             コメントする
           </button>
         </DockGroup>
       )}
-      {menu && (
+      {onEdit && (
         <DockGroup slot="r">
-          <button
-            type="button"
-            aria-label="投稿メニュー"
-            aria-expanded={menu.expanded}
-            onClick={(event) => menu.open(event.currentTarget)}
-          >
-            <Ellipsis />
+          <button type="button" aria-label="投稿を編集" onClick={onEdit}>
+            <Pencil />
           </button>
         </DockGroup>
       )}
@@ -754,15 +607,9 @@ function PostPage({
             <span aria-hidden />
           )}
           <div className="header-side header-action">
-            {menu && (
-              <button
-                className="icon-button"
-                type="button"
-                onClick={(event) => menu.open(event.currentTarget)}
-                aria-label="投稿メニュー"
-                aria-expanded={menu.expanded}
-              >
-                <Ellipsis />
+            {onEdit && (
+              <button className="icon-button" type="button" onClick={onEdit} aria-label="投稿を編集">
+                <Pencil />
               </button>
             )}
           </div>
@@ -789,14 +636,12 @@ function PostPage({
       {sheet}
       {content}
       {dock}
-      {overlay}
     </dialog>
   ) : (
     <>
       {sheet}
       {content}
       {dock}
-      {overlay}
     </>
   );
 }

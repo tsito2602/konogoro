@@ -260,3 +260,31 @@ body:has(.fuse-add-overlay) .floating-add-button {
     transition: none;
   }
 }
+
+/* 投稿を編集画面のドック（pages/PostEditPage.tsx）。左＝戻る、中央＝変更を保存（墨色の島）、右＝削除。
+   投稿ページのドック（戻る・コメントする・編集）から形を変えて続く。PC ではフォームの下のボタンを使う。 */
+.post-edit-actions {
+  display: grid;
+  gap: 10px;
+}
+.post-edit-actions .danger-button.wide {
+  width: 100%;
+  min-height: 50px;
+  justify-content: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+}
+.post-edit-actions .danger-button.wide svg {
+  width: 18px;
+}
+@media (max-width: 1023px) {
+  .post-edit-actions,
+  .post-edit-screen > .page-header .header-side > .icon-button {
+    display: none;
+  }
+  .main-dock-host.edit-dock {
+    z-index: 40;
+  }
+}

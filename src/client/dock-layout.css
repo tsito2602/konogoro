@@ -48,23 +48,6 @@
     letter-spacing: 0;
     white-space: nowrap;
   }
-  /* ドックと ＋ の後ろで画面がふわっと消える（cartoon-kit の dock.css と同じ）。 */
-  .app-shell:has(> .main-dock-host)::after {
-    content: "";
-    position: fixed;
-    z-index: 23;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    height: calc(var(--dock-height) + var(--dock-safe-bottom) + 22px + 58px + 16px);
-    background: linear-gradient(
-      to bottom,
-      color-mix(in srgb, var(--p-paper) 0%, transparent) 0%,
-      color-mix(in srgb, var(--p-paper) 55%, transparent) 45%,
-      color-mix(in srgb, var(--p-paper) 92%, transparent) 100%
-    );
-    pointer-events: none;
-  }
 }
 
 /* 更新のお知らせ（components/UpdateNotice.tsx）：kondo と同じく、ドックの 12px 上に浮かぶ黒い帯。 */

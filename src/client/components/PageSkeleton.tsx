@@ -55,22 +55,8 @@ export function AlbumContentSkeleton({ allYear = false }: { allYear?: boolean })
   );
 }
 
-export function UnreadSummarySkeleton() {
-  return (
-    <div className="unread-summary skeleton-unread-summary" role="status" aria-busy="true">
-      <div className="unread-summary-art skeleton-tile" aria-hidden="true" />
-      <span className="visually-hidden">新着件数を読み込み中</span>
-      <div aria-hidden>
-        {line("short")}
-        {line()}
-      </div>
-      <span className="skeleton-field" aria-hidden />
-    </div>
-  );
-}
-
 // 本物のカード（components/PostCard.tsx）と同じ箱の高さ・並びにし、読み込み後に位置がずれないようにする。
-function postSkeleton(showContext = true) {
+function postSkeleton(showContext = true, count: 1 | 2 = 2) {
   return (
     <div className="post-card skeleton-post">
       <div className="post-head">
@@ -85,8 +71,8 @@ function postSkeleton(showContext = true) {
           </div>
         )}
       </div>
-      <div className="media-grid skeleton-media-grid" data-count="2">
-        {tiles(2)}
+      <div className="media-grid skeleton-media-grid" data-count={count}>
+        {tiles(count)}
       </div>
       <div className="post-copy">
         <span className="skeleton-slot skeleton-caption">{line()}</span>
@@ -162,7 +148,7 @@ function skeletonContent(variant: SkeletonVariant, currentUser?: CurrentUser, pr
             <span className="timeline-year">{line("short")}</span>
             <span className="timeline-month">{line("short")}</span>
           </div>
-          {postSkeleton()}
+          {postSkeleton(false, 1)}
           {postSkeleton()}
         </section>
       );

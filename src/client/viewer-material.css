@@ -421,6 +421,10 @@
     z-index: 1;
     opacity: 1;
   }
+  /* 下ろしている間、中身は少し遅れて下がる。ボトムナビの帯は面が覆わないので、帯へ下がってきた分は切って見せない。 */
+  .media-viewer:not(.comments-open) > .comment-sheet.viewer-comment-sheet {
+    clip-path: inset(0 0 var(--viewer-dock-zone) 0);
+  }
   /* ドックは暗い面の島（cartoon-kit の島の色をビューアーの暗い色に置き換える）。 */
   .main-dock-host.viewer-dock {
     display: block;

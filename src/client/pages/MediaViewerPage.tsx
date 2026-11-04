@@ -390,7 +390,11 @@ export function MediaViewerPage() {
         main.style.setProperty("--viewer-y", `${y.toFixed(2)}px`);
         main.style.setProperty("--viewer-progress", progress.toFixed(3));
         // 中身は面より少し遅れて上がり、面の下から出てくるように見せる（投稿ページと同じ）。
-        sheetRef.current?.style.setProperty("--sheet-shift", `${((1 - progress) * 18).toFixed(1)}px`);
+        const sheet = sheetRef.current;
+        if (!sheet) return;
+        sheet.style.setProperty("--sheet-shift", `${((1 - progress) * 18).toFixed(1)}px`);
+        // 下ろすとき、面が一度下りきったら欄は隠す。ばねの揺れで面が少し戻っても下の欄をのぞかせない。
+        if (!openState.current && y > -0.5) sheet.style.visibility = "hidden";
       },
       "dock",
       0.3,
@@ -400,6 +404,7 @@ export function MediaViewerPage() {
   useEffect(() => {
     openState.current = commentsOpen;
     if (commentsOpen) {
+      sheetRef.current?.style.removeProperty("visibility");
       if (liftHeight > 0) void lift().to(-liftHeight, "dock");
       return;
     }

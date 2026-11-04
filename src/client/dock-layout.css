@@ -302,3 +302,45 @@ body:has(.fuse-add-overlay) .floating-add-button {
     display: none !important;
   }
 }
+
+/* スマホでは各ページの上のヘッダーを出さない（戻る・保存などはボトムナビ、見出しは読み上げにだけ残す）。
+   イベント一覧の絞り込みだけは右上に固定して出す。 */
+.event-filter-floating {
+  display: none;
+}
+@media (max-width: 1023px) {
+  .page-header {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    min-height: 0;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .event-filter-in-header {
+    display: none;
+  }
+  :root .icon-button.event-filter-floating {
+    position: fixed;
+    z-index: 25;
+    top: calc(env(safe-area-inset-top) + 12px);
+    right: max(16px, env(safe-area-inset-right));
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    color: var(--p-ink);
+    background: var(--p-soft);
+    box-shadow: 0 4px 14px rgb(0 0 0 / 0.12);
+  }
+  :root .icon-button.event-filter-floating svg {
+    width: 20px;
+    height: 20px;
+  }
+  :root .icon-button.event-filter-floating.active {
+    color: var(--accent-ink);
+  }
+}

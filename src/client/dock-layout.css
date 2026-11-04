@@ -345,6 +345,14 @@ body:has(.fuse-add-overlay) .floating-add-button {
   :root .event-list.page-content {
     padding-top: 0;
   }
+  /* お知らせの「最後に見た時間」は画面の端まで広げた帯の中にあるので、見出しを設定やイベントの見出しと同じ左端（20px）に、
+     並んだ人をお知らせの行と同じ左端（14px）に寄せる。 */
+  :root .activity-page .member-last-viewed > h2 {
+    margin-inline: 20px;
+  }
+  .member-last-viewed .member-last-viewed-list {
+    padding-inline: 14px;
+  }
   /* ヘッダーは余白だけになったので、その下に貼り付けていたものは画面の上端へ付ける。 */
   .timeline-month-heading,
   .event-cover,

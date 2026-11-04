@@ -166,7 +166,7 @@ Viewerは写真と映像を広く取り、縦横の構図をcontainで保つ。�
 
 ## ボトムナビ（親指ドック）
 
-1023px以下のボトムナビは cartoon-kit の親指ドック（`components/MainDock.tsx`、`src/client/cartoon/cartoon-dock.tsx`）。島の高さ56px、左右16px、下は `max(8px, safe area)`。アイコンとその下のページ名（10.5px）の5つのタブを1本の島に並べ、選択中の印は2辺が別々のばね（先に行く辺 lead、遅れる辺 split）で移る。島を押すと島ごとつぶれる（0.95）。＋ボタンは58pxで、島の22px上に置く。ドックと＋の後ろでは画面が紙色へふわっと消える。
+1023px以下のボトムナビは cartoon-kit の親指ドック（`components/MainDock.tsx`、`src/client/cartoon/cartoon-dock.tsx`）。島の高さ56px、左右16px、下は `max(8px, safe area)`。アイコンとその下のページ名（10.5px）の5つのタブを1本の島に並べ、選択中の印は2辺が別々のばね（先に行く辺 lead、遅れる辺 split）で移る。島を押すと島ごとつぶれる（0.95）。＋ボタンは58pxで、島の22px上に置く。ドックと＋の後ろには、ぼかしや紙色へ消えるグラデーションを置かない（投稿詳細などドックを持つ画面すべてで同じ）。
 
 ## タップの振動
 

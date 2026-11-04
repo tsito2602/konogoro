@@ -16,7 +16,7 @@ import { remainingBootMotion } from "../boot-motion";
 import { BootSymbol } from "./BootSymbol";
 import { ToastProvider } from "./Toast";
 import { MainDock } from "./MainDock";
-import { contextDock } from "./ContextDock";
+import { contextDock, hasOwnDock, isTopLevel } from "./ContextDock";
 import { UpdateNotice } from "./UpdateNotice";
 import { useRouteEnter } from "../route-motion";
 import { usePageJelly } from "../jelly-scroll";
@@ -107,7 +107,7 @@ export function AppLayout() {
   const hideNavigation = viewerPattern.test(pathname);
   // 投稿ページと投稿を編集画面は自分のドックを持つ（投稿ページはダイアログの上に出すため、編集画面はフォームの操作を置くため）。
   // 前のドックの形を引き継ぐので、画面のドックは1つに見える。
-  const postDock = /^\/posts\/(?!new$)[^/]+(\/edit)?$/.test(pathname);
+  const postDock = hasOwnDock(pathname);
   usePageJelly(Boolean(currentUser) && !hideNavigation);
   const viewerEntryRef = useRef<{ path: string; rect: DOMRect } | null>(null);
   useLayoutEffect(() => {
@@ -127,13 +127,8 @@ export function AppLayout() {
     return () => animation.cancel();
   }, [pathname]);
   const addPostPath = postCreatePath(pathname);
-  const hideAddButton =
-    pathname === "/settings/design" ||
-    /^\/posts\/[^/]+$/.test(pathname) ||
-    pathname === "/posts/new" ||
-    /^\/posts\/[^/]+\/edit$/.test(pathname) ||
-    pathname === "/events/new" ||
-    /^\/events\/[^/]+\/edit$/.test(pathname);
+  // ＋は一番上の階層とイベント詳細（そのイベントへ追加）だけに出す。
+  const hideAddButton = !(isTopLevel(pathname) || /^\/events\/(?!new$)[^/]+$/.test(pathname));
 
   const loadAuth = useCallback(() => {
     void api<CurrentUser>("/me")

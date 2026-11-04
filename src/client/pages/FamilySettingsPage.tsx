@@ -165,7 +165,7 @@ export function FamilySettingsPage() {
 
   return (
     <>
-      <PageHeader title="メンバーの管理" back />
+      <PageHeader title="メンバーの管理" back className="dock-owned-header" />
       <main className="page-content family-page">
         {reviewResult && (
           <p className="invitation-receipt" role="status">

@@ -5,6 +5,9 @@ import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { api } from "../api";
 import { PageHeader } from "../components/PageHeader";
+import { PageDock } from "../components/ContextDock";
+import { mainDockItems } from "../components/AppLayout";
+import { DockGroup } from "../cartoon/cartoon-dock";
 import { useToast } from "../components/Toast";
 
 export function EventCreatePage() {
@@ -39,10 +42,10 @@ export function EventCreatePage() {
   };
   return (
     <>
-      <PageHeader title="イベントを作成" back />
+      <PageHeader title="イベントを作成" back className="dock-owned-header" />
       <main className="form-page page-content event-create">
         <EventDraftPreview {...draft} />
-        <form onSubmit={submit} className="form-stack">
+        <form id="event-create-form" onSubmit={submit} className="form-stack">
           <label>
             タイトル
             <input
@@ -77,11 +80,18 @@ export function EventCreatePage() {
               {error}
             </p>
           )}
-          <button className="primary-button wide" disabled={saving}>
+          <button className="primary-button wide dock-owned-action" disabled={saving}>
             {saving ? "作成中…" : "作成"}
           </button>
         </form>
       </main>
+      <PageDock items={mainDockItems} identity="event-create" label="イベントの作成" fallback="/events">
+        <DockGroup slot="r" tone="ink" stretch>
+          <button type="submit" form="event-create-form" disabled={saving}>
+            {saving ? "作成中…" : "作成"}
+          </button>
+        </DockGroup>
+      </PageDock>
     </>
   );
 }

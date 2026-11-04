@@ -322,6 +322,12 @@ body:has(.fuse-add-overlay) .floating-add-button {
   .event-filter-in-header {
     display: none;
   }
+  /* ヘッダーは読み上げ用に1pxだけ残るので、その下に貼り付けていたものは画面の上端へ付ける。 */
+  .timeline-month-heading,
+  .event-cover,
+  .media-processing-status {
+    top: 0;
+  }
   :root .icon-button.event-filter-floating {
     position: fixed;
     z-index: 25;

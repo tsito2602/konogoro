@@ -12,6 +12,7 @@ import { PwaGuide } from "./PwaGuide";
 import { WelcomePhotos } from "./WelcomePhotos";
 import { AddMenu } from "./AddMenu";
 import { FuseAddMenu } from "./FuseAddMenu";
+import { handOffInitialBoot } from "../boot-handoff";
 import { remainingBootMotion } from "../boot-motion";
 import { BootSymbol } from "./BootSymbol";
 import { ToastProvider } from "./Toast";
@@ -154,7 +155,10 @@ export function AppLayout() {
   useLayoutEffect(() => {
     // Keep the original SVG mounted so React/auth updates cannot restart its motion.
     const initialBoot = document.getElementById("initial-boot");
-    if (initialBoot) initialBoot.hidden = !showingBoot;
+    if (!initialBoot) return;
+    if (showingBoot) initialBoot.hidden = false;
+    // The sun drops into the dock once the app has painted below the boot screen.
+    else handOffInitialBoot(initialBoot);
   }, [showingBoot]);
 
   if (invite) return <div className="app-shell">{routedContent}</div>;

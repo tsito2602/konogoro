@@ -27,8 +27,12 @@
       body {
         margin: 0;
       }
+      /* 起動画面は uchino・kondo・uchiwake と同じ寸法：シンボルの枠 176×142、名前まで 22px、名前の高さ 30px。
+         アプリが描けたら src/client/boot-handoff.ts が太陽を墨の玉にしてドックへ落とす。 */
       .boot-screen {
-        min-height: 100dvh;
+        position: fixed;
+        z-index: 1000;
+        inset: 0;
         display: grid;
         place-items: center;
         color: #000;
@@ -44,9 +48,9 @@
           sans-serif;
       }
       .boot-brand {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
+        display: grid;
+        justify-items: center;
+        gap: 22px;
         text-align: center;
       }
       #initial-boot[hidden] {
@@ -54,11 +58,11 @@
       }
       .boot-symbol {
         display: none;
-        width: 152px;
-        height: 152px;
-        margin-bottom: -12px;
+        width: 176px;
+        height: 142px;
       }
       .boot-symbol svg {
+        display: block;
         width: 100%;
         height: 100%;
         overflow: visible;
@@ -66,72 +70,198 @@
       .standalone .boot-symbol-animated {
         display: block;
       }
-      .boot-symbol-animated .ink {
+      .boot-symbol-animated :is(.boot-cloud, .boot-cloud-bob, .boot-sun, .boot-hill, .boot-hill-gap) {
         transform-box: fill-box;
-        transform-origin: center;
-        will-change: transform, opacity;
-        animation-duration: 900ms;
-        animation-fill-mode: both;
-        animation-timing-function: cubic-bezier(0.33, 0, 0.2, 1);
+        transform-origin: 50% 100%;
       }
-      .boot-symbol-animated .boot-sky {
-        transform-box: view-box;
-        transform-origin: 50% 70%;
-        animation-name: boot-sky;
+      .boot-symbol-animated .boot-cloud {
+        transform-origin: 50% 50%;
       }
-      .boot-symbol-animated .boot-sun {
-        animation-timing-function: cubic-bezier(0.33, 0, 0.67, 1);
-        animation-name: boot-sun;
+      /* 名前は kondo の文字グリッド（1字 74×102、線 18、丸い線端）で描く。r は n を書く途中で止めた形。 */
+      .boot-name {
+        display: flex;
+        gap: 0.075em;
+        height: 1em;
+        font-size: 30px;
+        line-height: 1;
       }
-      .boot-symbol-animated .boot-mountain {
-        animation-name: boot-mountain;
+      .boot-name span {
+        display: block;
+        width: 0.725em;
+        height: 1em;
+        transform-origin: 50% 100%;
+      }
+      .boot-name span.boot-letter-narrow {
+        width: 0.62em;
+      }
+      .boot-name svg {
+        display: block;
+        width: 100%;
+        height: 100%;
+        overflow: visible;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 18;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      /* 雲がふわっと降りて浮かび、山が地面から盛り上がり、太陽が山の後ろから弾んで昇って光の線が出る。
+         最後に名前が1字ずつ弾む。全体で約1.6秒。数値を変えるときは src/client/boot-motion.ts の長さも合わせる。 */
+      .standalone .boot-symbol-animated .boot-cloud {
+        animation: boot-cloud 900ms linear both;
+      }
+      .standalone .boot-symbol-animated .boot-cloud-bob {
+        animation: boot-cloud-bob 1800ms ease-in-out 900ms infinite;
+      }
+      .standalone .boot-symbol-animated :is(.boot-hill, .boot-hill-gap) {
+        animation: boot-hill 712.5ms linear 150ms both;
+      }
+      .standalone .boot-symbol-animated .boot-sun {
+        animation: boot-sun 675ms linear 645ms both;
+      }
+      .standalone .boot-symbol-animated .boot-rays path {
+        animation: boot-ray 390ms cubic-bezier(0.2, 0.6, 0.4, 1) 1009.5ms both;
+      }
+      .standalone .boot-symbol-animated .boot-rays path:is(:nth-child(2), :nth-child(4)) {
+        animation-delay: 1047ms;
+      }
+      .standalone .boot-symbol-animated .boot-rays path:is(:nth-child(1), :nth-child(5)) {
+        animation-delay: 1084.5ms;
+      }
+      .standalone .boot-name span {
+        animation: boot-letter 285ms linear both;
+      }
+      .standalone .boot-name span:nth-child(1) {
+        animation-delay: 1020ms;
+      }
+      .standalone .boot-name span:nth-child(2) {
+        animation-delay: 1061.25ms;
+      }
+      .standalone .boot-name span:nth-child(3) {
+        animation-delay: 1102.5ms;
+      }
+      .standalone .boot-name span:nth-child(4) {
+        animation-delay: 1143.75ms;
+      }
+      .standalone .boot-name span:nth-child(5) {
+        animation-delay: 1185ms;
+      }
+      .standalone .boot-name span:nth-child(6) {
+        animation-delay: 1226.25ms;
+      }
+      .standalone .boot-name span:nth-child(7) {
+        animation-delay: 1267.5ms;
+      }
+      .standalone .boot-name span:nth-child(8) {
+        animation-delay: 1308.75ms;
+      }
+      @keyframes boot-cloud {
+        0% {
+          transform: translate(0, -266.66px);
+          opacity: 0;
+          animation-timing-function: cubic-bezier(0.25, 0.6, 0.35, 1);
+        }
+        20% {
+          transform: none;
+          opacity: 1;
+        }
+        60% {
+          transform: translate(0, 8.57px) scale(1.024, 0.97);
+          animation-timing-function: ease-in-out;
+        }
+        80% {
+          transform: translate(0, -8.57px) scale(0.994, 1.012);
+          animation-timing-function: ease-in-out;
+        }
+        100% {
+          transform: none;
+        }
+      }
+      @keyframes boot-cloud-bob {
+        0%,
+        100% {
+          transform: none;
+        }
+        50% {
+          transform: translate(0, -11.9px);
+        }
+      }
+      @keyframes boot-hill {
+        0% {
+          transform: translate(0, 397.68px) scale(1.03, 0.94);
+          animation-timing-function: cubic-bezier(0.4, 0.15, 0.35, 1);
+        }
+        80% {
+          transform: translate(0, -4.71px) scale(0.994, 1.012);
+          animation-timing-function: ease-in-out;
+        }
+        100% {
+          transform: none;
+        }
       }
       @keyframes boot-sun {
         0% {
-          transform: translate3d(0, 100px, 0) scale(0.68);
+          transform: translate(0, 190.47px);
           opacity: 0;
+          animation-timing-function: cubic-bezier(0.2, 0.8, 0.3, 1);
         }
-        66% {
-          transform: translate3d(0, -18px, 0) scale(1.015);
+        4% {
+          transform: translate(0, 185.71px);
           opacity: 1;
+          animation-timing-function: cubic-bezier(0.2, 0.8, 0.3, 1);
         }
-        86% {
-          transform: translate3d(0, 3px, 0) scale(0.998);
-          opacity: 1;
+        36% {
+          transform: translate(0, -51.43px) scale(0.958, 1.054);
+          animation-timing-function: cubic-bezier(0.5, 0, 0.8, 0.4);
+        }
+        54% {
+          transform: scale(1.06, 0.94);
+          animation-timing-function: cubic-bezier(0.2, 0.7, 0.4, 1);
+        }
+        68% {
+          transform: translate(0, -17.14px) scale(0.988, 1.012);
+          animation-timing-function: cubic-bezier(0.5, 0, 0.8, 0.4);
+        }
+        80% {
+          transform: scale(1.018, 0.982);
         }
         100% {
-          transform: translate3d(0, 0, 0) scale(1);
+          transform: none;
+        }
+      }
+      @keyframes boot-ray {
+        from {
+          stroke-dashoffset: 0.5;
+        }
+        to {
+          stroke-dashoffset: -1.1;
+        }
+      }
+      @keyframes boot-letter {
+        0% {
+          transform: translateY(10px);
+          opacity: 0;
+          animation-timing-function: cubic-bezier(0.2, 0.8, 0.3, 1);
+        }
+        50% {
+          transform: translateY(-2.4px) scale(0.976, 1.036);
           opacity: 1;
+          animation-timing-function: cubic-bezier(0.5, 0, 0.8, 0.4);
         }
-      }
-      @keyframes boot-sky {
-        from {
-          transform: rotate(-8deg);
+        75% {
+          transform: scale(1.024, 0.976);
         }
-        to {
-          transform: rotate(0deg);
-        }
-      }
-      @keyframes boot-mountain {
-        from {
-          transform: translate3d(0, 6px, 0);
-        }
-        to {
-          transform: translate3d(0, 0, 0);
+        100% {
+          transform: none;
         }
       }
       @media (prefers-reduced-motion: reduce) {
-        .boot-symbol-animated .ink {
-          animation: none;
+        .boot-screen * {
+          animation: none !important;
         }
       }
-      .boot-name {
-        font-size: 20px;
-        font-weight: 650;
-        letter-spacing: 0.04em;
-      }
       .boot-status {
-        margin: 8px 0 0;
+        margin: -8px 0 0;
         color: #77726b;
         font-size: 14px;
       }
@@ -187,43 +317,99 @@
     </script>
     <main id="initial-boot" class="boot-screen" role="status" aria-label="konogoroを読み込み中">
       <div class="boot-brand">
-        <!-- Keep this initial artwork in sync with assets/brand/symbol.svg. -->
+        <!-- Keep this initial artwork in sync with assets/brand/symbol.svg (cropped to the artwork). -->
         <span class="boot-symbol boot-symbol-animated" aria-hidden="true"
-          ><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
-            <title id="title">このごろ — 雲と丘</title>
-            <desc id="desc">雲、丘、その後ろから昇る太陽で、ひらがなの「こ」を表した白黒のシンボル</desc>
+          ><svg xmlns="http://www.w3.org/2000/svg" viewBox="118 143 780 712" preserveAspectRatio="xMidYMid meet">
             <defs>
-              <mask id="konogoro-sun-gap" maskUnits="userSpaceOnUse" x="-1024" y="-1024" width="3072" height="3072">
-                <rect x="-1024" y="-1024" width="3072" height="3072" fill="#FFFFFF" />
-                <path
-                  d="M105 609 C120 566 164 545 209 573 C305 647 381 653 460 633 C549 611 599 557 660 512 C698 482 720 475 750 490 C805 521 851 581 890 622 C930 670 918 711 877 742 C751 844 531 872 347 815 C212 782 156 733 120 680 C109 662 95 635 105 609 Z"
-                  transform="translate(54 88) scale(0.91)"
-                  fill="#000000"
-                  stroke="#000000"
-                  stroke-width="40"
-                  stroke-linejoin="round"
-                />
+              <clipPath id="konogoro-boot-ground" clipPathUnits="userSpaceOnUse">
+                <rect x="-3000" y="-3000" width="7000" height="3884" />
+              </clipPath>
+              <clipPath id="konogoro-boot-under" clipPathUnits="userSpaceOnUse">
+                <rect x="-3000" y="-3000" width="7000" height="3840" />
+              </clipPath>
+              <mask id="konogoro-sun-gap" maskUnits="userSpaceOnUse" x="-3000" y="-3000" width="7000" height="7000">
+                <rect x="-3000" y="-3000" width="7000" height="7000" fill="#FFFFFF" />
+                <g clip-path="url(#konogoro-boot-ground)">
+                  <g transform="translate(54 88) scale(0.91)">
+                    <path
+                      class="boot-hill-gap"
+                      d="M105 609 C120 566 164 545 209 573 C305 647 381 653 460 633 C549 611 599 557 660 512 C698 482 720 475 750 490 C805 521 851 581 890 622 C930 670 918 711 877 742 C751 844 531 872 347 815 C212 782 156 733 120 680 C109 662 95 635 105 609 Z"
+                      fill="#000000"
+                      stroke="#000000"
+                      stroke-width="40"
+                      stroke-linejoin="round"
+                    />
+                  </g>
+                </g>
               </mask>
             </defs>
             <g transform="translate(512 512) scale(1.053) translate(-520.3 -531)">
-              <path
-                class="ink boot-sky"
-                fill="currentColor"
-                d="m683.9 189.4c-38.27 0-74.88 9.216-106 17.79-39.17 11.39-81.54 21.5-123.6 21.5-39.94 0-74.88-11.26-99.71-28.67-16.9-11.65-35.58-18.82-55.55-18.94-45.18 0-83.07 33.54-83.07 74.11 0 48.64 51.97 96.38 139.8 96.38 59.78 0 124.8-19.84 194.2-19.84 58.88 0 113.3 14.34 150.3 36.1 12.54 7.04 26.37 10.37 38.02 10.37 47.1 0 84.48-35.46 84.48-82.3 0-58.88-54.02-106.9-138.8-106.5z"
-              />
-              <g mask="url(#konogoro-sun-gap)">
-                <circle class="ink boot-sun" fill="currentColor" cx="518" cy="649" r="143" />
-              </g>
-              <g transform="translate(54 88) scale(0.91)">
+              <g class="boot-cloud-bob">
                 <path
-                  class="ink boot-mountain"
+                  class="boot-cloud"
                   fill="currentColor"
-                  d="M105 609 C120 566 164 545 209 573 C305 647 381 653 460 633 C549 611 599 557 660 512 C698 482 720 475 750 490 C805 521 851 581 890 622 C930 670 918 711 877 742 C751 844 531 872 347 815 C212 782 156 733 120 680 C109 662 95 635 105 609 Z"
+                  d="m683.9 189.4c-38.27 0-74.88 9.216-106 17.79-39.17 11.39-81.54 21.5-123.6 21.5-39.94 0-74.88-11.26-99.71-28.67-16.9-11.65-35.58-18.82-55.55-18.94-45.18 0-83.07 33.54-83.07 74.11 0 48.64 51.97 96.38 139.8 96.38 59.78 0 124.8-19.84 194.2-19.84 58.88 0 113.3 14.34 150.3 36.1 12.54 7.04 26.37 10.37 38.02 10.37 47.1 0 84.48-35.46 84.48-82.3 0-58.88-54.02-106.9-138.8-106.5z"
                 />
               </g>
-            </g>
-          </svg> </span
-        ><strong class="boot-name">konogoro</strong>
+              <g
+                class="boot-rays"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="26"
+                stroke-linecap="round"
+                stroke-dasharray="0.5 3"
+                stroke-dashoffset="0.5"
+              >
+                <path pathLength="1" d="M360.4 558L301.5 524" />
+                <path pathLength="1" d="M427 491.4L393 432.5" />
+                <path pathLength="1" d="M518 467L518 399" />
+                <path pathLength="1" d="M609 491.4L643 432.5" />
+                <path pathLength="1" d="M675.6 558L734.5 524" />
+              </g>
+              <g clip-path="url(#konogoro-boot-under)">
+                <g mask="url(#konogoro-sun-gap)">
+                  <circle class="boot-sun" fill="currentColor" cx="518" cy="649" r="143" />
+                </g>
+              </g>
+              <g clip-path="url(#konogoro-boot-ground)">
+                <g transform="translate(54 88) scale(0.91)">
+                  <path
+                    class="boot-hill"
+                    fill="currentColor"
+                    d="M105 609 C120 566 164 545 209 573 C305 647 381 653 460 633 C549 611 599 557 660 512 C698 482 720 475 750 490 C805 521 851 581 890 622 C930 670 918 711 877 742 C751 844 531 872 347 815 C212 782 156 733 120 680 C109 662 95 635 105 609 Z"
+                  />
+                </g>
+              </g>
+            </g></svg
+        ></span>
+        <strong class="boot-name" aria-label="konogoro">
+          <span
+            ><svg viewBox="0 0 74 102"><path d="M12 12V90M58 38L12 70M29 59L60 90" /></svg
+          ></span>
+          <span
+            ><svg viewBox="0 0 74 102"><circle cx="37" cy="64" r="26" /></svg
+          ></span>
+          <span
+            ><svg viewBox="0 0 74 102"><path d="M12 90V64A25 25 0 0 1 62 64V90" /></svg
+          ></span>
+          <span
+            ><svg viewBox="0 0 74 102"><circle cx="37" cy="64" r="26" /></svg
+          ></span>
+          <span
+            ><svg viewBox="0 0 74 102">
+              <circle cx="37" cy="64" r="26" />
+              <path d="M63 40V96C63 112 51 120 37 120C27 120 19 117 14 111" /></svg
+          ></span>
+          <span
+            ><svg viewBox="0 0 74 102"><circle cx="37" cy="64" r="26" /></svg
+          ></span>
+          <span class="boot-letter-narrow"
+            ><svg viewBox="0 0 63.24 102"><path d="M12 90V64A25 25 0 0 1 54.68 46.32" /></svg
+          ></span>
+          <span
+            ><svg viewBox="0 0 74 102"><circle cx="37" cy="64" r="26" /></svg
+          ></span>
+        </strong>
         <p class="boot-status">読み込み中…</p>
       </div>
     </main>

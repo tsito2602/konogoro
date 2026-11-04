@@ -748,18 +748,12 @@ export function MediaViewerPage() {
       {/* スマホ・タブレットのボトムナビ：閉じる・コメントする・保存。コメント欄を開くと、閉じると送信になる。 */}
       <MainDock items={mainDockItems} className="viewer-dock" identity="viewer" label="写真・動画の操作">
         {commentsOpen ? (
-          <>
-            <DockGroup slot="l">
-              <button type="button" onClick={closeComments} aria-label="コメントを閉じて写真・動画に戻る">
-                <X />
-              </button>
-            </DockGroup>
-            <DockGroup slot="r" tone="ink" stretch>
-              <button type="submit" form={VIEWER_COMMENT_FORM} disabled={!text.trim() || sending}>
-                {sending ? "送信中…" : "送信"}
-              </button>
-            </DockGroup>
-          </>
+          // 投稿ページと同じく、書いている間は送信ボタンだけ。持ち上がった面を押すと下りる。
+          <DockGroup slot="r" className="cdock-center cdock-send">
+            <button type="submit" form={VIEWER_COMMENT_FORM} disabled={!text.trim() || sending}>
+              {sending ? "送信中…" : "送信"}
+            </button>
+          </DockGroup>
         ) : (
           <>
             <DockGroup slot="l">

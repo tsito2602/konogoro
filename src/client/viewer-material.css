@@ -394,11 +394,20 @@
     transform: translateY(calc(-1 * var(--viewer-lift, 0px)));
     cursor: pointer;
   }
+  /* 持ち上がった面は投稿ページの面と同じ色にし、下の黒い書き込み欄と分けて見せる。 */
+  .media-viewer .viewer-viewport,
+  .media-viewer .thumbnail-strip {
+    transition-property: transform, border-radius, background-color;
+  }
+  .media-viewer.comments-open .viewer-viewport,
+  .media-viewer.comments-open .thumbnail-strip {
+    background-color: #262522;
+  }
   /* 持ち上がった面の下端は角丸にし、押せば下りるとわかるつまみを付ける。 */
   .media-viewer.comments-open .thumbnail-strip {
     border-radius: 0 0 28px 28px;
     box-shadow: 0 18px 40px #000a;
-    background: #000
+    background: #262522
       url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='5'%3E%3Crect width='40' height='5' rx='2.5' fill='%23ffffff66'/%3E%3C/svg%3E")
       no-repeat center bottom 6px;
   }
@@ -418,11 +427,12 @@
   .main-dock-host.viewer-dock {
     display: block;
     z-index: 8;
-    --p-paper: #000;
-    --p-dock: var(--v-soft);
-    --p-ink: var(--v-ink);
-    --p-line: #ffffff14;
-    --p-mute: var(--v-mute);
+    /* 投稿ページのドック（暗い表示）と同じ色。 */
+    --p-paper: #141312;
+    --p-dock: #262522;
+    --p-ink: #f5f1e9;
+    --p-line: #2d2b29;
+    --p-mute: #aaa49b;
   }
   .viewer-dock .viewer-dock-count {
     min-width: 22px;

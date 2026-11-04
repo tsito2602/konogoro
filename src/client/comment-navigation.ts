@@ -18,7 +18,8 @@ export function revealComment(container: HTMLElement, commentId: string | null):
   if (panel) {
     panel.scrollTop += target.getBoundingClientRect().top - panel.getBoundingClientRect().top - 16;
   }
-  target.classList.add("comment-arrived");
+  // 光らせるのは目当てのコメントだけ。一覧全体には付けない（角丸が区切り線を曲げて見せていた）。
+  if (target !== container) target.classList.add("comment-arrived");
   return target;
 }
 export function commentNavigationState(intent: CommentIntent, currentState: unknown = null) {

@@ -1,23 +1,12 @@
 import { setReadingIdentity } from "../reading-context";
-import {
-  Bell,
-  BellOff,
-  BookOpen,
-  Check,
-  ChevronRight,
-  LogOut,
-  Monitor,
-  Moon,
-  Smartphone,
-  Sun,
-  Users,
-  X,
-} from "lucide-react";
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { Bell, BookOpen, ChevronRight, Link2, Pencil, Smartphone, Users } from "lucide-react";
+import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import packageInfo from "../../../package.json";
 import type { CurrentUser, FamilyMember, User } from "../../shared/types";
 import { api } from "../api";
+import { useAppUpdate } from "../app-update";
+import { spring } from "../cartoon/cartoon";
 import { canInviteFamily } from "../../shared/permissions";
 import { ErrorState } from "../components/AsyncState";
 import { PageHeader } from "../components/PageHeader";
@@ -27,11 +16,8 @@ import { openInstallGuide, openOnboardingGuide } from "../components/PwaGuide";
 import { useToast } from "../components/Toast";
 import { getThemePreference, setThemePreference, type ThemePreference } from "../theme";
 
-const themeOptions = [
-  { value: "system", label: "システム", description: "端末に合わせる", icon: Monitor },
-  { value: "light", label: "ライト", description: "明るい表示", icon: Sun },
-  { value: "dark", label: "ダーク", description: "暗い表示", icon: Moon },
-] satisfies { value: ThemePreference; label: string; description: string; icon: typeof Monitor }[];
+// kondo の設定（kondo src/web/settings.tsx・styles/settings.css）の形に合わせた設定画面。
+// 一度決めれば済むものだけを、区切りの見出しと面のまとまりに並べる。表示名と通知は変えたときにすぐ保存する。
 
 const roleLabels: Record<User["role"], string> = {
   owner: "管理者",
@@ -79,22 +65,319 @@ export function StagingRoleGuide({ currentRole, disabled, onChange }: StagingRol
   );
 }
 
+/** 面のまとまりの中の1行。左に線のアイコン、まん中に名前と説明、右に状態や ›。 */
+function Row({
+  icon,
+  title,
+  note,
+  end,
+  danger = false,
+}: {
+  icon?: ReactNode;
+  title: ReactNode;
+  note?: ReactNode;
+  end?: ReactNode;
+  danger?: boolean;
+}) {
+  return (
+    <>
+      {icon}
+      <span className="settings-row-copy">
+        <b className={danger ? "danger" : undefined}>{title}</b>
+        {note && <small>{note}</small>}
+      </span>
+      {end !== undefined && <span className="settings-row-end">{end}</span>}
+    </>
+  );
+}
+
+const chevron = <ChevronRight aria-hidden />;
+const okMark = (
+  <span className="settings-ok" aria-hidden="true">
+    <svg viewBox="0 0 24 24">
+      <path
+        d="M5 12.5l4.5 4.5L19 7.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="3.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  </span>
+);
+
+/** アカウントの面：顔、その場で書き換えられる表示名、下の点線の欄に権限のはんこ。 */
+function Passport({ user, onSaved }: { user: CurrentUser; onSaved: (user: CurrentUser) => void }) {
+  const showToast = useToast();
+  const nameId = useId();
+  const [name, setName] = useState(user.displayName);
+  const saved = useRef(user.displayName);
+  const pending = useRef<string | null>(null);
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+  const save = useCallback(() => {
+    clearTimeout(timer.current);
+    const next = pending.current?.trim();
+    pending.current = null;
+    if (!next || next.length > 50 || next === saved.current) return;
+    const previous = saved.current;
+    saved.current = next;
+    void api<CurrentUser>("/me", { method: "PATCH", body: JSON.stringify({ displayName: next }) })
+      .then((result) => {
+        onSaved(result);
+        showToast("表示名を保存しました", { success: true });
+      })
+      .catch((reason: unknown) => {
+        saved.current = previous;
+        showToast(reason instanceof Error ? reason.message : "表示名を保存できませんでした");
+      });
+  }, [onSaved, showToast]);
+  // 入力の途中で設定を離れても、最後に書いた名前を保存する。
+  useEffect(() => save, [save]);
+
+  const role = roleLabels[user.role];
+  return (
+    <div className="passport">
+      <span className="passport-photo" aria-hidden="true">
+        {user.avatarUrl ? <img src={user.avatarUrl} alt="" /> : <span>{user.displayName.slice(0, 1)}</span>}
+      </span>
+      <div className="passport-fields">
+        <label className="passport-key" htmlFor={nameId}>
+          NAME / 表示名
+        </label>
+        <span className="passport-name-field">
+          <input
+            id={nameId}
+            className="passport-name"
+            value={name}
+            maxLength={50}
+            autoComplete="nickname"
+            enterKeyHint="done"
+            onChange={(event) => {
+              setName(event.target.value);
+              pending.current = event.target.value;
+              clearTimeout(timer.current);
+              timer.current = setTimeout(save, 700);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") event.currentTarget.blur();
+            }}
+            onBlur={() => {
+              save();
+              if (!name.trim()) setName(saved.current);
+            }}
+          />
+          <label htmlFor={nameId} className="passport-name-edit" aria-label="表示名を変更">
+            <Pencil aria-hidden />
+          </label>
+        </span>
+      </div>
+      <div className="passport-stamps">
+        <small>このごろでの権限</small>
+        <span role="img" aria-label={role} title={role}>
+          {role}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/** LINE：通知のオンとオフは押したときに保存する。連携と受け取りの状態は右に出す。 */
+function LineRows({ user, onSaved }: { user: CurrentUser; onSaved: (user: CurrentUser) => void }) {
+  const showToast = useToast();
+  const [enabled, setEnabled] = useState(user.notificationEnabled ?? false);
+  const [busy, setBusy] = useState(false);
+  const available = user.lineFriend;
+  const toggle = async (next: boolean) => {
+    setEnabled(next);
+    setBusy(true);
+    try {
+      const result = await api<CurrentUser>("/me", {
+        method: "PATCH",
+        body: JSON.stringify({ notificationEnabled: next }),
+      });
+      onSaved(result);
+      setEnabled(result.notificationEnabled ?? false);
+      showToast(next ? "LINE通知をオンにしました" : "LINE通知をオフにしました", { success: true });
+    } catch (reason) {
+      setEnabled(!next);
+      showToast((reason as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <>
+      <div className="settings-group settings-line">
+        <label className={`settings-row settings-switch-row${available ? "" : " unavailable"}`}>
+          <Row
+            icon={<Bell className="settings-row-icon" aria-hidden />}
+            title="LINE通知"
+            note={
+              !available
+                ? "友だち追加後に利用できる"
+                : enabled
+                  ? "新しい投稿をLINEでお知らせします"
+                  : "新しい投稿のLINE通知は届きません"
+            }
+            end={
+              <>
+                <input
+                  className="settings-switch-input"
+                  type="checkbox"
+                  role="switch"
+                  checked={enabled}
+                  disabled={busy || !available}
+                  onChange={(event) => void toggle(event.target.checked)}
+                />
+                <span className="settings-switch" aria-hidden="true" />
+              </>
+            }
+          />
+        </label>
+        <div className="settings-row">
+          <Row
+            icon={<Link2 className="settings-row-icon" aria-hidden />}
+            title="LINEアカウント"
+            end={
+              user.lineConnected ? (
+                <>
+                  {okMark}
+                  連携済み
+                </>
+              ) : (
+                "未連携"
+              )
+            }
+          />
+        </div>
+        <div className="settings-row">
+          <Row
+            title="アプリからの通知"
+            end={
+              user.lineFriend ? (
+                <>
+                  {okMark}
+                  受信可能
+                </>
+              ) : (
+                "受信不可"
+              )
+            }
+          />
+        </div>
+      </div>
+      {!user.lineFriend && (
+        <p className="settings-note">LINEで「このごろ」アカウントをブロックしていないか確認してください。</p>
+      )}
+    </>
+  );
+}
+
+const THEME_ICONS: Record<ThemePreference, ReactNode> = {
+  system: (
+    <>
+      <circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" strokeWidth="2.2" />
+      <path d="M12 4a8 8 0 0 1 0 16z" fill="currentColor" />
+    </>
+  ),
+  light: (
+    <>
+      <circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" strokeWidth="2.2" />
+      <path
+        d="M12 2.5v2.5M12 19v2.5M2.5 12h2.5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"
+        stroke="currentColor"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+      />
+    </>
+  ),
+  dark: (
+    <path
+      d="M19.5 14.5A8 8 0 0 1 9.5 4.5a8 8 0 1 0 10 10z"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinejoin="round"
+    />
+  ),
+};
+const THEMES = [
+  { value: "system", label: "自動" },
+  { value: "light", label: "ライト" },
+  { value: "dark", label: "ダーク" },
+] satisfies { value: ThemePreference; label: string }[];
+
+/** 外観：3つのボタン。選んだものが紙の面になり、押したものは弾む。 */
+function Appearance() {
+  const [theme, setTheme] = useState<ThemePreference>(getThemePreference);
+  return (
+    <div className="settings-theme" role="group" aria-label="表示モード">
+      {THEMES.map((entry) => (
+        <button
+          key={entry.value}
+          type="button"
+          aria-pressed={theme === entry.value}
+          data-feedback="none"
+          onClick={(event) => {
+            setTheme(entry.value);
+            setThemePreference(entry.value);
+            void spring(event.currentTarget, [{ transform: "scale(.9)" }, { transform: "none" }], "boing");
+          }}
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            {THEME_ICONS[entry.value]}
+          </svg>
+          {entry.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** 一番下のアイコン：押すと跳ねて、着地で少しつぶれる。 */
+function FooterLogo() {
+  const mark = useRef<HTMLSpanElement>(null);
+  return (
+    <footer className="settings-foot">
+      <button
+        type="button"
+        aria-label="このごろ"
+        data-feedback="none"
+        onClick={() => {
+          if (!mark.current) return;
+          void spring(
+            mark.current,
+            [
+              { transform: "translateY(0)" },
+              { transform: "translateY(-26px) scale(.92,1.08)", offset: 0.4 },
+              { transform: "translateY(0) scale(1.12,.86)", offset: 0.75 },
+              { transform: "none" },
+            ],
+            "boing",
+          );
+        }}
+      >
+        <span ref={mark} className="settings-logo" aria-hidden="true">
+          <img className="settings-app-icon-light" src="/icons/icon-light-transparent.png" alt="" />
+          <img className="settings-app-icon-dark" src="/icons/icon-dark-transparent.png" alt="" />
+        </span>
+      </button>
+      <b>このごろ</b>
+    </footer>
+  );
+}
+
 export function SettingsPage() {
   const currentUser = useCurrentUser();
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [members, setMembers] = useState<FamilyMember[] | null>(null);
-  const [displayName, setDisplayName] = useState("");
-  const [notificationEnabled, setNotificationEnabled] = useState(false);
-  const [notificationTouched, setNotificationTouched] = useState(false);
   const [error, setError] = useState("");
   const [familyError, setFamilyError] = useState("");
   const [busy, setBusy] = useState(false);
   const [switchingRole, setSwitchingRole] = useState(false);
-  const [theme, setTheme] = useState<ThemePreference>(getThemePreference);
-  const showToast = useToast();
-  const hasChanges = Boolean(
-    user && (displayName !== user.displayName || notificationEnabled !== (user.notificationEnabled ?? false)),
-  );
+  const update = useAppUpdate();
 
   const loadFamily = useCallback(() => {
     setFamilyError("");
@@ -106,8 +389,6 @@ export function SettingsPage() {
   const applyUser = useCallback(
     (result: CurrentUser) => {
       setUser(result);
-      setDisplayName(result.displayName);
-      setNotificationEnabled(result.notificationEnabled ?? false);
       if (canInviteFamily(result)) loadFamily();
     },
     [loadFamily],
@@ -125,26 +406,6 @@ export function SettingsPage() {
       .then(applyUser)
       .catch((reason) => setError((reason as Error).message));
   }, [applyUser]);
-
-  const save = async (event: FormEvent) => {
-    event.preventDefault();
-    setBusy(true);
-    setError("");
-    try {
-      const result = await api<CurrentUser>("/me", {
-        method: "PATCH",
-        body: JSON.stringify({ displayName, notificationEnabled }),
-      });
-      setUser(result);
-      setDisplayName(result.displayName);
-      setNotificationEnabled(result.notificationEnabled ?? false);
-      showToast("設定を保存しました", { success: true });
-    } catch (reason) {
-      setError((reason as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  };
 
   const logout = async () => {
     setBusy(true);
@@ -176,266 +437,147 @@ export function SettingsPage() {
     }
   };
 
+  const updateLabel = update.version && update.version !== packageInfo.version ? update.version : "新しいバージョン";
+
   return (
     <>
       <PageHeader title="設定" />
-      <main className={`page-content settings-page${hasChanges ? " has-save-bar" : ""}`}>
+      <main className="page-content settings-page">
         {error && !user ? (
           <ErrorState message={error} retry={load} />
         ) : !user ? (
           <PageSkeleton variant="settings" currentUser={currentUser} />
         ) : (
           <>
-            <form id="settings-save-form" className="settings-form" onSubmit={save}>
-              <section className="settings-section">
-                <h2>プロフィール</h2>
-                <div className="settings-card settings-profile">
-                  <span className="settings-profile-avatar" aria-hidden="true">
-                    {user.avatarUrl ? <img src={user.avatarUrl} alt="" /> : user.displayName.slice(0, 1)}
-                  </span>
-                  <label className="settings-field">
-                    <span>表示名</span>
-                    <input
-                      value={displayName}
-                      onChange={(event) => setDisplayName(event.target.value)}
-                      required
-                      maxLength={100}
-                      disabled={busy}
-                    />
-                  </label>
-                </div>
-              </section>
-
-              <section className="settings-section">
-                <h2>LINE</h2>
-                <div className="settings-card">
-                  <label
-                    className={`notification-toggle${notificationEnabled ? " enabled" : ""}${!user.lineFriend ? " unavailable" : ""}${notificationTouched ? " touched" : ""}`}
-                  >
-                    <input
-                      className="notification-toggle-input"
-                      type="checkbox"
-                      checked={notificationEnabled}
-                      onChange={(event) => {
-                        setNotificationTouched(true);
-                        setNotificationEnabled(event.target.checked);
-                      }}
-                      disabled={busy || !user.lineFriend}
-                    />
-                    <span className="notification-toggle-icon" aria-hidden>
-                      <Bell className="notification-bell-on" />
-                      <BellOff className="notification-bell-off" />
-                    </span>
-                    <span className="notification-toggle-copy">
-                      <strong>
-                        LINE通知{" "}
-                        <small>
-                          {!user.lineFriend ? "利用不可" : notificationEnabled ? "オン" : "オフ"}
-                          {user.lineFriend && notificationEnabled !== (user.notificationEnabled ?? false)
-                            ? " · 未保存"
-                            : ""}
-                        </small>
-                      </strong>
-                      <span>
-                        {!user.lineFriend
-                          ? "友だち追加後に利用できる"
-                          : notificationEnabled
-                            ? "新しい投稿をLINEでお知らせします"
-                            : "新しい投稿のLINE通知は届きません"}
-                      </span>
-                    </span>
-                    <span className="notification-switch" aria-hidden>
-                      <span>
-                        <Check className="notification-switch-on" />
-                        <X className="notification-switch-off" />
-                      </span>
-                    </span>
-                  </label>
-                  <div className="setting-status">
-                    <strong>LINEアカウント</strong>
-                    <span className={user.lineConnected ? "linked" : ""}>
-                      {user.lineConnected ? "連携済み" : "未連携"}
-                    </span>
-                  </div>
-                  <div className="setting-status">
-                    <strong>アプリからの通知</strong>
-                    <span className={user.lineFriend ? "linked" : ""}>{user.lineFriend ? "受信可能" : "受信不可"}</span>
-                  </div>
-                  {!user.lineFriend && (
-                    <p className="settings-line-warning">
-                      LINEで「このごろ」アカウントをブロックしていないか確認してください。
-                    </p>
-                  )}
-                </div>
-              </section>
-
-              {error && (
-                <p className="form-error" role="alert">
-                  {error}
-                </p>
-              )}
-            </form>
-
-            {user.isStaging && (
-              <section className="settings-section">
-                <h2>ステージング確認</h2>
-                <Link className="settings-menu-row" to="/settings/design">
-                  <span>
-                    <strong>新しい触り心地を試す</strong>
-                    <small>イベント・写真・LINE通知のデザイン試作</small>
-                  </span>
-                </Link>
-                <StagingRoleGuide
-                  currentRole={user.role}
-                  disabled={switchingRole}
-                  onChange={(role) => void switchStagingRole(role)}
-                />
-                <p className="settings-hint">
-                  このブラウザだけの確認用設定です。切り替えるとタイムラインへ移動します。
-                </p>
-              </section>
-            )}
-
-            <div className={`change-save-bar${hasChanges ? " visible" : ""}`} aria-hidden={!hasChanges}>
-              <button
-                className="primary-button wide"
-                type="submit"
-                form="settings-save-form"
-                disabled={busy || !displayName.trim()}
-              >
-                {busy ? "保存中…" : "変更を保存"}
-              </button>
-            </div>
-
             <section className="settings-section">
-              <h2>表示</h2>
-              <p className="settings-hint">テーマは選ぶとすぐに反映されます。</p>
-              <fieldset className="settings-card theme-setting">
-                <legend className="visually-hidden">テーマ</legend>
-                <div>
-                  {themeOptions.map(({ value, label, description, icon: Icon }) => (
-                    <label className={theme === value ? "selected" : ""} key={value}>
-                      <input
-                        type="radio"
-                        name="theme"
-                        value={value}
-                        checked={theme === value}
-                        onChange={() => {
-                          setTheme(value);
-                          setThemePreference(value);
-                        }}
-                      />
-                      <span className="theme-preview" data-sample={value} aria-hidden="true">
-                        <i className="theme-preview-header" />
-                        <i className="theme-preview-photo" />
-                        <i className="theme-preview-caption" />
-                        <i className="theme-preview-nav" />
-                      </span>
-                      <Icon aria-hidden />
-                      <span>
-                        <strong>{label}</strong>
-                        <small>{description}</small>
-                      </span>
-                    </label>
-                  ))}
-                </div>
-              </fieldset>
+              <h2>アカウント</h2>
+              <Passport user={user} onSaved={setUser} />
+              <LineRows user={user} onSaved={setUser} />
             </section>
 
             <section className="settings-section">
-              <h2>使い方</h2>
-              <div className="settings-card">
-                <button className="settings-menu-row" type="button" onClick={openOnboardingGuide}>
-                  <BookOpen aria-hidden />
-                  <span>
-                    <strong>このごろの使い方</strong>
-                    <small>初回ガイドをもう一度見る</small>
-                  </span>
-                  <ChevronRight aria-hidden />
-                </button>
-                <button className="settings-menu-row bordered" type="button" onClick={openInstallGuide}>
-                  <Smartphone aria-hidden />
-                  <span>
-                    <strong>ホーム画面に追加</strong>
-                    <small>この端末に合った手順を見る</small>
-                  </span>
-                  <ChevronRight aria-hidden />
-                </button>
-              </div>
+              <h2>外観</h2>
+              <Appearance />
             </section>
 
             {canInviteFamily(user) && (
               <section className="settings-section">
                 <h2>メンバー</h2>
-                <div className="settings-card">
+                <div className="settings-group">
                   {familyError ? (
-                    <div className="settings-family-error">
-                      <p>{familyError}</p>
-                      <button className="text-button" type="button" onClick={loadFamily}>
-                        再読み込み
-                      </button>
+                    <div className="settings-row">
+                      <Row
+                        title={<span className="settings-error">{familyError}</span>}
+                        end={
+                          <button className="text-button" type="button" onClick={loadFamily}>
+                            再読み込み
+                          </button>
+                        }
+                      />
                     </div>
                   ) : members === null ? (
-                    <div className="settings-card-loading" role="status">
+                    <div className="settings-row" role="status">
                       <span className="spinner" />
-                      読み込み中
+                      <Row title="読み込み中" />
                     </div>
                   ) : (
                     members.map((member) => (
-                      <article className="member-row" key={member.id}>
-                        <div className="member-avatar">
+                      <div className="settings-row settings-member" key={member.id}>
+                        <span className="settings-member-avatar" aria-hidden="true">
                           {member.avatarUrl ? <img src={member.avatarUrl} alt="" /> : member.displayName.slice(0, 1)}
-                        </div>
-                        <div className="member-copy">
-                          <strong>{member.displayName}</strong>
-                          <span>{roleLabels[member.role]}</span>
-                        </div>
-                        <span className={`notification-state${member.notificationEnabled ? " enabled" : ""}`}>
-                          {member.notificationEnabled ? <Bell /> : <BellOff />}LINE通知
-                          {member.notificationEnabled ? "ON" : "OFF"}
                         </span>
-                      </article>
+                        <Row
+                          title={member.displayName}
+                          note={roleLabels[member.role]}
+                          end={`LINE通知${member.notificationEnabled ? "オン" : "オフ"}`}
+                        />
+                      </div>
                     ))
                   )}
-                  <Link className="settings-menu-row" to="/settings/family">
-                    <Users aria-hidden />
-                    <span>
-                      <strong>メンバーの管理</strong>
-                      <small>権限設定・招待URL発行</small>
-                    </span>
-                    <ChevronRight aria-hidden />
+                  <Link className="settings-row" to="/settings/family">
+                    <Row
+                      icon={<Users className="settings-row-icon" aria-hidden />}
+                      title="メンバーの管理"
+                      note="権限設定・招待URL発行"
+                      end={chevron}
+                    />
                   </Link>
                 </div>
               </section>
             )}
 
             <section className="settings-section">
-              <h2>その他</h2>
-              <div className="settings-card">
-                <button className="settings-menu-row settings-logout" type="button" onClick={logout} disabled={busy}>
-                  <LogOut aria-hidden />
-                  <span>
-                    <strong>ログアウト</strong>
-                  </span>
+              <h2>アプリ</h2>
+              <div className="settings-group">
+                <button className="settings-row" type="button" onClick={() => openOnboardingGuide()}>
+                  <Row
+                    icon={<BookOpen className="settings-row-icon" aria-hidden />}
+                    title="このごろの使い方"
+                    note="初回ガイドをもう一度見る"
+                    end={chevron}
+                  />
+                </button>
+                <button className="settings-row" type="button" onClick={() => openInstallGuide()}>
+                  <Row
+                    icon={<Smartphone className="settings-row-icon" aria-hidden />}
+                    title="ホーム画面に追加"
+                    note="アプリのように全画面で開ける"
+                    end={chevron}
+                  />
+                </button>
+                <div className="settings-row" role="status" aria-live="polite">
+                  <Row
+                    title={`バージョン ${packageInfo.version}`}
+                    end={
+                      update.available ? (
+                        `${updateLabel} が届いています`
+                      ) : (
+                        <>
+                          {okMark}
+                          最新です
+                        </>
+                      )
+                    }
+                  />
+                </div>
+              </div>
+            </section>
+
+            {user.isStaging && (
+              <section className="settings-section">
+                <h2>ステージング確認</h2>
+                <div className="settings-group">
+                  <Link className="settings-row" to="/settings/design">
+                    <Row title="新しい触り心地を試す" note="イベント・写真・LINE通知のデザイン試作" end={chevron} />
+                  </Link>
+                </div>
+                <StagingRoleGuide
+                  currentRole={user.role}
+                  disabled={switchingRole}
+                  onChange={(role) => void switchStagingRole(role)}
+                />
+                <p className="settings-note">
+                  このブラウザだけの確認用設定です。切り替えるとタイムラインへ移動します。
+                </p>
+              </section>
+            )}
+
+            {error && (
+              <p className="form-error" role="alert">
+                {error}
+              </p>
+            )}
+
+            <section className="settings-section settings-signout" aria-label="ログアウト">
+              <div className="settings-group">
+                <button className="settings-row" type="button" onClick={() => void logout()} disabled={busy}>
+                  <Row title="ログアウト" danger />
                 </button>
               </div>
             </section>
 
-            <section className="settings-app-info" aria-label="アプリ情報">
-              <span aria-hidden>
-                <img
-                  className="settings-app-icon settings-app-icon-light"
-                  src="/icons/icon-light-transparent.png"
-                  alt=""
-                />
-                <img
-                  className="settings-app-icon settings-app-icon-dark"
-                  src="/icons/icon-dark-transparent.png"
-                  alt=""
-                />
-              </span>
-              <strong>このごろ</strong>
-              <small>バージョン {packageInfo.version}</small>
+            <section className="settings-section settings-foot-section" aria-label="アプリ情報">
+              <FooterLogo />
             </section>
           </>
         )}

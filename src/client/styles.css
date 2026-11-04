@@ -759,9 +759,6 @@ a.icon-button {
 .family-page > .page-skeleton {
   grid-column: 1 / -1;
 }
-.skeleton-settings-card .skeleton-form-group {
-  padding: 16px;
-}
 .skeleton-role-choice {
   display: flex;
   align-items: center;
@@ -775,22 +772,6 @@ a.icon-button {
   width: 18px;
   height: 18px;
   flex-basis: 18px;
-}
-.skeleton-theme-options {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  padding: 12px;
-}
-.skeleton-theme-options > span {
-  height: 92px;
-  border-radius: var(--radius);
-}
-.skeleton-settings-card .settings-menu-row > .skeleton-copy {
-  flex: 1;
-}
-.skeleton-settings-layout .settings-app-info {
-  align-items: center;
 }
 .skeleton-viewer,
 .skeleton-viewer > .skeleton-content {
@@ -3163,12 +3144,6 @@ textarea:focus {
   font-size: 0.875rem;
   font-weight: 600;
 }
-.settings-hint {
-  margin: 8px 4px 0;
-  color: var(--ash);
-  font-size: 0.875rem;
-  line-height: 1.5;
-}
 .invite-result {
   display: grid;
   gap: 10px;
@@ -3340,19 +3315,6 @@ textarea:focus {
 .settings-page {
   padding: 20px 16px 40px;
 }
-.settings-page.has-save-bar {
-  padding-bottom: 112px;
-}
-.settings-form {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-.settings-form + .settings-section,
-.change-save-bar + .settings-section,
-.settings-page > .settings-section + .settings-section {
-  margin-top: 28px;
-}
 .change-save-bar {
   position: fixed;
   z-index: 35;
@@ -3394,249 +3356,6 @@ textarea:focus {
   border-radius: var(--radius-card);
   background: var(--surface);
 }
-.settings-field {
-  padding: 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  font-size: 0.8125rem;
-  font-weight: 600;
-}
-.settings-field input {
-  background: var(--surface-muted);
-}
-.theme-setting {
-  margin: 0;
-  padding: 12px;
-}
-.theme-setting > div {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-}
-.theme-setting label {
-  min-width: 0;
-  min-height: 92px;
-  padding: 11px 7px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--surface-muted);
-  text-align: center;
-  cursor: pointer;
-}
-.theme-setting label.selected {
-  border-color: var(--accent-ink);
-  background: var(--p-select);
-}
-.theme-setting label:has(input:focus-visible) {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: 2px;
-}
-.theme-setting input {
-  position: absolute;
-  width: 1px;
-  min-height: 1px;
-  opacity: 0;
-  pointer-events: none;
-}
-.theme-setting svg {
-  width: 24px;
-  height: 24px;
-  color: var(--accent-ink);
-  stroke-width: 2;
-}
-.theme-setting span {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.theme-setting strong {
-  font-size: 0.8125rem;
-}
-.theme-setting small {
-  overflow: hidden;
-  color: var(--ash);
-  font-size: 0.625rem;
-  font-weight: 400;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-.setting-status {
-  min-height: 56px;
-  padding: 0 14px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  border-top: 1px solid var(--separator);
-  font-size: 0.875rem;
-}
-.notification-toggle {
-  position: relative;
-  min-height: 80px;
-  padding: 14px;
-  display: grid;
-  grid-template-columns: 44px minmax(0, 1fr) 58px;
-  gap: 11px;
-  align-items: center;
-  cursor: pointer;
-}
-.notification-toggle:has(input:focus-visible) {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: 2px;
-}
-.notification-toggle-input {
-  position: absolute;
-  width: 1px;
-  min-height: 1px !important;
-  opacity: 0;
-  pointer-events: none;
-}
-.notification-toggle-icon {
-  position: relative;
-  width: 44px;
-  height: 44px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  color: var(--ash);
-  background: var(--surface-muted);
-  transition:
-    color 220ms ease,
-    background-color 220ms ease,
-    transform 260ms cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-.notification-toggle-icon svg {
-  position: absolute;
-  width: 22px;
-  height: 22px;
-  transition:
-    opacity 180ms ease,
-    transform 260ms cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-.notification-bell-on {
-  opacity: 0;
-  transform: scale(0.72) rotate(8deg);
-}
-.notification-toggle.enabled .notification-toggle-icon {
-  color: var(--accent-contrast);
-  background: var(--accent);
-  transform: rotate(-7deg) scale(1.04);
-}
-.notification-toggle.enabled .notification-bell-on {
-  opacity: 1;
-  transform: scale(1) rotate(0);
-}
-.notification-toggle.enabled .notification-bell-off {
-  opacity: 0;
-  transform: scale(0.72) rotate(-8deg);
-}
-.notification-toggle-copy {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-.notification-toggle-copy strong {
-  display: flex;
-  align-items: baseline;
-  gap: 7px;
-  font-size: 0.9375rem;
-}
-.notification-toggle-copy strong small {
-  color: var(--ash);
-  font-size: 0.6875rem;
-  transition: color 220ms ease;
-}
-.notification-toggle.enabled .notification-toggle-copy strong small {
-  color: var(--accent-ink);
-}
-.notification-toggle-copy > span {
-  color: var(--ash);
-  font-size: 0.75rem;
-  font-weight: 400;
-  line-height: 1.4;
-}
-.notification-switch {
-  position: relative;
-  width: 58px;
-  height: 36px;
-  border: 2px solid var(--border);
-  border-radius: var(--pill);
-  background: var(--placeholder);
-  transition:
-    border-color 220ms ease,
-    background-color 220ms ease;
-}
-.notification-switch > span {
-  position: absolute;
-  top: 3px;
-  left: 3px;
-  width: 26px;
-  height: 26px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  color: var(--ash);
-  background: #fff;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.22);
-  transition:
-    color 220ms ease,
-    transform 260ms cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-.notification-switch svg {
-  position: absolute;
-  width: 14px;
-  height: 14px;
-  stroke-width: 2.6;
-  transition:
-    opacity 180ms ease,
-    transform 240ms ease;
-}
-.notification-switch-on {
-  opacity: 0;
-  transform: scale(0.65);
-}
-.notification-toggle.enabled .notification-switch {
-  border-color: var(--accent);
-  background: var(--accent);
-}
-.notification-toggle.enabled .notification-switch > span {
-  color: var(--accent-ink);
-  transform: translateX(22px);
-}
-.notification-toggle.enabled .notification-switch-on {
-  opacity: 1;
-  transform: scale(1);
-}
-.notification-toggle.enabled .notification-switch-off {
-  opacity: 0;
-  transform: scale(0.65);
-}
-.notification-toggle.unavailable {
-  cursor: default;
-  opacity: 0.55;
-}
-.setting-status span {
-  color: var(--ash);
-}
-.setting-status span.linked {
-  color: var(--success);
-}
-.settings-line-warning {
-  margin: 0;
-  padding: 12px 14px 14px;
-  color: var(--ash);
-  border-top: 1px solid var(--separator);
-  font-size: 0.75rem;
-  line-height: 1.5;
-}
 .member-delete-button {
   color: var(--danger);
 }
@@ -3644,107 +3363,6 @@ textarea:focus {
   width: 19px;
   height: 19px;
 }
-.settings-card .member-row {
-  padding: 0 14px;
-}
-.settings-card-loading {
-  min-height: 64px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 9px;
-  color: var(--ash);
-  font-size: 0.8125rem;
-}
-.settings-family-error {
-  padding: 14px;
-  text-align: center;
-}
-.settings-family-error p {
-  margin: 0;
-  color: var(--danger);
-  font-size: 0.8125rem;
-}
-.settings-menu-row {
-  width: 100%;
-  min-height: 68px;
-  padding: 12px 14px;
-  display: grid;
-  grid-template-columns: 40px minmax(0, 1fr) 20px;
-  gap: 11px;
-  align-items: center;
-  border: 0;
-  background: transparent;
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-.settings-menu-row > svg:first-child {
-  width: 40px;
-  height: 40px;
-  padding: 9px;
-  border-radius: 50%;
-  color: var(--accent-ink);
-  background: var(--p-select);
-}
-.settings-menu-row > span {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.settings-menu-row strong {
-  font-size: 0.9375rem;
-}
-.settings-menu-row small {
-  color: var(--ash);
-  font-size: 0.75rem;
-}
-.settings-menu-row > svg:last-of-type {
-  width: 18px;
-  color: var(--ash);
-}
-.settings-menu-row.bordered {
-  border-top: 1px solid var(--separator);
-}
-.settings-logout {
-  grid-template-columns: 40px minmax(0, 1fr);
-  color: var(--danger);
-}
-.settings-logout > svg:first-child {
-  color: var(--danger);
-  background: color-mix(in srgb, var(--danger) 12%, transparent);
-}
-.settings-app-info {
-  margin-top: 32px;
-  padding-bottom: 12px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  color: var(--ash);
-  text-align: center;
-}
-.settings-app-info > span {
-  width: 88px;
-  height: 88px;
-  margin-bottom: -8px;
-  display: block;
-}
-.settings-app-icon {
-  width: 88px;
-  height: 88px;
-}
-.settings-app-icon-dark {
-  display: none;
-}
-.settings-app-info strong {
-  color: var(--carbon);
-  font-size: 0.9375rem;
-}
-.settings-app-info small {
-  margin-top: 2px;
-  font-size: 0.6875rem;
-}
-
 .photo-picker {
   margin: 0 -16px;
 }
@@ -4579,7 +4197,6 @@ textarea:focus {
     border: 1px solid var(--separator);
     border-radius: var(--radius-card);
   }
-  .settings-page,
   .family-page {
     max-width: 1080px;
     padding: 28px 32px 56px;
@@ -4587,28 +4204,11 @@ textarea:focus {
   .family-page > .request-section {
     grid-column: 1 / -1;
   }
+  /* 設定は kondo と同じく1列に並べ、PC でも読みやすい幅に収める。見出しと同じ左端から始める。 */
   .settings-page {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 28px;
-    align-items: start;
-  }
-  .settings-page > .settings-form {
-    grid-row: span 2;
-  }
-  .settings-page > .page-skeleton,
-  .settings-page > .state-message,
-  .settings-page > .form-error,
-  .settings-app-info {
-    grid-column: 1 / -1;
-  }
-  .settings-form + .settings-section,
-  .change-save-bar + .settings-section,
-  .settings-page > .settings-section + .settings-section {
-    margin-top: 0;
-  }
-  .settings-app-info {
-    margin-top: 4px;
+    max-width: 664px;
+    margin-left: 0;
+    padding: 28px 32px 56px;
   }
   .family-page {
     display: grid;

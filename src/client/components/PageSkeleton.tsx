@@ -108,20 +108,24 @@ function settingsSection(content: React.ReactNode, className = "") {
   return (
     <section className={`settings-section ${className}`}>
       <h2>{line("short")}</h2>
-      <div className="settings-card skeleton-settings-card">{content}</div>
+      {content}
     </section>
   );
 }
-function menuRows(count: number) {
-  return Array.from({ length: count }, (_, i) => (
-    <div className="settings-menu-row" key={i}>
-      <span className="skeleton-square" />
-      <div className="skeleton-copy">
-        {line("medium")}
-        {line("short")}
-      </div>
+function settingsRows(count: number, icon = true) {
+  return (
+    <div className="settings-group">
+      {Array.from({ length: count }, (_, i) => (
+        <div className="settings-row" key={i}>
+          {icon && <span className="settings-row-icon skeleton-square" />}
+          <div className="skeleton-copy">
+            {line("medium")}
+            {line("short")}
+          </div>
+        </div>
+      ))}
     </div>
-  ));
+  );
 }
 function roleChoices() {
   return (
@@ -327,48 +331,28 @@ function skeletonContent(variant: SkeletonVariant, currentUser?: CurrentUser, pr
         </div>
       );
     case "settings":
+      // 実画面（pages/SettingsPage.tsx）と同じ並び：アカウント、外観、メンバー、アプリ、ステージング確認、ログアウト。
       return (
         <div className="settings-page skeleton-settings-layout">
-          <div className="settings-form">
-            {settingsSection(
-              <div className="settings-profile">
-                <span className="settings-profile-avatar skeleton-circle" />
-                {field()}
-              </div>,
-            )}
-            {settingsSection(
-              <>
-                <div className="notification-toggle">
-                  <span className="notification-toggle-icon skeleton-tile" />
-                  <div className="notification-toggle-copy skeleton-copy">
-                    {line("medium")}
-                    {line()}
-                  </div>
-                  <span className="notification-switch skeleton-tile" />
+          {settingsSection(
+            <>
+              <div className="passport">
+                <span className="passport-photo skeleton-circle" />
+                <div className="passport-fields">
+                  {line("short")}
+                  {line("medium")}
                 </div>
-                <div className="setting-status">{line("medium")}</div>
-                <div className="setting-status">{line("medium")}</div>
-              </>,
-            )}
-          </div>
-          {currentUser?.isStaging && settingsSection(roleChoices(), "skeleton-staging-section")}
-          {settingsSection(<div className="skeleton-theme-options">{tiles(3)}</div>)}
-          {settingsSection(menuRows(2))}
-          {currentUser &&
-            canInviteFamily(currentUser) &&
-            settingsSection(
-              <>
-                {memberRows()}
-                {menuRows(1)}
-              </>,
-              "skeleton-family-section",
-            )}
-          {settingsSection(menuRows(1))}
-          <div className="settings-app-info">
-            <span className="skeleton-tile" />
-            <strong>{line("short")}</strong>
-            <small>{line("short")}</small>
-          </div>
+                <div className="passport-stamps">{line("short")}</div>
+              </div>
+              {settingsRows(3)}
+            </>,
+          )}
+          {settingsSection(<div className="settings-theme" />)}
+          {currentUser && canInviteFamily(currentUser) && settingsSection(settingsRows(4), "skeleton-family-section")}
+          {settingsSection(settingsRows(3))}
+          {currentUser?.isStaging &&
+            settingsSection(<div className="settings-card">{roleChoices()}</div>, "skeleton-staging-section")}
+          <section className="settings-section settings-signout">{settingsRows(1, false)}</section>
         </div>
       );
     case "members":

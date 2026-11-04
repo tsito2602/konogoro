@@ -9,6 +9,7 @@ import { Download, MessageCircle, X } from "lucide-react";
 import { mainDockItems, useCurrentUser } from "../components/AppLayout";
 import { MainDock } from "../components/MainDock";
 import { DockGroup } from "../cartoon/cartoon-dock";
+import { Live } from "../cartoon/cartoon";
 import {
   useCallback,
   useEffect,
@@ -16,7 +17,6 @@ import {
   useMemo,
   useRef,
   useState,
-  type CSSProperties,
   type FormEvent,
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
@@ -375,11 +375,42 @@ export function MediaViewerPage() {
     window.addEventListener("keydown", keydown);
     return () => window.removeEventListener("keydown", keydown);
   }, [animateToMedia, closeViewer, commentsOpen, index, post]);
+  // 持ち上げは投稿ページ（post-motion.ts）と同じばね「dock」で、上げ下ろしとも動かす。
+  const mainRef = useRef<HTMLElement>(null);
+  const liftLive = useRef<Live | null>(null);
+  const liftSize = useRef(0);
+  const openState = useRef(false);
+  const lift = () => {
+    liftLive.current ??= new Live(
+      0,
+      (y) => {
+        const main = mainRef.current;
+        if (!main) return;
+        const progress = Math.max(0, Math.min(1, -y / (liftSize.current || 1)));
+        main.style.setProperty("--viewer-y", `${y.toFixed(2)}px`);
+        main.style.setProperty("--viewer-progress", progress.toFixed(3));
+        // 中身は面より少し遅れて上がり、面の下から出てくるように見せる（投稿ページと同じ）。
+        sheetRef.current?.style.setProperty("--sheet-shift", `${((1 - progress) * 18).toFixed(1)}px`);
+      },
+      "dock",
+      0.3,
+    );
+    return liftLive.current;
+  };
   useEffect(() => {
-    if (commentsOpen) return;
-    const timer = window.setTimeout(() => setSheetMounted(false), 420);
-    return () => window.clearTimeout(timer);
-  }, [commentsOpen]);
+    openState.current = commentsOpen;
+    if (commentsOpen) {
+      if (liftHeight > 0) void lift().to(-liftHeight, "dock");
+      return;
+    }
+    // コメント欄は面が下りきってから外す。
+    void lift()
+      .to(0, "dock")
+      .then(() => {
+        if (!openState.current) setSheetMounted(false);
+      });
+  }, [commentsOpen, liftHeight]);
+  useEffect(() => () => liftLive.current?.stop(), []);
   useLayoutEffect(() => {
     const sheet = sheetRef.current;
     if (!sheet || typeof ResizeObserver === "undefined") return;
@@ -388,7 +419,8 @@ export function MediaViewerPage() {
       // カスタムプロパティは calc のまま返るので、計算済みの main の下余白（= ボトムナビの帯）を使う。
       const main = sheet.parentElement;
       const zone = main ? parseFloat(getComputedStyle(main).paddingBottom) || 0 : 0;
-      setLiftHeight(Math.max(0, sheet.offsetHeight - zone));
+      liftSize.current = Math.max(0, sheet.offsetHeight - zone);
+      setLiftHeight(liftSize.current);
     };
     measure();
     const observer = new ResizeObserver(measure);
@@ -424,14 +456,7 @@ export function MediaViewerPage() {
     }
   };
   // 持ち上がった面：押すと下ろす、つまみなどを持って下へ引くと指についてくる（投稿ページと同じ）。
-  const mainRef = useRef<HTMLElement>(null);
   const liftDrag = useRef<{ start: number; moved: number } | null>(null);
-  const setDrag = (moved: number | null) => {
-    const main = mainRef.current;
-    if (!main) return;
-    main.classList.toggle("lift-dragging", moved !== null);
-    main.style.setProperty("--viewer-drag", `${moved ?? 0}px`);
-  };
   const liftHandlers = {
     onPointerDownCapture: (event: ReactPointerEvent<HTMLElement>) => {
       if (!commentsOpen) return;
@@ -445,19 +470,19 @@ export function MediaViewerPage() {
       if (!drag) return;
       event.stopPropagation();
       drag.moved = Math.min(Math.max(0, event.clientY - drag.start), liftHeight);
-      setDrag(drag.moved);
+      lift().set(-liftHeight + drag.moved);
     },
     onPointerUpCapture: (event: ReactPointerEvent<HTMLElement>) => {
       const drag = liftDrag.current;
       if (!drag) return;
       event.stopPropagation();
       liftDrag.current = null;
-      setDrag(null);
       if (drag.moved < 6 || drag.moved > 70) closeComments();
+      else void lift().to(-liftHeight, "dock");
     },
     onPointerCancelCapture: () => {
       liftDrag.current = null;
-      setDrag(null);
+      if (commentsOpen) void lift().to(-liftHeight, "dock");
     },
     onClickCapture: (event: ReactMouseEvent<HTMLElement>) => {
       if (!commentsOpen) return;
@@ -629,8 +654,7 @@ export function MediaViewerPage() {
   return (
     <main
       ref={mainRef}
-      className={`media-viewer video-viewer${commentsOpen ? " comments-open" : ""}`}
-      style={{ "--viewer-lift": `${liftHeight}px` } as CSSProperties}
+      className={`media-viewer video-viewer${commentsOpen ? " comments-open" : ""}${commentsOpen || sheetMounted ? " lift-active" : ""}`}
     >
       <div className={`viewer-viewport${overlayVisible ? " overlay-visible" : " overlay-hidden"}`} {...liftHandlers}>
         <header

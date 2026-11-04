@@ -377,42 +377,34 @@
     padding: 12px 16px;
     background: #000;
   }
+  /* 持ち上げは投稿ページと同じばね（MediaViewerPage の Live が --viewer-y と --viewer-progress を毎フレーム書く）。 */
   .media-viewer .viewer-viewport,
   .media-viewer .thumbnail-strip {
-    transition:
-      transform 520ms cubic-bezier(0.22, 1.12, 0.36, 1),
-      border-radius 300ms ease;
+    transition: background-color 300ms ease;
   }
-  /* 下ろすときは跳ねずに収まる。 */
-  .media-viewer:not(.comments-open) .viewer-viewport,
-  .media-viewer:not(.comments-open) .thumbnail-strip {
-    transition-timing-function: cubic-bezier(0.3, 0, 0.2, 1);
-    transition-duration: 380ms;
+  /* 欄が出ている間（下りきるまで）だけ動かす。閉じている間は transform を付けない。 */
+  .media-viewer.lift-active .viewer-viewport,
+  .media-viewer.lift-active .thumbnail-strip {
+    transform: translateY(var(--viewer-y, 0px));
   }
   .media-viewer.comments-open .viewer-viewport,
   .media-viewer.comments-open .thumbnail-strip {
-    transform: translateY(calc(var(--viewer-drag, 0px) - var(--viewer-lift, 0px)));
     cursor: s-resize;
     touch-action: none;
   }
-  /* 指で引いている間はばねを止め、指にそのままついてくる。 */
-  .media-viewer.lift-dragging .viewer-viewport,
-  .media-viewer.lift-dragging .thumbnail-strip {
-    transition: none;
-  }
   /* 持ち上がった面は投稿ページの面と同じ色にし、下の黒い書き込み欄と分けて見せる。 */
-  .media-viewer .viewer-viewport,
-  .media-viewer .thumbnail-strip {
-    transition-property: transform, border-radius, background-color;
-  }
   .media-viewer.comments-open .viewer-viewport,
   .media-viewer.comments-open .thumbnail-strip {
     background-color: #262522;
   }
-  /* 持ち上がった面の下端は角丸にし、押せば下りるとわかるつまみを付ける。 */
+  /* 持ち上がった面の下端は持ち上がるほど丸くなり（投稿ページと同じ 30px まで）、押せば下りるとわかるつまみを付ける。
+     影は下へだけ落とし、写真の側へははみ出させない。 */
+  .media-viewer .thumbnail-strip {
+    --viewer-corner: calc(var(--viewer-progress, 0) * 30px);
+    border-radius: 0 0 var(--viewer-corner) var(--viewer-corner);
+    box-shadow: 0 30px 30px -14px rgb(0 0 0 / calc(var(--viewer-progress, 0) * 0.7));
+  }
   .media-viewer.comments-open .thumbnail-strip {
-    border-radius: 0 0 28px 28px;
-    box-shadow: 0 18px 40px #000a;
     background: #262522
       url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='5'%3E%3Crect width='40' height='5' rx='2.5' fill='%23ffffff66'/%3E%3C/svg%3E")
       no-repeat center bottom 6px;
@@ -452,11 +444,5 @@
     font-family: var(--f-num);
     font-size: 12px;
     font-weight: 700;
-  }
-}
-@media (max-width: 1023px) and (prefers-reduced-motion: reduce) {
-  .media-viewer .viewer-viewport,
-  .media-viewer .thumbnail-strip {
-    transition: none;
   }
 }

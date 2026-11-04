@@ -65,6 +65,7 @@ export function EventDetailPage() {
         <PageHeader
           title="イベント"
           back
+          className="dock-owned-header"
           action={canManageEvent(currentUser) ? <span className="skeleton-square" aria-hidden /> : undefined}
         />
         <PageSkeleton variant="event-detail" />
@@ -73,7 +74,7 @@ export function EventDetailPage() {
   if (error)
     return (
       <>
-        <PageHeader title="イベント" back />
+        <PageHeader title="イベント" back className="dock-owned-header" />
         <ErrorState message={error} retry={load} />
       </>
     );
@@ -84,6 +85,7 @@ export function EventDetailPage() {
       <PageHeader
         title={cover.title}
         back
+        className="dock-owned-header"
         action={
           detail && canManageEvent(currentUser) ? (
             <Link

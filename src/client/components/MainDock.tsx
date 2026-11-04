@@ -6,6 +6,9 @@ import { CartoonDock } from "../cartoon/cartoon-dock";
 /** The page the tabs last stood on (the post page closes back onto it). */
 let lastTabsPath = "/";
 
+/** The page under a post page (its dock is the one the post page closes back into). */
+export const lastBasePath = () => lastTabsPath;
+
 export type MainDockItem = { to: string; label: string; icon: ReactNode; end?: boolean };
 
 /** The selection pill's two edges on two springs; moving right, the right edge leads (40 ms).

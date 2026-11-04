@@ -8,18 +8,23 @@ export function PageHeader({
   action,
   back = false,
   inverse = false,
+  className,
 }: {
   title: string;
   action?: React.ReactNode;
   back?: boolean;
   inverse?: boolean;
+  className?: string;
 }) {
   const heightRef = useMeasuredHeight("--page-header-height");
   const navigate = useNavigate();
   const location = useLocation();
   const backPath = location.pathname.startsWith("/events/") ? "/events" : "/";
   return (
-    <header ref={heightRef} className={`page-header${inverse ? " inverse" : ""}${back ? "" : " root-page"}`}>
+    <header
+      ref={heightRef}
+      className={`page-header${inverse ? " inverse" : ""}${back ? "" : " root-page"}${className ? ` ${className}` : ""}`}
+    >
       <div className="page-header-inner">
         <div className="header-side">
           {back && (

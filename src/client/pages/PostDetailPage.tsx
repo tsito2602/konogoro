@@ -26,7 +26,8 @@ import type { Comment, Post } from "../../shared/types";
 import { api, formatDate } from "../api";
 import { ErrorState } from "../components/AsyncState";
 import { mainDockItems, useCurrentUser } from "../components/AppLayout";
-import { MainDock } from "../components/MainDock";
+import { MainDock, lastBasePath } from "../components/MainDock";
+import { contextDock } from "../components/ContextDock";
 import { PageSkeleton } from "../components/PageSkeleton";
 import { SeenBy } from "../components/SeenBy";
 import { DockBackIcon, DockGroup } from "../cartoon/cartoon-dock";
@@ -548,8 +549,12 @@ function PostPage({
     </form>
   );
 
-  // 画面に1つのドック：戻る・コメントする・…、書くときは送信ボタン、閉じるときはタブへ形を変える。
-  const dockControls = closing ? undefined : composing ? (
+  // 画面に1つのドック：戻る・コメントする・編集、書くときは送信ボタン、閉じるときは下の画面のドック
+  // （タブ、イベント詳細なら戻る・編集）へ形を変える。
+  const base = closing && modal ? contextDock(lastBasePath(), currentUser) : null;
+  const dockControls = closing ? (
+    base?.controls
+  ) : composing ? (
     <DockGroup slot="r" className="cdock-center cdock-send">
       <button type="submit" form={formId} disabled={sending || !text.trim()}>
         {sending ? "送信中…" : "送信"}
@@ -580,7 +585,12 @@ function PostPage({
     </>
   );
   const dock = (
-    <MainDock items={mainDockItems} className="post-dock" label={closing ? undefined : "投稿の操作"}>
+    <MainDock
+      items={mainDockItems}
+      className="post-dock"
+      identity={base?.identity}
+      label={closing ? undefined : "投稿の操作"}
+    >
       {dockControls}
     </MainDock>
   );

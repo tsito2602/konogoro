@@ -288,3 +288,10 @@ body:has(.fuse-add-overlay) .floating-add-button {
     z-index: 40;
   }
 }
+
+/* 戻ると編集をボトムナビに置く画面（components/ContextDock.tsx）は、スマホではヘッダーの両脇を出さない。 */
+@media (max-width: 1023px) {
+  .dock-owned-header .header-side > * {
+    display: none;
+  }
+}

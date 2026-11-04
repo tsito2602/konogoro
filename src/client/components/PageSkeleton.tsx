@@ -69,24 +69,30 @@ export function UnreadSummarySkeleton() {
   );
 }
 
+// 本物のカード（components/PostCard.tsx）と同じ箱の高さ・並びにし、読み込み後に位置がずれないようにする。
 function postSkeleton(showContext = true) {
   return (
     <div className="post-card skeleton-post">
       <div className="post-head">
         <div className="post-author-row">
           <span className="post-author-avatar skeleton-circle" />
-          {line("short")}
+          <span className="skeleton-slot skeleton-author">{line("short")}</span>
+          <span className="skeleton-slot skeleton-date">{line("short")}</span>
         </div>
-        {showContext && <div className="post-context">{line("medium")}</div>}
+        {showContext && (
+          <div className="post-context">
+            <span className="skeleton-slot">{line("medium")}</span>
+          </div>
+        )}
       </div>
-      <div className="media-grid skeleton-media-grid" data-count="4">
-        {tiles(4)}
+      <div className="media-grid skeleton-media-grid" data-count="2">
+        {tiles(2)}
       </div>
       <div className="post-copy">
-        {line()}
+        <span className="skeleton-slot skeleton-caption">{line()}</span>
         <div className="post-engagement">
-          {line("short")}
-          {line("short")}
+          <span className="skeleton-slot skeleton-action">{line()}</span>
+          <span className="skeleton-slot skeleton-action short">{line()}</span>
         </div>
       </div>
     </div>

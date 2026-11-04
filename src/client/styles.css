@@ -591,8 +591,59 @@ a.icon-button {
   height: 20px;
   flex-basis: 20px;
 }
-.skeleton-post .post-copy > .skeleton-line {
-  margin: 8px 0 16px;
+/* 文字の行と同じ高さの箱に線を置き、本物のカードと同じ位置に並べる。 */
+.skeleton-post .skeleton-slot {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+.skeleton-post .skeleton-author {
+  width: 64px;
+  height: 21px;
+}
+.skeleton-post .skeleton-date {
+  width: 56px;
+  height: 21px;
+  margin-left: auto;
+}
+.skeleton-post .post-context > .skeleton-slot {
+  width: 100%;
+  height: 21px;
+}
+.skeleton-post .skeleton-caption {
+  width: 100%;
+  height: 30px;
+}
+.skeleton-post .skeleton-action {
+  width: 110px;
+  height: 44px;
+}
+.skeleton-post .skeleton-action.short {
+  width: 80px;
+}
+.skeleton-post .skeleton-caption {
+  margin-bottom: 12px;
+}
+.skeleton-post .skeleton-slot > .skeleton-line {
+  width: 100%;
+  min-width: 0;
+}
+.skeleton-post .skeleton-slot > .skeleton-line.medium {
+  width: 58%;
+}
+.skeleton-post .skeleton-slot > .skeleton-line.wide {
+  width: 88%;
+}
+/* 年月見出しも本物の文字の行と同じ高さにする。 */
+.page-skeleton .timeline-month-heading > span {
+  display: inline-flex;
+  align-items: center;
+}
+.page-skeleton .timeline-month-heading > .timeline-year {
+  height: 16px;
+}
+.page-skeleton .timeline-month-heading > .timeline-month {
+  height: 28px;
 }
 .skeleton-media-grid > .skeleton-tile {
   min-width: 0;

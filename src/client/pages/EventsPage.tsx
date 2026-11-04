@@ -66,9 +66,10 @@ export function EventsPage() {
   );
   return (
     <>
-      <PageHeader title="イベント" action={filterButton("event-filter-in-header")} />
+      {/* 絞り込みは一覧を読み込んでから出す（スケルトンの間は出さない）。 */}
+      <PageHeader title="イベント" action={events ? filterButton("event-filter-in-header") : undefined} />
       {/* スマホではヘッダーを出さないので、絞り込みは右上に固定する。 */}
-      {filterButton("event-filter-floating")}
+      {events && filterButton("event-filter-floating")}
       <main className="event-list page-content">
         {!events && !error && <PageSkeleton variant="events" />}
         {error && <ErrorState message={error} retry={load} />}

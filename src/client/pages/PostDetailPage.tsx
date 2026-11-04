@@ -34,7 +34,11 @@ export function PostDetailPage() {
   const { postId = "" } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  const preview = location.state as { previewPostId?: string; previewUrls?: string[] } | null;
+  const preview = location.state as {
+    previewPostId?: string;
+    previewUrls?: string[];
+    previewMenu?: boolean;
+  } | null;
   const previewUrls =
     preview?.previewPostId === postId && Array.isArray(preview.previewUrls)
       ? preview.previewUrls.slice(0, 4)
@@ -128,7 +132,13 @@ export function PostDetailPage() {
 
   if (!post && !error)
     return (
-      <PostPage onClose={closePage} composer={composer} startComposing={writeIntent}>
+      <PostPage
+        onClose={closePage}
+        composer={composer}
+        startComposing={writeIntent}
+        // カードから開いたときは、読み込み中から…を置いておく（あとから出てドックが組み替わらないように）。
+        menu={preview?.previewPostId === postId && preview.previewMenu ? { expanded: false, open: () => {} } : null}
+      >
         <PageSkeleton variant="post-detail" previewUrls={previewUrls} />
       </PostPage>
     );

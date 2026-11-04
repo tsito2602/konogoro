@@ -106,6 +106,11 @@ export function handOffInitialBoot(boot: HTMLElement) {
   run(sun, [{ opacity: 1 }, { opacity: 0 }], { duration: 1, delay: go });
 
   // 跳んだ太陽と同じ形の墨の玉が、縦に伸びて落ち、ドックの上で横につぶれて広がる。
+  // 広がりながらドックの色に変わり、ドックの形に戻ったところで本物のドックと入れ替わる。
+  // 墨の色のまま本物のドックへ重ねて薄くすると、黒いドックが一瞬残って見える。
+  const ink = getComputedStyle(boot).color;
+  const fill = document.querySelector(".main-dock-host .cdock-fill");
+  const paper = fill ? getComputedStyle(fill).fill : getComputedStyle(boot).backgroundColor;
   const blob = document.createElement("div");
   blob.setAttribute("aria-hidden", "true");
   blob.style.cssText = "position:absolute;left:0;top:0;background:currentColor;opacity:0;pointer-events:none";
@@ -123,16 +128,18 @@ export function handOffInitialBoot(boot: HTMLElement) {
         offset: 0.3,
         easing: "cubic-bezier(.4,0,.6,1)",
       },
-      { ...frame(centerX - 40, dock.y - 26, 80, 70), offset: 0.6, easing: LAND },
+      { ...frame(centerX - 40, dock.y - 26, 80, 70), offset: 0.6, backgroundColor: ink, easing: LAND },
       {
         ...frame(dock.x - bounce(14), dock.y + bounce(8), dock.w + bounce(28), dock.h - bounce(16)),
         offset: 0.8,
-        opacity: 1,
+        backgroundColor: ink,
       },
-      { ...frame(dock.x, dock.y, dock.w, dock.h), opacity: 0 },
+      { ...frame(dock.x, dock.y, dock.w, dock.h), backgroundColor: paper, opacity: 1 },
     ],
     { duration: morph, delay: go },
   );
+  const swap = go + morph;
+  run(blob, [{ opacity: 1 }, { opacity: 0 }], { duration: 1, delay: swap });
 
   run(name, [{ opacity: 1 }, { opacity: 0, filter: "blur(4px)", transform: "translateY(6px)" }], {
     duration: ms(260),
@@ -158,7 +165,9 @@ export function handOffInitialBoot(boot: HTMLElement) {
         fill: "both",
       },
     );
-  run(dockHost, [{ opacity: 0 }, { opacity: 1 }], { duration: ms(160), delay: landAt, fill: "both" });
+  run(dockHost, [{ opacity: 0 }, { opacity: 1 }], { duration: 1, delay: swap, fill: "both" });
+  const icons = dockHost.querySelector(".cdock-content");
+  if (icons) run(icons, [{ opacity: 0 }, { opacity: 1 }], { duration: ms(160), delay: swap, fill: "both" });
   const add = document.querySelector(".mobile-add-button");
   if (add)
     run(

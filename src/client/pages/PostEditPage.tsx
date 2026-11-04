@@ -181,6 +181,7 @@ export function PostEditPage() {
   useLayoutEffect(() => () => rememberEditLeft(postId), [postId]);
 
   const leave = () => {
+    rememberEditLeft(postId);
     if (canReturnInApp()) navigate(-1);
     else navigate(`/posts/${postId}`, { replace: true });
   };
@@ -558,6 +559,7 @@ export function PostEditPage() {
     );
     markSaved();
     showToast("投稿を更新しました", { success: true });
+    rememberEditLeft(post.id);
     if ((location.state as { returnToDetail?: boolean } | null)?.returnToDetail) navigate(-1);
     else navigate(`/posts/${post.id}`, { replace: true, state: location.state, viewTransition: true });
   };

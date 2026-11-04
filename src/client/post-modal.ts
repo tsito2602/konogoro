@@ -18,6 +18,11 @@ export function rememberEditLeft(postId: string) {
   editLeft = { postId, at: performance.now() };
 }
 
+/** Whether the post's edit page has just closed (the edit button can stand from the start). */
+export function editJustLeft(postId: string) {
+  return editLeft?.postId === postId && performance.now() - editLeft.at < 1000;
+}
+
 /** Whether the post page is coming back from its edit page (taken once). */
 export function takeEditLeft(postId: string) {
   const left = editLeft?.postId === postId && performance.now() - editLeft.at < 1000;

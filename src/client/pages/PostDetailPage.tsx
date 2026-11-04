@@ -1,4 +1,11 @@
-import { PostModalContext, postOrigin, postOriginCard, modalTransform, takeEditLeft } from "../post-modal";
+import {
+  PostModalContext,
+  postOrigin,
+  postOriginCard,
+  modalTransform,
+  takeEditLeft,
+  editJustLeft,
+} from "../post-modal";
 import { VideoBadge } from "../components/VideoBadge";
 import { commentIntent, commentTargetId, revealComment } from "../comment-navigation";
 import { canReturnInApp, restorePanelPosition, updateReadingPost } from "../reading-context";
@@ -102,6 +109,8 @@ export function PostDetailPage() {
     },
   };
   // 編集と削除は投稿を編集画面にまとめる（Tsubasa 2026-11-04「３点リーダーは編集ボタンにして」）。
+  // 編集画面から戻ったときは、読み込み中から編集ボタンを置いておく（編集できた投稿なので）。
+  const [fromEdit] = useState(() => editJustLeft(postId));
   const openEdit = () =>
     navigate(`/posts/${postId}/edit`, { state: { ...(location.state as object | null), returnToDetail: true } });
   if (!post && !error)
@@ -111,7 +120,7 @@ export function PostDetailPage() {
         composer={composer}
         startComposing={writeIntent}
         // カードから開いたときは、読み込み中から編集ボタンを置いておく（あとから出てドックが組み替わらないように）。
-        onEdit={preview?.previewPostId === postId && preview.previewEdit ? openEdit : undefined}
+        onEdit={(preview?.previewPostId === postId && preview.previewEdit) || fromEdit ? openEdit : undefined}
       >
         <PageSkeleton variant="post-detail" previewUrls={previewUrls} />
       </PostPage>

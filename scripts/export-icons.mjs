@@ -21,6 +21,23 @@ const ink = { light: "#000000", dark: "#FFFFFF" };
 function art(theme) {
   return artwork.replaceAll('class="ink" fill="#000000"', `class="ink" fill="${ink[theme]}"`);
 }
+// ホーム画面のアイコンは kondo・uchiwake と同じく透過にし、黒い絵柄の外側に白い縁を付ける。
+// iOS のダークモードなど暗い下地でも形が見えるようにするため。縁は太陽と丘のすき間も白で埋める。
+const EDGE = 36;
+function edge() {
+  const group = artwork.slice(artwork.indexOf("<g transform"));
+  return group
+    .replace(/ mask="url\(#[^)]*\)"/g, "")
+    .replaceAll(
+      'class="ink" fill="#000000"',
+      `class="edge" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="${EDGE}" stroke-linejoin="round"`,
+    );
+}
+function appIcon() {
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <title>このごろ — 雲と丘</title>
+${edge()}${art("light")}</svg>\n`;
+}
 function svg(background, scale = 1, adaptive = false, theme = "light") {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
   <title>このごろ — 雲と丘</title>
@@ -40,6 +57,7 @@ for (const [theme, background] of [
   await writeFile(resolve(brandDir, `logo-symbol-${theme}.svg`), svg(null, 1, false, theme));
 }
 await writeFile(resolve(iconDir, "icon.svg"), svg("#FFFFFF", 1, true));
+await writeFile(resolve(brandDir, "icon-app.svg"), appIcon());
 await writeFile(resolve(iconDir, "icon-maskable.svg"), svg("#FFFFFF", 0.8));
 
 const sources = {
@@ -47,6 +65,7 @@ const sources = {
   dark: resolve(brandDir, "icon-master-dark.svg"),
   lightTransparent: resolve(brandDir, "logo-symbol-light.svg"),
   darkTransparent: resolve(brandDir, "logo-symbol-dark.svg"),
+  app: resolve(brandDir, "icon-app.svg"),
 };
 
 const exports = [
@@ -56,15 +75,15 @@ const exports = [
   [sources.dark, resolve(iconDir, "icon-dark-512.png"), 512],
   [sources.light, resolve(iconDir, "icon-light-192.png"), 192],
   [sources.dark, resolve(iconDir, "icon-dark-192.png"), 192],
-  [sources.light, resolve(iconDir, "apple-touch-icon.png"), 180],
+  [sources.app, resolve(iconDir, "apple-touch-icon.png"), 180],
   [sources.light, resolve(iconDir, "icon-light-167.png"), 167],
   [sources.light, resolve(iconDir, "icon-light-152.png"), 152],
   [sources.lightTransparent, resolve(iconDir, "icon-light-transparent.png"), 1024],
   [sources.darkTransparent, resolve(iconDir, "icon-dark-transparent.png"), 1024],
   [sources.light, resolve(publicDir, "favicon-32x32.png"), 32],
   [sources.light, resolve(publicDir, "favicon-16x16.png"), 16],
-  [sources.light, resolve(publicDir, "android-chrome-192x192.png"), 192],
-  [sources.light, resolve(publicDir, "android-chrome-512x512.png"), 512],
+  [sources.app, resolve(publicDir, "android-chrome-192x192.png"), 192],
+  [sources.app, resolve(publicDir, "android-chrome-512x512.png"), 512],
   [resolve(iconDir, "icon-maskable.svg"), resolve(iconDir, "icon-maskable-512.png"), 512],
 ];
 

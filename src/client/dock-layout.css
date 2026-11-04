@@ -349,7 +349,8 @@ body:has(.fuse-add-overlay) .floating-add-button {
   :root .icon-button.event-filter-floating {
     position: fixed;
     z-index: 25;
-    top: calc(env(safe-area-inset-top) + 24px);
+    /* 上端を最初の見出し（これまで など）の上端にそろえる：上の余白24px＋一覧の上余白16px＋見出しの上20px＋行の高さと文字の差の半分4px。 */
+    top: calc(env(safe-area-inset-top) + 64px);
     right: max(16px, env(safe-area-inset-right));
     display: grid;
     place-items: center;

@@ -313,7 +313,7 @@ body:has(.fuse-add-overlay) .floating-add-button {
      スクロールしていない状態の中身はその下から始める（スクロールして上端へ入った分はぼけてよい）。 */
   :root .page-header.page-header {
     position: relative;
-    height: calc(env(safe-area-inset-top) + 40px);
+    height: calc(env(safe-area-inset-top) + 24px);
     min-height: 0;
     padding: 0;
     background: none;
@@ -345,7 +345,7 @@ body:has(.fuse-add-overlay) .floating-add-button {
   :root .icon-button.event-filter-floating {
     position: fixed;
     z-index: 25;
-    top: calc(env(safe-area-inset-top) + 40px);
+    top: calc(env(safe-area-inset-top) + 24px);
     right: max(16px, env(safe-area-inset-right));
     display: grid;
     place-items: center;

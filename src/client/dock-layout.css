@@ -309,7 +309,21 @@ body:has(.fuse-add-overlay) .floating-add-button {
   display: none;
 }
 @media (max-width: 1023px) {
-  .page-header {
+  /* ヘッダーの場所は、何も描かない余白として残す。iOS は画面の上端にぼかしをかけるので、
+     スクロールしていない状態の中身はその下から始める（スクロールして上端へ入った分はぼけてよい）。 */
+  :root .page-header.page-header {
+    position: relative;
+    height: calc(env(safe-area-inset-top) + 40px);
+    min-height: 0;
+    padding: 0;
+    background: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  :root .page-header::after {
+    display: none;
+  }
+  :root .page-header .page-header-inner {
     position: absolute;
     width: 1px;
     height: 1px;
@@ -322,7 +336,7 @@ body:has(.fuse-add-overlay) .floating-add-button {
   .event-filter-in-header {
     display: none;
   }
-  /* ヘッダーは読み上げ用に1pxだけ残るので、その下に貼り付けていたものは画面の上端へ付ける。 */
+  /* ヘッダーは余白だけになったので、その下に貼り付けていたものは画面の上端へ付ける。 */
   .timeline-month-heading,
   .event-cover,
   .media-processing-status {
@@ -331,7 +345,7 @@ body:has(.fuse-add-overlay) .floating-add-button {
   :root .icon-button.event-filter-floating {
     position: fixed;
     z-index: 25;
-    top: calc(env(safe-area-inset-top) + 12px);
+    top: calc(env(safe-area-inset-top) + 40px);
     right: max(16px, env(safe-area-inset-right));
     display: grid;
     place-items: center;

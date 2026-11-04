@@ -82,6 +82,10 @@
         display: flex;
         gap: 0.075em;
         height: 1em;
+        /* g の下の線は文字の枠の外へ出る。消えるときにそこだけ描き直されずに残らないよう、名前の箱に含める。 */
+        box-sizing: content-box;
+        padding-bottom: 0.3em;
+        margin-bottom: -0.3em;
         font-size: 30px;
         line-height: 1;
       }

@@ -323,6 +323,10 @@ body:has(.fuse-add-overlay) .floating-add-button {
   :root .page-header::after {
     display: none;
   }
+  /* タイムラインは年月見出しに上の余白があり、ぼかしにかからないので詰める。 */
+  :root .page-header.page-header:has(+ .timeline-layout) {
+    height: env(safe-area-inset-top);
+  }
   :root .page-header .page-header-inner {
     position: absolute;
     width: 1px;

@@ -71,7 +71,7 @@
 }
 .video-viewer .viewer-controls {
   display: grid;
-  grid-template-columns: 56px minmax(0, 1fr) 56px;
+  grid-template-columns: minmax(0, 1fr);
   gap: 10px;
   margin-top: 12px;
 }
@@ -358,4 +358,100 @@
 }
 .video-viewer .video-player-status button {
   pointer-events: auto;
+}
+
+/* スマホ・タブレット：操作は画面の下の親指ドック（閉じる・コメントする・保存）。サムネイルの列はその上。
+   コメントを開くと、写真と列の面が持ち上がり、下からコメント欄（面の外の暗い面）がせり上がる。 */
+@media (max-width: 1023px) {
+  .media-viewer {
+    --viewer-dock-zone: calc(var(--dock-height) + var(--dock-safe-bottom) + 8px);
+    --viewer-thumbnail-height: 76px;
+    padding-bottom: var(--viewer-dock-zone);
+    background: var(--v-dock);
+  }
+  .media-viewer .viewer-viewport {
+    z-index: 2;
+    background: #000;
+  }
+  .media-viewer .thumbnail-strip {
+    padding: 12px 16px;
+    background: #000;
+  }
+  .media-viewer .viewer-viewport,
+  .media-viewer .thumbnail-strip {
+    transition:
+      transform 520ms cubic-bezier(0.22, 1.12, 0.36, 1),
+      border-radius 300ms ease;
+  }
+  /* 下ろすときは跳ねずに収まる。 */
+  .media-viewer:not(.comments-open) .viewer-viewport,
+  .media-viewer:not(.comments-open) .thumbnail-strip {
+    transition-timing-function: cubic-bezier(0.3, 0, 0.2, 1);
+    transition-duration: 380ms;
+  }
+  .media-viewer.comments-open .viewer-viewport,
+  .media-viewer.comments-open .thumbnail-strip {
+    transform: translateY(calc(-1 * var(--viewer-lift, 0px)));
+    cursor: pointer;
+  }
+  /* 持ち上がった面の下端は角丸にし、押せば下りるとわかるつまみを付ける。 */
+  .media-viewer.comments-open .thumbnail-strip {
+    border-radius: 0 0 28px 28px;
+    box-shadow: 0 18px 40px #000a;
+    background: #000
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='5'%3E%3Crect width='40' height='5' rx='2.5' fill='%23ffffff66'/%3E%3C/svg%3E")
+      no-repeat center bottom 6px;
+  }
+  .media-viewer.comments-open .thumbnail-strip a {
+    pointer-events: none;
+  }
+  .video-viewer .viewer-header .viewer-button,
+  .video-viewer .viewer-controls {
+    visibility: hidden;
+  }
+  .video-viewer .viewer-comments {
+    z-index: 1;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    max-height: min(56dvh, 460px);
+    padding: 18px 16px var(--viewer-dock-zone);
+    border-radius: 0;
+    background: var(--v-dock);
+    box-shadow: none;
+    animation: none;
+  }
+  .video-viewer .viewer-comments > header .viewer-button,
+  .video-viewer .viewer-comments .viewer-comment-send {
+    display: none;
+  }
+  /* ドックは暗い面の島（cartoon-kit の島の色をビューアーの暗い色に置き換える）。 */
+  .main-dock-host.viewer-dock {
+    display: block;
+    z-index: 8;
+    --p-paper: #000;
+    --p-dock: var(--v-soft);
+    --p-ink: var(--v-ink);
+    --p-line: #ffffff14;
+    --p-mute: var(--v-mute);
+  }
+  .viewer-dock .viewer-dock-count {
+    min-width: 22px;
+    height: 22px;
+    display: grid;
+    place-items: center;
+    padding: 0 6px;
+    border-radius: 999px;
+    color: var(--v-ink);
+    background: #000;
+    font-family: var(--f-num);
+    font-size: 12px;
+    font-weight: 700;
+  }
+}
+@media (max-width: 1023px) and (prefers-reduced-motion: reduce) {
+  .media-viewer .viewer-viewport,
+  .media-viewer .thumbnail-strip {
+    transition: none;
+  }
 }

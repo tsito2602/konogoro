@@ -12,14 +12,22 @@ const iconDir = resolve(publicDir, "icons");
 
 // 全形式を同じシンボルから生成し、古い図柄や色の混在を防ぐ。
 const symbol = await readFile(resolve(brandDir, "symbol.svg"), "utf8");
-const artwork = symbol.slice(symbol.indexOf("  <path"), symbol.lastIndexOf("</svg>"));
-function svg(background, scale = 1, adaptive = false) {
+const artwork = symbol.slice(
+  symbol.indexOf("<!-- artwork:start -->") + "<!-- artwork:start -->".length,
+  symbol.indexOf("<!-- artwork:end -->"),
+);
+// 絵柄は白黒1色。暗い面では白で描く。
+const ink = { light: "#000000", dark: "#FFFFFF" };
+function art(theme) {
+  return artwork.replaceAll('class="ink" fill="#000000"', `class="ink" fill="${ink[theme]}"`);
+}
+function svg(background, scale = 1, adaptive = false, theme = "light") {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
-  <title>このごろ — 山の向こう</title>
-  ${adaptive ? "<style>@media (prefers-color-scheme: dark) { .background { fill: #000000; } }</style>" : ""}
+  <title>このごろ — 雲と丘</title>
+  ${adaptive ? "<style>@media (prefers-color-scheme: dark) { .background { fill: #000000; } .ink { fill: #FFFFFF; } }</style>" : ""}
   ${background ? `<rect class="background" width="1024" height="1024" fill="${background}"/>` : ""}
   <g transform="translate(${512 * (1 - scale)} ${512 * (1 - scale)}) scale(${scale})">
-${artwork}  </g>
+${art(theme)}  </g>
 </svg>\n`.replace(/^[\t ]+$/gm, "");
 }
 
@@ -28,8 +36,8 @@ for (const [theme, background] of [
   ["light", "#FFFFFF"],
   ["dark", "#000000"],
 ]) {
-  await writeFile(resolve(brandDir, `icon-master-${theme}.svg`), svg(background));
-  await writeFile(resolve(brandDir, `logo-symbol-${theme}.svg`), svg(null));
+  await writeFile(resolve(brandDir, `icon-master-${theme}.svg`), svg(background, 1, false, theme));
+  await writeFile(resolve(brandDir, `logo-symbol-${theme}.svg`), svg(null, 1, false, theme));
 }
 await writeFile(resolve(iconDir, "icon.svg"), svg("#FFFFFF", 1, true));
 await writeFile(resolve(iconDir, "icon-maskable.svg"), svg("#FFFFFF", 0.8));

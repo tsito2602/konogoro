@@ -215,7 +215,20 @@ export class CartoonDock extends Component<Props> {
             () => copy.remove(),
           );
         }
-        for (const { el } of this.groups()) popIn(el);
+        // The same islands with other controls (the post page and its edit page): the controls
+        // cross-fade where they stand, so none of them shows up late (Tsubasa 2026-11-04
+        // 「編集画面から戻ったあとに、編集ボタンが遅れて出現する」). Other changes pop in.
+        const slots = (els: HTMLElement[]) =>
+          els
+            .map((el) => el.dataset.slot ?? "")
+            .sort()
+            .join();
+        const groups = this.groups().map(({ el }) => el);
+        const swap = slots(groups) === slots(carry.copies);
+        for (const el of groups)
+          if (swap)
+            void anim(el, [{ opacity: 0 }, { opacity: 1 }], { duration: 120, easing: "ease", fill: "backwards" });
+          else popIn(el);
         this.paint();
         this.layout(false);
       }

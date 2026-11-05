@@ -521,6 +521,11 @@ function InstallGuide({
             ))}
           </ol>
         )}
+        {environment.endsWith("-line") && (
+          <a className="primary-button wide" href={externalBrowserUrl(window.location.href)}>
+            ブラウザで開く
+          </a>
+        )}
         {canPrompt && environment === "android-browser" && (
           <button className="primary-button wide" type="button" onClick={install}>
             ホーム画面に追加
@@ -534,6 +539,13 @@ function InstallGuide({
   );
 }
 
+/** LINEのアプリ内ブラウザでこの印を付けたURLを開くと、端末のいつものブラウザで開き直す。 */
+export function externalBrowserUrl(href: string): string {
+  const url = new URL(href);
+  url.searchParams.set("openExternalBrowser", "1");
+  return url.toString();
+}
+
 export function installGuideContent(
   environment: PwaEnvironment,
   notify = false,
@@ -544,7 +556,7 @@ export function installGuideContent(
     ...content,
     title: "アプリで通知を受け取る",
     body: `ホーム画面に追加すると、新しい思い出のお知らせがこのアプリから届きます。${
-      environment.endsWith("-line") ? "まずLINEから、いつものブラウザで開きます。" : ""
+      environment.endsWith("-line") ? "まずLINEから、いつものブラウザで開き直します。" : ""
     }追加したら、ホーム画面の「このごろ」から開いてください。`,
   };
 }
@@ -556,11 +568,7 @@ function installSteps(environment: PwaEnvironment): { title: string; body: strin
     return {
       title: "次から、すぐに開けます",
       body: "まずLINEからSafariで開き、ホーム画面へ追加します。",
-      steps: [
-        "LINEのメニューから「デフォルトのブラウザで開く」を選ぶ",
-        "Safari下部の共有ボタンを押す",
-        "「ホーム画面に追加」→「追加」を押す",
-      ],
+      steps: ["下の「ブラウザで開く」を押す", "Safari下部の共有ボタンを押す", "「ホーム画面に追加」→「追加」を押す"],
     };
   if (environment === "ios-browser")
     return {
@@ -573,7 +581,7 @@ function installSteps(environment: PwaEnvironment): { title: string; body: strin
       title: "次から、すぐに開けます",
       body: "まずLINEから標準ブラウザで開き、ホーム画面へ追加します。",
       steps: [
-        "LINEのメニューから「デフォルトのブラウザで開く」を選ぶ",
+        "下の「ブラウザで開く」を押す",
         "ブラウザのメニューを押す",
         "「アプリをインストール」または「ホーム画面に追加」を選ぶ",
       ],

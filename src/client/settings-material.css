@@ -399,74 +399,6 @@
   min-height: 52px;
 }
 
-/* ── お知らせの札：どこに届くかを大きく1文で。押せるのは次にすることのボタン1つ ── */
-.notify-card {
-  margin-top: 12px;
-  padding: 22px 18px 18px;
-  display: grid;
-  justify-items: center;
-  gap: 2px;
-  border-radius: var(--r-card);
-  text-align: center;
-  background: var(--p-soft);
-}
-.notify-card-icon {
-  width: 56px;
-  height: 56px;
-  margin-bottom: 10px;
-  display: grid;
-  place-items: center;
-  overflow: hidden;
-  border-radius: 14px;
-}
-.notify-card-icon img {
-  width: 100%;
-  height: 100%;
-}
-.notify-card-icon.line {
-  color: #fff;
-  background: #06c755;
-  font-size: 13px;
-  font-weight: 900;
-}
-.notify-card-icon.off {
-  color: var(--p-mute);
-  background: var(--p-paper);
-}
-.notify-card-icon.off svg {
-  width: 28px;
-  height: 28px;
-}
-.notify-card > small {
-  color: var(--p-mute);
-  font-size: 14px;
-}
-.notify-card > strong {
-  font-size: 22px;
-  line-height: 1.4;
-}
-.notify-card > p {
-  margin: 8px 0 0;
-  color: var(--p-mute);
-  font-size: 15px;
-  line-height: 1.6;
-}
-.notify-card .primary-button {
-  margin-top: 16px;
-  min-height: 54px;
-  font-size: 16px;
-}
-.notify-card-stop {
-  display: block;
-  margin: 10px auto 0;
-  padding: 8px 12px;
-  border: 0;
-  color: var(--p-mute);
-  background: none;
-  font-size: 13px;
-  text-decoration: underline;
-}
-
 /* メンバー一覧のお知らせ先 */
 .notify-tag {
   padding: 3px 9px;
@@ -497,11 +429,4 @@
   box-shadow: 0 0 0 1px var(--p-line);
   font-size: 12px;
   font-weight: 700;
-}
-.notify-card-icon .settings-app-icon-dark {
-  display: none;
-}
-.skeleton-notify-card {
-  min-height: 196px;
-  align-content: center;
 }

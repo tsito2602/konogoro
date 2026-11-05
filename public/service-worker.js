@@ -29,11 +29,24 @@ self.addEventListener("push", (event) => {
   }
   const title = typeof message.title === "string" ? message.title : "このごろ";
   const tag = typeof message.tag === "string" ? message.tag : "konogoro";
+  // アイコンの右上に、まだ見ていない思い出の数を出す（iOS 16.4以降とAndroidのアプリ）。
+  const badge =
+    typeof message.badge === "number" && "setAppBadge" in self.navigator
+      ? self.navigator.setAppBadge(message.badge).catch(() => undefined)
+      : Promise.resolve();
   event.waitUntil(
     // 開いている画面に「受け取った」と伝える。試しのお知らせが届いたかを、本人に聞かずに確かめられる。
-    clients
-      .matchAll({ type: "window", includeUncontrolled: true })
-      .then((windows) => windows.forEach((client) => client.postMessage({ type: "PUSH_RECEIVED", tag })))
+    badge
+      .then(() => clients.matchAll({ type: "window", includeUncontrolled: true }))
+      .then((windows) => {
+        windows.forEach((client) => client.postMessage({ type: "PUSH_RECEIVED", tag }));
+        // iPhone では postMessage が画面に届かないことがあるので、BroadcastChannel でも伝える。
+        if ("BroadcastChannel" in self) {
+          const channel = new self.BroadcastChannel("konogoro-push");
+          channel.postMessage({ type: "PUSH_RECEIVED", tag });
+          channel.close();
+        }
+      })
       .then(() =>
         self.registration.showNotification(title, {
           body: typeof message.body === "string" ? message.body : "新しい思い出が届きました",

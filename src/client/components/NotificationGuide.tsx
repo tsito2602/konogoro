@@ -221,9 +221,14 @@ export function NotificationGuide({
 
           {step === "missing" && (
             <>
-              <h2 id="notify-title">お知らせが届きませんでした</h2>
+              <h2 id="notify-title">お知らせを確かめられませんでした</h2>
+              <p>画面の上に「通知のテスト」が出ていれば、受け取れています。</p>
+              <button className="primary-button wide" type="button" onClick={() => setStep("done")} disabled={busy}>
+                出ていました
+              </button>
+              <p>出ていなかったときは、次のとおりに直してから、もう一度ためしてください。</p>
               <Steps items={settingsSteps} />
-              <button className="primary-button wide" type="button" onClick={() => void turnOn()} disabled={busy}>
+              <button className="outline-button wide" type="button" onClick={() => void turnOn()} disabled={busy}>
                 もう一度ためす
               </button>
               <button className="outline-button wide" type="button" onClick={() => void backToLine()} disabled={busy}>

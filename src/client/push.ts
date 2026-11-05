@@ -111,12 +111,17 @@ export async function syncPushSubscription(): Promise<void> {
  * 試しのお知らせを、この端末のアプリが受け取るまで待つ。受け取れば true、時間内に来なければ false。
  * 受け取りは service worker が知らせてくる（public/service-worker.js の PUSH_RECEIVED）。
  */
-export function waitForTestPush(timeoutMs = 12_000): Promise<boolean> {
+export function waitForTestPush(timeoutMs = 20_000): Promise<boolean> {
   if (!("serviceWorker" in navigator)) return Promise.resolve(false);
+  // iPhone では、サービスワーカーからの postMessage が画面に届かないことがある。
+  // そのため BroadcastChannel と、出ているお知らせの一覧も見て確かめる。
   return new Promise((resolve) => {
+    const channel = "BroadcastChannel" in window ? new BroadcastChannel("konogoro-push") : null;
     const done = (received: boolean) => {
       clearTimeout(timer);
+      clearInterval(poll);
       navigator.serviceWorker.removeEventListener("message", onMessage);
+      channel?.close();
       resolve(received);
     };
     const onMessage = (event: MessageEvent) => {
@@ -124,6 +129,15 @@ export function waitForTestPush(timeoutMs = 12_000): Promise<boolean> {
       if (data?.type === "PUSH_RECEIVED" && data.tag === "test") done(true);
     };
     const timer = setTimeout(() => done(false), timeoutMs);
+    const poll = setInterval(() => {
+      void navigator.serviceWorker.ready
+        .then((registration) => registration.getNotifications?.({ tag: "test" }))
+        .then((shown) => {
+          if (shown && shown.length > 0) done(true);
+        })
+        .catch(() => undefined);
+    }, 1000);
     navigator.serviceWorker.addEventListener("message", onMessage);
+    channel?.addEventListener("message", onMessage);
   });
 }

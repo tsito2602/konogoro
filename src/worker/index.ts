@@ -925,6 +925,9 @@ app.get("/timeline", async (c) => {
 
 app.get("/unread-posts", async (c) => c.json(await loadNextUnreadPost(c.env.DB, c.var.currentUser)));
 
+// アイコンの数字（バッジ）を合わせるための、まだ見ていない投稿の数だけ。
+app.get("/unread-count", async (c) => c.json({ unreadCount: await countUnreadPosts(c.env.DB, c.var.currentUser.id) }));
+
 // Keep navigation counts and media pages on the same event-based date and visibility rules.
 const albumCapturedAt = "COALESCE(m.captured_at, p.captured_at, p.published_at, p.created_at)";
 const albumDate = `COALESCE(e.start_date, e.end_date, DATE(${albumCapturedAt}, '+9 hours'))`;

@@ -6,6 +6,7 @@ import {
   sendLineNotification,
   type LineNotificationEnv,
 } from "./line-messaging";
+import { countUnreadPosts } from "./db";
 import { parseVapidKey, PushDeliveryError, sendWebPush, type PushMessage, type PushSend } from "./web-push";
 
 export type NotificationCronEnv = Cloudflare.Env &
@@ -194,6 +195,7 @@ export async function processNotificationBatches(
         )
           .bind(delivery.user_id)
           .all<Subscription>();
+        const badge = await countUnreadPosts(env.DB, delivery.user_id).catch(() => undefined);
         let delivered = false;
         let retryable = false;
         let lastError = "push_no_subscription";
@@ -201,11 +203,14 @@ export async function processNotificationBatches(
           try {
             await push({
               subscription,
-              message: newPostsPushMessage({
-                postCount: batch.post_count,
-                photoCount: batch.photo_count,
-                videoCount: batch.video_count,
-              }),
+              message: {
+                ...newPostsPushMessage({
+                  postCount: batch.post_count,
+                  photoCount: batch.photo_count,
+                  videoCount: batch.video_count,
+                }),
+                badge,
+              },
               keys: vapid,
               subject: pushSubject(env),
             });

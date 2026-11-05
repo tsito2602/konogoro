@@ -1,3 +1,4 @@
+import { syncAppBadge } from "../app-badge";
 import { PostModalContext, modalTransform } from "../post-modal";
 import { useMeasuredHeight } from "../hooks/useMeasuredHeight";
 import { Bell, CalendarDays, GalleryVerticalEnd, Images, Plus, Settings } from "lucide-react";
@@ -151,8 +152,11 @@ export function AppLayout() {
   useEffect(() => {
     if (invite) return;
     loadAuth();
+    syncAppBadge();
+    // 戻ってきたときと離れるときに、アイコンの数をまだ見ていない思い出の数に合わせ直す。
     const resumeAuth = () => {
       if (document.visibilityState === "visible") loadAuth();
+      syncAppBadge();
     };
     document.addEventListener("visibilitychange", resumeAuth);
     return () => document.removeEventListener("visibilitychange", resumeAuth);

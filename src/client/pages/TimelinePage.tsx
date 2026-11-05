@@ -1,3 +1,4 @@
+import { setAppBadge } from "../app-badge";
 import { ArrowUpRight, Bookmark } from "lucide-react";
 import { readPages, useReadingState } from "../reading-context";
 import { useEffect, useState } from "react";
@@ -26,6 +27,7 @@ export function TimelinePage() {
         setPosts(data.posts);
         setNextCursor(data.nextCursor);
         setUnreadCount(data.unreadCount);
+        setAppBadge(data.unreadCount);
       })
       .catch((reason: Error) => setError(reason.message));
   };
@@ -35,6 +37,7 @@ export function TimelinePage() {
         setPosts(data.posts);
         setNextCursor(data.nextCursor);
         setUnreadCount(data.unreadCount);
+        setAppBadge(data.unreadCount);
       })
       .catch((reason: Error) => setError(reason.message));
   }, [restoreCount, setPosts, setNextCursor, setUnreadCount]);

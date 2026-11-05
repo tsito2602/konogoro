@@ -1,6 +1,7 @@
 import { Bell, BellOff, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { RM } from "../cartoon/cartoon";
+import { haptic } from "../haptics";
 import { disablePush, enablePush, isAppleMobile, readPushState, sendTestPush, type PushState } from "../push";
 
 export const OPEN_NOTIFICATION_GUIDE_EVENT = "konogoro:open-notification-guide";
@@ -91,6 +92,7 @@ export function NotificationGuide({
       const state = await enablePush(publicKey);
       announce(state);
       if (state === "on") {
+        haptic();
         setStep("testing");
         await sendTestPush().catch(() => undefined);
         setStep("check");
@@ -102,6 +104,7 @@ export function NotificationGuide({
   const backToLine = () =>
     run(async () => {
       await disablePush();
+      haptic();
       announce(await readPushState());
       dismiss();
     });
@@ -138,7 +141,8 @@ export function NotificationGuide({
           {step === "ask" && (
             <>
               <h2 id="notify-title">新しい思い出を、このアプリでお知らせします</h2>
-              <p>下のボタンを押すと、確認が出ます。「許可」を押してください。</p>
+              <p>オンにすると、お知らせはLINEではなく、このアプリに届きます。</p>
+              <p>下のボタンを押すと確認が出るので、「許可」を押してください。</p>
               <button className="primary-button wide" type="button" onClick={() => void turnOn()} disabled={busy}>
                 通知をオンにする
               </button>
@@ -213,12 +217,13 @@ export function NotificationGuide({
           {step === "on" && (
             <>
               <h2 id="notify-title">この端末で受け取っています</h2>
-              <p>新しい思い出のお知らせは、このアプリに届きます。</p>
+              <p>新しい思い出のお知らせは、このアプリに届きます。LINEには届きません。</p>
+              <p>オフにすると、またLINEでお知らせします。</p>
               <button className="primary-button wide" type="button" onClick={() => void sendTest()} disabled={busy}>
                 試しの通知を送る
               </button>
               <button className="outline-button wide" type="button" onClick={() => void backToLine()} disabled={busy}>
-                この端末では受け取らない
+                オフにしてLINEで受け取る
               </button>
             </>
           )}

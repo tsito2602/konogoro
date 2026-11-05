@@ -16,6 +16,7 @@ import { openNotificationGuide, PUSH_STATE_CHANGED_EVENT } from "../components/N
 import { openInstallGuide, openOnboardingGuide } from "../components/PwaGuide";
 import { disablePush, readPushState, type PushState } from "../push";
 import { useToast } from "../components/Toast";
+import { haptic } from "../haptics";
 import { getThemePreference, setThemePreference, type ThemePreference } from "../theme";
 
 // kondo の設定（kondo src/web/settings.tsx・styles/settings.css）の形に合わせた設定画面。
@@ -239,6 +240,7 @@ function NotificationRows({ user, onSaved }: { user: CurrentUser; onSaved: (user
   const channel = enabled ? (user.notificationChannel ?? "none") : "none";
   const available = Boolean(user.lineFriend) || user.notificationChannel === "app" || pushState === "on";
   const toggle = async (next: boolean) => {
+    haptic();
     setEnabled(next);
     setBusy(true);
     try {
@@ -270,6 +272,8 @@ function NotificationRows({ user, onSaved }: { user: CurrentUser; onSaved: (user
                   className="settings-switch-input"
                   type="checkbox"
                   role="switch"
+                  // iPhone の Safari は、指で切り替えた switch だけ小さく振動させる。
+                  {...({ switch: "" } as object)}
                   checked={enabled}
                   disabled={busy || !available}
                   onChange={(event) => void toggle(event.target.checked)}
@@ -284,7 +288,11 @@ function NotificationRows({ user, onSaved }: { user: CurrentUser; onSaved: (user
             <Row
               icon={<Smartphone className="settings-row-icon" aria-hidden />}
               title="この端末のアプリ通知"
-              note={pushState === "on" ? "試しの通知を送れます" : "LINEの代わりにアプリで受け取る"}
+              note={
+                pushState === "on"
+                  ? "オン：LINEには届きません"
+                  : "オフ：LINEでお知らせします。オンにするとアプリに届きます"
+              }
               end={
                 <>
                   {pushState === "on" && okMark}

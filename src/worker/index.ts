@@ -3,6 +3,8 @@ import { mediaThumbnailRoutes } from "./media-thumbnail";
 import { videoPlaybackRoutes } from "./video-playback";
 import { retryResourceId } from "./request-id";
 import { multipartRoutes } from "./multipart";
+import { createPushRoutes, notificationChannelSql } from "./push-routes";
+import { parseVapidKey } from "./web-push";
 import { Hono, type Context } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { ulid } from "ulid";
@@ -32,7 +34,7 @@ import {
   canManageEvent,
   canViewMemberLastViewed,
 } from "../shared/permissions";
-import type { User } from "../shared/types";
+import type { NotificationChannel, User } from "../shared/types";
 import {
   createSession,
   getCurrentUser,
@@ -70,7 +72,7 @@ type Bindings = Cloudflare.Env &
   R2Secrets &
   LineSecrets &
   LineNotificationEnv &
-  LineWebhookSecrets & { STAGING?: string; LINE_CHANNEL_ACCESS_TOKEN?: string };
+  LineWebhookSecrets & { STAGING?: string; LINE_CHANNEL_ACCESS_TOKEN?: string; VAPID_KEY?: string };
 type EventRow = {
   thumbnail_object_key?: string | null;
   id: string;
@@ -209,6 +211,7 @@ app.onError((error, c) => {
 app.notFound((c) => c.json({ error: "見つかりませんでした" }, 404));
 
 app.route("/", multipartRoutes);
+app.route("/", createPushRoutes());
 
 app.post("/webhooks/line", async (c) => {
   const channelSecret = c.env.LINE_MESSAGING_CHANNEL_SECRET;
@@ -234,7 +237,9 @@ app.get("/me", async (c) => {
   const session = getCookie(c, "family_session");
   if (session && (await refreshSession(c.env.DB, session))) setSessionCookie(c, session);
   const profile = await c.env.DB.prepare(
-    "SELECT avatar_url, line_user_id, line_friend_enabled, notification_enabled FROM users WHERE id = ?",
+    `SELECT u.avatar_url, u.line_user_id, u.line_friend_enabled, u.notification_enabled,
+       ${notificationChannelSql} AS notification_channel
+     FROM users u WHERE u.id = ?`,
   )
     .bind(c.var.currentUser.id)
     .first<{
@@ -242,6 +247,7 @@ app.get("/me", async (c) => {
       line_user_id: string | null;
       line_friend_enabled: number;
       notification_enabled: number;
+      notification_channel: NotificationChannel;
     }>();
   return c.json({
     ...c.var.currentUser,
@@ -249,6 +255,8 @@ app.get("/me", async (c) => {
     lineConnected: Boolean(profile?.line_user_id),
     lineFriend: Boolean(profile?.line_friend_enabled),
     notificationEnabled: Boolean(profile?.notification_enabled),
+    notificationChannel: profile?.notification_channel ?? "none",
+    pushPublicKey: parseVapidKey(c.env.VAPID_KEY)?.publicKey ?? null,
     isStaging: isStaging(c),
   });
 });
@@ -286,7 +294,9 @@ app.patch("/me", async (c) => {
     )
     .run();
   const user = await c.env.DB.prepare(
-    "SELECT id, display_name, role, avatar_url, line_user_id, line_friend_enabled, notification_enabled FROM users WHERE id = ?",
+    `SELECT u.id, u.display_name, u.role, u.avatar_url, u.line_user_id, u.line_friend_enabled, u.notification_enabled,
+       ${notificationChannelSql} AS notification_channel
+     FROM users u WHERE u.id = ?`,
   )
     .bind(c.var.currentUser.id)
     .first<{
@@ -297,6 +307,7 @@ app.patch("/me", async (c) => {
       line_user_id: string | null;
       line_friend_enabled: number;
       notification_enabled: number;
+      notification_channel: NotificationChannel;
     }>();
   if (!user) return c.json({ error: "ユーザーが見つかりません" }, 404);
   return c.json({
@@ -307,6 +318,8 @@ app.patch("/me", async (c) => {
     lineConnected: Boolean(user.line_user_id),
     lineFriend: Boolean(user.line_friend_enabled),
     notificationEnabled: Boolean(user.notification_enabled),
+    notificationChannel: user.notification_channel,
+    pushPublicKey: parseVapidKey(c.env.VAPID_KEY)?.publicKey ?? null,
     isStaging: isStaging(c),
   });
 });
@@ -527,10 +540,11 @@ app.get("/family/members", async (c) => {
   if (!canInviteFamily(c.var.currentUser)) return c.json({ error: "メンバー情報を表示する権限がありません" }, 403);
   const result = await c.env.DB.prepare(
     `
-    SELECT id, display_name, role, avatar_url, line_user_id, notification_enabled, created_at
-      FROM users
-     WHERE is_active = 1
-     ORDER BY CASE role WHEN 'owner' THEN 0 WHEN 'uploader' THEN 1 ELSE 2 END, created_at, id
+    SELECT u.id, u.display_name, u.role, u.avatar_url, u.line_user_id, u.notification_enabled, u.created_at,
+      ${notificationChannelSql} AS notification_channel
+      FROM users u
+     WHERE u.is_active = 1
+     ORDER BY CASE u.role WHEN 'owner' THEN 0 WHEN 'uploader' THEN 1 ELSE 2 END, u.created_at, u.id
   `,
   ).all<{
     id: string;
@@ -539,6 +553,7 @@ app.get("/family/members", async (c) => {
     avatar_url: string | null;
     line_user_id: string | null;
     notification_enabled: number;
+    notification_channel: NotificationChannel;
     created_at: string;
   }>();
   return c.json({
@@ -549,6 +564,7 @@ app.get("/family/members", async (c) => {
       avatarUrl: member.avatar_url,
       lineConnected: Boolean(member.line_user_id),
       notificationEnabled: Boolean(member.notification_enabled),
+      notificationChannel: member.notification_channel,
       joinedAt: member.created_at,
     })),
   });

@@ -2,14 +2,18 @@ import {
   buildNotificationText,
   lineNotificationOrigin,
   LineDeliveryError,
+  notificationSummary,
   sendLineNotification,
   type LineNotificationEnv,
 } from "./line-messaging";
+import { parseVapidKey, PushDeliveryError, sendWebPush, type PushMessage, type PushSend } from "./web-push";
 
 export type NotificationCronEnv = Cloudflare.Env &
   LineNotificationEnv & {
     LINE_CHANNEL_ACCESS_TOKEN?: string;
     STAGING?: string;
+    /** アプリ通知の VAPID 秘密鍵（JWK の JSON）。ないときはアプリ通知を送らない。 */
+    VAPID_KEY?: string;
   };
 type Dispatch = {
   id: string;
@@ -18,7 +22,30 @@ type Dispatch = {
   video_count: number;
   message_text: string | null;
 };
-type Delivery = { user_id: string; line_user_id: string };
+type Delivery = { user_id: string; channel: "line" | "push"; line_user_id: string | null };
+type Subscription = { id: string; endpoint: string; p256dh: string; auth: string };
+
+export function pushSubject(env: LineNotificationEnv): string {
+  return lineNotificationOrigin(env) || "https://konogoro.tsito-apps.workers.dev";
+}
+
+export function newPostsPushMessage(counts: {
+  postCount: number;
+  photoCount: number;
+  videoCount: number;
+}): PushMessage {
+  return {
+    title: "このごろ",
+    body: `新しい思い出が届きました。${notificationSummary(counts)}`,
+    url: "/unread",
+    tag: "new-posts",
+  };
+}
+
+/** アプリ通知が届かなくなった端末の購読を消す。 */
+export async function forgetPushSubscription(db: D1Database, id: string): Promise<void> {
+  await db.prepare("DELETE FROM push_subscriptions WHERE id = ?").bind(id).run();
+}
 
 // Leave a safety margin inside LINE's 24-hour retry-key lifetime.
 export const NOTIFICATION_RETRY_WINDOW_MS = 23 * 60 * 60 * 1000;
@@ -27,14 +54,39 @@ export async function processNotificationBatches(
   env: NotificationCronEnv,
   now = new Date(),
   send: typeof sendLineNotification = sendLineNotification,
+  push: PushSend = sendWebPush,
 ): Promise<void> {
-  if (!env.LINE_CHANNEL_ACCESS_TOKEN || env.STAGING === "true") return;
+  // stagingからはLINEを送らない。アプリ通知は試す人の端末にだけ届くので送る。
+  const lineToken = env.STAGING === "true" ? undefined : env.LINE_CHANNEL_ACCESS_TOKEN;
+  const vapid = parseVapidKey(env.VAPID_KEY);
+  if (!lineToken && !vapid) return;
   const started = Date.now();
   const currentTime = () => new Date(now.getTime() + Math.max(0, Date.now() - started));
   const at = now.toISOString();
   const sealToken = crypto.randomUUID();
   // Counts and recipients are frozen atomically with sealing. A concurrent cron
   // cannot append recipients, because its seal token will not match.
+  const recipients = [
+    // アプリ通知を受け取れる端末がある人はアプリへ。先に入れるので、LINEの行は重ならない。
+    vapid &&
+      env.DB.prepare(
+        `
+      INSERT INTO notification_deliveries (batch_id, user_id, channel, line_user_id, next_attempt_at)
+      SELECT b.id, u.id, 'push', NULL, ? FROM notification_dispatches b CROSS JOIN users u
+      WHERE b.seal_token = ? AND b.post_count > 0 AND u.is_active = 1 AND u.notification_enabled = 1
+        AND EXISTS (SELECT 1 FROM push_subscriptions s WHERE s.user_id = u.id)
+    `,
+      ).bind(at, sealToken),
+    lineToken &&
+      env.DB.prepare(
+        `
+      INSERT OR IGNORE INTO notification_deliveries (batch_id, user_id, channel, line_user_id, next_attempt_at)
+      SELECT b.id, u.id, 'line', u.line_user_id, ? FROM notification_dispatches b CROSS JOIN users u
+      WHERE b.seal_token = ? AND b.post_count > 0 AND u.is_active = 1
+        AND u.notification_enabled = 1 AND u.line_friend_enabled = 1 AND u.line_user_id IS NOT NULL
+    `,
+      ).bind(at, sealToken),
+  ].filter((statement): statement is D1PreparedStatement => Boolean(statement));
   await env.DB.batch([
     env.DB.prepare(
       `
@@ -50,14 +102,7 @@ export async function processNotificationBatches(
       WHERE state = 'collecting' AND scheduled_for <= ?
     `,
     ).bind(sealToken, at),
-    env.DB.prepare(
-      `
-      INSERT INTO notification_deliveries (batch_id, user_id, line_user_id, next_attempt_at)
-      SELECT b.id, u.id, u.line_user_id, ? FROM notification_dispatches b CROSS JOIN users u
-      WHERE b.seal_token = ? AND b.post_count > 0 AND u.is_active = 1
-        AND u.notification_enabled = 1 AND u.line_friend_enabled = 1 AND u.line_user_id IS NOT NULL
-    `,
-    ).bind(at, sealToken),
+    ...recipients,
   ]);
   const batches = await env.DB.prepare(
     "SELECT id, post_count, photo_count, video_count, message_text FROM notification_dispatches WHERE state = 'sending'",
@@ -80,12 +125,13 @@ export async function processNotificationBatches(
     if (!payload) continue;
     const deliveries = await env.DB.prepare(
       `
-      SELECT user_id, line_user_id FROM notification_deliveries
+      SELECT user_id, channel, line_user_id FROM notification_deliveries
       WHERE batch_id = ? AND state = 'pending' AND next_attempt_at <= ?
         AND (lease_until IS NULL OR lease_until <= ?)
+        AND ((channel = 'line' AND ?) OR (channel = 'push' AND ?))
     `,
     )
-      .bind(batch.id, at, at)
+      .bind(batch.id, at, at, lineToken ? 1 : 0, vapid ? 1 : 0)
       .all<Delivery>();
     for (const delivery of deliveries.results) {
       const attemptTime = currentTime();
@@ -128,6 +174,84 @@ export async function processNotificationBatches(
         console.error({ event: "notification_delivery_expired", batchId: batch.id });
         continue;
       }
+      const backoff = () =>
+        new Date(
+          currentTime().getTime() + Math.min(15 * 60_000, 60_000 * 2 ** Math.min(claimed.attempts - 1, 4)),
+        ).toISOString();
+      if (delivery.channel === "push" && vapid) {
+        const active = await env.DB.prepare(
+          "SELECT id FROM users WHERE id = ? AND is_active = 1 AND notification_enabled = 1",
+        )
+          .bind(delivery.user_id)
+          .first();
+        if (!active) {
+          await settle("skipped");
+          continue;
+        }
+        const subscriptions = await env.DB.prepare(
+          "SELECT id, endpoint, p256dh, auth FROM push_subscriptions WHERE user_id = ? ORDER BY created_at, id",
+        )
+          .bind(delivery.user_id)
+          .all<Subscription>();
+        let delivered = false;
+        let retryable = false;
+        let lastError = "push_no_subscription";
+        for (const subscription of subscriptions.results) {
+          try {
+            await push({
+              subscription,
+              message: newPostsPushMessage({
+                postCount: batch.post_count,
+                photoCount: batch.photo_count,
+                videoCount: batch.video_count,
+              }),
+              keys: vapid,
+              subject: pushSubject(env),
+            });
+            delivered = true;
+            await env.DB.prepare("UPDATE push_subscriptions SET last_success_at = ? WHERE id = ?")
+              .bind(currentTime().toISOString(), subscription.id)
+              .run();
+          } catch (error) {
+            lastError = error instanceof PushDeliveryError ? `push_http_${error.status}` : "push_uncertain";
+            if (error instanceof PushDeliveryError && error.gone) await forgetPushSubscription(env.DB, subscription.id);
+            else if (!(error instanceof PushDeliveryError) || error.retryable) retryable = true;
+            console.error({ event: "push_delivery_failed", batchId: batch.id, reason: lastError });
+          }
+        }
+        if (delivered) {
+          await settle("accepted");
+          continue;
+        }
+        if (retryable) {
+          await settle("pending", lastError, backoff());
+          continue;
+        }
+        // アプリに届けられない（アプリを消した、通知を切ったなど）。LINEで受け取れる人はLINEへ戻す。
+        const line = lineToken
+          ? await env.DB.prepare(
+              "SELECT line_user_id FROM users WHERE id = ? AND line_friend_enabled = 1 AND line_user_id IS NOT NULL",
+            )
+              .bind(delivery.user_id)
+              .first<{ line_user_id: string }>()
+          : null;
+        if (!line) {
+          await settle("failed", lastError);
+          continue;
+        }
+        await env.DB.prepare(
+          `
+          UPDATE notification_deliveries SET channel = 'line', line_user_id = ?, last_error = ?,
+            next_attempt_at = ?, lease_token = NULL, lease_until = NULL
+          WHERE batch_id = ? AND user_id = ? AND lease_token = ?
+        `,
+        )
+          .bind(line.line_user_id, lastError, attemptAt, batch.id, delivery.user_id, lease)
+          .run();
+        console.error({ event: "push_fell_back_to_line", batchId: batch.id });
+        continue;
+      }
+      if (delivery.channel !== "line" || !lineToken) continue;
       const eligible = await env.DB.prepare(
         `
         SELECT id FROM users WHERE id = ? AND line_user_id = ? AND is_active = 1
@@ -142,8 +266,8 @@ export async function processNotificationBatches(
       }
       try {
         await send({
-          channelAccessToken: env.LINE_CHANNEL_ACCESS_TOKEN,
-          to: delivery.line_user_id,
+          channelAccessToken: lineToken,
+          to: delivery.line_user_id!,
           text: payload.message_text,
           retryKey: await notificationRetryKey(batch.id, delivery.user_id),
         });
@@ -151,8 +275,7 @@ export async function processNotificationBatches(
       } catch (error) {
         const retryable = !(error instanceof LineDeliveryError) || error.retryable;
         const reason = error instanceof LineDeliveryError ? `line_http_${error.status}` : "delivery_uncertain";
-        const delay = Math.min(15 * 60_000, 60_000 * 2 ** Math.min(claimed.attempts - 1, 4));
-        await settle(retryable ? "pending" : "failed", reason, new Date(currentTime().getTime() + delay).toISOString());
+        await settle(retryable ? "pending" : "failed", reason, backoff());
         console.error({ event: "notification_delivery_failed", batchId: batch.id, reason });
       }
     }

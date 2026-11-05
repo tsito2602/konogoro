@@ -26,18 +26,22 @@ export type NotificationCounts = {
   appOrigin: string;
 };
 
-export function buildNotificationText(counts: NotificationCounts): string {
+/** 「投稿2件（写真3枚・動画1本）」の形。LINEとアプリの通知で同じ言い方にする。 */
+export function notificationSummary(counts: Omit<NotificationCounts, "appOrigin">): string {
   const media = [
     counts.photoCount > 0 ? `写真${counts.photoCount}枚` : null,
     counts.videoCount > 0 ? `動画${counts.videoCount}本` : null,
   ]
     .filter((value): value is string => value !== null)
     .join("・");
-  const summary = media ? `（${media}）` : "";
+  return `投稿${counts.postCount}件${media ? `（${media}）` : ""}`;
+}
+
+export function buildNotificationText(counts: NotificationCounts): string {
   const appOrigin = counts.appOrigin.replace(/\/+$/, "");
   const destination = `${appOrigin}/unread`;
 
-  return `新しい思い出が届きました。投稿${counts.postCount}件${summary}\nまとめて見る：${destination}`;
+  return `新しい思い出が届きました。${notificationSummary(counts)}\nまとめて見る：${destination}`;
 }
 
 type LineNotification = {

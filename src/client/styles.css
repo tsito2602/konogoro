@@ -2220,6 +2220,20 @@ textarea:focus {
 .install-guide .text-button {
   margin-top: 8px;
 }
+/* 通知の案内は、機械に詳しくない人が読む。文字とボタンを一回り大きくする。 */
+.notify-guide > p:not(.pwa-guide-eyebrow),
+.notify-guide li {
+  font-size: 1.0625rem;
+}
+.notify-guide .primary-button {
+  min-height: 56px;
+  margin-top: 22px;
+  font-size: 1.0625rem;
+}
+.notify-guide .form-error {
+  margin-top: 12px;
+  text-align: center;
+}
 .onboarding-guide-backdrop {
   position: fixed;
   z-index: 100;

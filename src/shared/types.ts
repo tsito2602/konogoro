@@ -5,9 +5,13 @@ export type User = {
   avatarUrl?: string | null;
 };
 
+/** 新しい投稿の通知の届け先。app はホーム画面に追加したこのごろ、line はLINE。 */
+export type NotificationChannel = "app" | "line" | "none";
+
 export type FamilyMember = User & {
   avatarUrl: string | null;
   notificationEnabled: boolean;
+  notificationChannel: NotificationChannel;
   lineConnected: boolean;
 };
 
@@ -41,6 +45,9 @@ export type CurrentUser = User & {
   notificationEnabled?: boolean;
   lineConnected?: boolean;
   lineFriend?: boolean;
+  notificationChannel?: NotificationChannel;
+  /** アプリ通知の公開鍵。サーバーで使えないときは null。 */
+  pushPublicKey?: string | null;
   isStaging?: boolean;
 };
 

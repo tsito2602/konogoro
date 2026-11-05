@@ -49,6 +49,8 @@ export type CurrentUser = User & {
   /** アプリ通知の公開鍵。サーバーで使えないときは null。 */
   pushPublicKey?: string | null;
   isStaging?: boolean;
+  /** 使い方の紹介を見たか。端末をまたいで覚える。 */
+  onboardingSeen?: boolean;
 };
 
 export type Media = {

@@ -192,19 +192,37 @@ function Passport({ user, onSaved }: { user: CurrentUser; onSaved: (user: Curren
   );
 }
 
-const channelNotes: Record<NotificationChannel, string> = {
-  app: "新しい投稿をこのアプリでお知らせします",
-  line: "新しい投稿をLINEでお知らせします",
-  none: "新しい投稿のお知らせは届きません",
-};
+type Destination = { label: string; note: string; ok: boolean };
 
-const pushStateLabels: Record<PushState, string> = {
-  on: "オン",
-  off: "オフ",
-  denied: "止められています",
-  "needs-install": "ホーム画面に追加が必要",
-  unsupported: "使えません",
-};
+/** いま新しい投稿のお知らせがどこに届くか。スイッチと別に、言葉で言い切って出す。 */
+function destinationOf(
+  enabled: boolean,
+  pushState: PushState | null,
+  channel: NotificationChannel | undefined,
+  pushReady: boolean,
+): Destination {
+  if (!enabled) return { label: "届きません", note: "アプリにもLINEにも届きません", ok: false };
+  if (pushState === "on")
+    return {
+      label: "このアプリ",
+      note: "LINEには届きません",
+      ok: true,
+    };
+  if (channel === "app")
+    return { label: "ほかの端末", note: "ほかの端末のアプリに届きます。LINEには届きません", ok: true };
+  const canUseApp = pushReady && pushState !== "unsupported";
+  if (channel === "line")
+    return {
+      label: "LINE",
+      note: canUseApp ? "押すと、LINEの代わりにこのアプリで受け取れます" : "この端末ではアプリの通知を使えません",
+      ok: true,
+    };
+  return {
+    label: "届きません",
+    note: canUseApp ? "押すと、このアプリで受け取れるようにできます" : "LINEで「このごろ」を友だち追加すると届きます",
+    ok: false,
+  };
+}
 
 /**
  * 通知：オンとオフは押したときに保存する。届け先は、アプリの端末があればアプリ、なければLINE。
@@ -237,7 +255,7 @@ function NotificationRows({ user, onSaved }: { user: CurrentUser; onSaved: (user
     return () => window.removeEventListener(PUSH_STATE_CHANGED_EVENT, changed);
   }, [pushReady, refresh]);
 
-  const channel = enabled ? (user.notificationChannel ?? "none") : "none";
+  const destination = destinationOf(enabled, pushState, user.notificationChannel, pushReady);
   const available = Boolean(user.lineFriend) || user.notificationChannel === "app" || pushState === "on";
   const toggle = async (next: boolean) => {
     haptic();
@@ -265,7 +283,13 @@ function NotificationRows({ user, onSaved }: { user: CurrentUser; onSaved: (user
           <Row
             icon={<Bell className="settings-row-icon" aria-hidden />}
             title="通知"
-            note={available ? channelNotes[channel] : "アプリかLINEで受け取れるようにすると使えます"}
+            note={
+              !available
+                ? "アプリかLINEで受け取れるようにすると使えます"
+                : enabled
+                  ? "新しい思い出をお知らせします"
+                  : "オフ：どこにも届きません"
+            }
             end={
               <>
                 <input
@@ -283,26 +307,31 @@ function NotificationRows({ user, onSaved }: { user: CurrentUser; onSaved: (user
             }
           />
         </label>
-        {pushReady && (
-          <button className="settings-row" type="button" onClick={openNotificationGuide}>
+        {(() => {
+          const row = (
             <Row
               icon={<Smartphone className="settings-row-icon" aria-hidden />}
-              title="この端末のアプリ通知"
-              note={
-                pushState === "on"
-                  ? "オン：LINEには届きません"
-                  : "オフ：LINEでお知らせします。オンにするとアプリに届きます"
-              }
+              title="届け先"
+              note={destination.note}
               end={
                 <>
-                  {pushState === "on" && okMark}
-                  {pushState ? pushStateLabels[pushState] : ""}
-                  {chevron}
+                  {destination.ok && okMark}
+                  {destination.label}
+                  {pushReady && enabled && chevron}
                 </>
               }
             />
-          </button>
-        )}
+          );
+          return pushReady && enabled ? (
+            <button className="settings-row" type="button" onClick={openNotificationGuide}>
+              {row}
+            </button>
+          ) : (
+            <div className="settings-row" aria-live="polite">
+              {row}
+            </div>
+          );
+        })()}
         <div className="settings-row">
           <Row
             icon={<Link2 className="settings-row-icon" aria-hidden />}
@@ -335,7 +364,7 @@ function NotificationRows({ user, onSaved }: { user: CurrentUser; onSaved: (user
           />
         </div>
       </div>
-      {!user.lineFriend && user.notificationChannel !== "app" && (
+      {!user.lineFriend && pushState !== "on" && user.notificationChannel !== "app" && (
         <p className="settings-note">LINEで「このごろ」アカウントをブロックしていないか確認してください。</p>
       )}
     </>

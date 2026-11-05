@@ -1,5 +1,5 @@
 import { setReadingIdentity } from "../reading-context";
-import { Bell, BookOpen, ChevronRight, Link2, Pencil, Smartphone, Users } from "lucide-react";
+import { BellOff, BookOpen, ChevronRight, Pencil, Smartphone, Users } from "lucide-react";
 import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import packageInfo from "../../../package.json";
@@ -29,10 +29,42 @@ const roleLabels: Record<User["role"], string> = {
 };
 
 const memberChannelLabels: Record<NotificationChannel, string> = {
-  app: "アプリ通知",
-  line: "LINE通知",
-  none: "通知なし",
+  app: "アプリ",
+  line: "LINE",
+  none: "止まっている",
 };
+
+/** メンバーのお知らせ先と、電話しながら確かめるための「試す」。 */
+function MemberNotify({ member }: { member: FamilyMember }) {
+  const showToast = useToast();
+  const [busy, setBusy] = useState(false);
+  const channel = member.notificationChannel;
+  const test = async () => {
+    setBusy(true);
+    try {
+      const result = await api<{ sentTo: "app" | "line" }>(`/family/members/${member.id}/test-notification`, {
+        method: "POST",
+      });
+      showToast(`${member.displayName}さんの${result.sentTo === "app" ? "アプリ" : "LINE"}に送りました`, {
+        success: true,
+      });
+    } catch (reason) {
+      showToast((reason as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <>
+      <span className={`notify-tag ${channel}`}>{memberChannelLabels[channel]}</span>
+      {channel !== "none" && (
+        <button className="notify-try" type="button" disabled={busy} onClick={() => void test()}>
+          試す
+        </button>
+      )}
+    </>
+  );
+}
 
 const stagingRoleOptions = [
   { value: "owner", label: "管理者", description: "投稿・イベント・メンバーをすべて管理できます" },
@@ -192,60 +224,23 @@ function Passport({ user, onSaved }: { user: CurrentUser; onSaved: (user: Curren
   );
 }
 
-type Destination = { label: string; note: string; ok: boolean };
-
-/** いま新しい投稿のお知らせがどこに届くか。スイッチと別に、言葉で言い切って出す。 */
-function destinationOf(
-  enabled: boolean,
-  pushState: PushState | null,
-  channel: NotificationChannel | undefined,
-  pushReady: boolean,
-): Destination {
-  if (!enabled) return { label: "届きません", note: "アプリにもLINEにも届きません", ok: false };
-  if (pushState === "on")
-    return {
-      label: "このアプリ",
-      note: "LINEには届きません",
-      ok: true,
-    };
-  if (channel === "app")
-    return { label: "ほかの端末", note: "ほかの端末のアプリに届きます。LINEには届きません", ok: true };
-  const canUseApp = pushReady && pushState !== "unsupported";
-  if (channel === "line")
-    return {
-      label: "LINE",
-      note: canUseApp ? "押すと、LINEの代わりにこのアプリで受け取れます" : "この端末ではアプリの通知を使えません",
-      ok: true,
-    };
-  return {
-    label: "届きません",
-    note: canUseApp ? "押すと、このアプリで受け取れるようにできます" : "LINEで「このごろ」を友だち追加すると届きます",
-    ok: false,
-  };
-}
-
 /**
- * 通知：オンとオフは押したときに保存する。届け先は、アプリの端末があればアプリ、なければLINE。
- * この端末のアプリ通知は、押すと手順の画面を開く。
+ * お知らせの札：いまお知らせがどこに届くかを1文で言い切り、押せるのは次にすることのボタン1つだけ。
+ * オンオフのスイッチやLINEの連携状態は出さない。止めたい人のために一番下に小さく「お知らせを止める」を置く。
  */
-function NotificationRows({ user, onSaved }: { user: CurrentUser; onSaved: (user: CurrentUser) => void }) {
+function NotificationCard({ user, onSaved }: { user: CurrentUser; onSaved: (user: CurrentUser) => void }) {
   const showToast = useToast();
-  const [enabled, setEnabled] = useState(user.notificationEnabled ?? false);
   const [busy, setBusy] = useState(false);
   const [pushState, setPushState] = useState<PushState | null>(null);
   const pushReady = Boolean(user.pushPublicKey);
 
   const refresh = useCallback(() => {
     void api<CurrentUser>("/me")
-      .then((result) => {
-        onSaved(result);
-        setEnabled(result.notificationEnabled ?? false);
-      })
+      .then(onSaved)
       .catch(() => undefined);
   }, [onSaved]);
 
   useEffect(() => {
-    if (!pushReady) return;
     void readPushState().then(setPushState);
     const changed = (event: Event) => {
       setPushState((event as CustomEvent<PushState>).detail);
@@ -253,119 +248,84 @@ function NotificationRows({ user, onSaved }: { user: CurrentUser; onSaved: (user
     };
     window.addEventListener(PUSH_STATE_CHANGED_EVENT, changed);
     return () => window.removeEventListener(PUSH_STATE_CHANGED_EVENT, changed);
-  }, [pushReady, refresh]);
+  }, [refresh]);
 
-  const destination = destinationOf(enabled, pushState, user.notificationChannel, pushReady);
-  const available = Boolean(user.lineFriend) || user.notificationChannel === "app" || pushState === "on";
-  const toggle = async (next: boolean) => {
+  const setEnabled = async (next: boolean) => {
     haptic();
-    setEnabled(next);
     setBusy(true);
     try {
-      const result = await api<CurrentUser>("/me", {
-        method: "PATCH",
-        body: JSON.stringify({ notificationEnabled: next }),
-      });
-      onSaved(result);
-      setEnabled(result.notificationEnabled ?? false);
-      showToast(next ? "通知をオンにしました" : "通知をオフにしました", { success: true });
+      onSaved(await api<CurrentUser>("/me", { method: "PATCH", body: JSON.stringify({ notificationEnabled: next }) }));
+      showToast(next ? "お知らせを再開しました" : "お知らせを止めました", { success: true });
     } catch (reason) {
-      setEnabled(!next);
       showToast((reason as Error).message);
     } finally {
       setBusy(false);
     }
   };
+
+  const enabled = user.notificationEnabled ?? false;
+  const canUseApp = pushReady && pushState !== null && pushState !== "unsupported";
+  const appHere = pushState === "on";
+  const channel = user.notificationChannel ?? "none";
+
+  let where: "app" | "line" | "stopped" | "none";
+  if (!enabled) where = "stopped";
+  else if (appHere || channel === "app") where = "app";
+  else if (channel === "line") where = "line";
+  else where = "none";
+
+  const appIcon = (
+    <span className="notify-card-icon app" aria-hidden="true">
+      <img className="settings-app-icon-light" src="/icons/icon-light-192.png" alt="" />
+      <img className="settings-app-icon-dark" src="/icons/icon-dark-192.png" alt="" />
+    </span>
+  );
+  const lineIcon = (
+    <span className="notify-card-icon line" aria-hidden="true">
+      LINE
+    </span>
+  );
+
   return (
     <>
-      <div className="settings-group settings-line">
-        <label className={`settings-row settings-switch-row${available ? "" : " unavailable"}`}>
-          <Row
-            icon={<Bell className="settings-row-icon" aria-hidden />}
-            title="通知"
-            note={
-              !available
-                ? "アプリかLINEで受け取れるようにすると使えます"
-                : enabled
-                  ? "新しい思い出をお知らせします"
-                  : "オフ：どこにも届きません"
-            }
-            end={
-              <>
-                <input
-                  className="settings-switch-input"
-                  type="checkbox"
-                  role="switch"
-                  // iPhone の Safari は、指で切り替えた switch だけ小さく振動させる。
-                  {...({ switch: "" } as object)}
-                  checked={enabled}
-                  disabled={busy || !available}
-                  onChange={(event) => void toggle(event.target.checked)}
-                />
-                <span className="settings-switch" aria-hidden="true" />
-              </>
-            }
-          />
-        </label>
-        {(() => {
-          const row = (
-            <Row
-              icon={<Smartphone className="settings-row-icon" aria-hidden />}
-              title="届け先"
-              note={destination.note}
-              end={
-                <>
-                  {destination.ok && okMark}
-                  {destination.label}
-                  {pushReady && enabled && chevron}
-                </>
-              }
-            />
-          );
-          return pushReady && enabled ? (
-            <button className="settings-row" type="button" onClick={openNotificationGuide}>
-              {row}
-            </button>
-          ) : (
-            <div className="settings-row" aria-live="polite">
-              {row}
-            </div>
-          );
-        })()}
-        <div className="settings-row">
-          <Row
-            icon={<Link2 className="settings-row-icon" aria-hidden />}
-            title="LINEアカウント"
-            end={
-              user.lineConnected ? (
-                <>
-                  {okMark}
-                  連携済み
-                </>
-              ) : (
-                "未連携"
-              )
-            }
-          />
-        </div>
-        <div className="settings-row">
-          <Row
-            title="LINEでの受け取り"
-            end={
-              user.lineFriend ? (
-                <>
-                  {okMark}
-                  受信可能
-                </>
-              ) : (
-                "受信不可"
-              )
-            }
-          />
-        </div>
+      <div className={`notify-card ${where}`} aria-live="polite">
+        {where === "app" && appIcon}
+        {where === "line" && lineIcon}
+        {(where === "stopped" || where === "none") && (
+          <span className="notify-card-icon off" aria-hidden="true">
+            <BellOff />
+          </span>
+        )}
+        <small>新しい写真のお知らせは</small>
+        <strong>
+          {where === "app" && (appHere ? "このアプリに届きます" : "ほかのスマホのアプリに届きます")}
+          {where === "line" && "LINEに届きます"}
+          {where === "stopped" && "止まっています"}
+          {where === "none" && "届いていません"}
+        </strong>
+        {where === "line" && !canUseApp && <p>この端末では、LINEでお知らせします。このままで大丈夫です。</p>}
+        {where === "none" && !canUseApp && <p>LINEで「このごろ」を友だち追加すると届きます。</p>}
+
+        {where === "app" && appHere && (
+          <button className="primary-button wide" type="button" onClick={() => openNotificationGuide("test")}>
+            試しにお知らせを送る
+          </button>
+        )}
+        {(where === "line" || where === "none" || (where === "app" && !appHere)) && canUseApp && (
+          <button className="primary-button wide" type="button" onClick={() => openNotificationGuide("invite")}>
+            {where === "app" ? "このスマホでも受け取る" : "このアプリで受け取る"}
+          </button>
+        )}
+        {where === "stopped" && (
+          <button className="primary-button wide" type="button" disabled={busy} onClick={() => void setEnabled(true)}>
+            お知らせを再開する
+          </button>
+        )}
       </div>
-      {!user.lineFriend && pushState !== "on" && user.notificationChannel !== "app" && (
-        <p className="settings-note">LINEで「このごろ」アカウントをブロックしていないか確認してください。</p>
+      {enabled && (
+        <button className="notify-card-stop" type="button" disabled={busy} onClick={() => void setEnabled(false)}>
+          お知らせを止める
+        </button>
       )}
     </>
   );
@@ -550,7 +510,7 @@ export function SettingsPage() {
             <section className="settings-section">
               <h2>アカウント</h2>
               <Passport user={user} onSaved={setUser} />
-              <NotificationRows user={user} onSaved={setUser} />
+              <NotificationCard user={user} onSaved={setUser} />
             </section>
 
             <section className="settings-section">
@@ -587,7 +547,7 @@ export function SettingsPage() {
                         <Row
                           title={member.displayName}
                           note={roleLabels[member.role]}
-                          end={memberChannelLabels[member.notificationChannel]}
+                          end={<MemberNotify member={member} />}
                         />
                       </div>
                     ))

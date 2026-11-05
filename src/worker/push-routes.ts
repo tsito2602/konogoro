@@ -2,12 +2,14 @@ import { Hono } from "hono";
 import { ulid } from "ulid";
 import { pushEndpointInputSchema, pushSubscriptionInputSchema } from "../shared/schemas";
 import type { User } from "../shared/types";
-import type { LineNotificationEnv } from "./line-messaging";
+import { canInviteFamily } from "../shared/permissions";
+import { sendLineNotification, type LineNotificationEnv } from "./line-messaging";
 import { forgetPushSubscription, pushSubject } from "./notification-cron";
 import { parseVapidKey, PushDeliveryError, sendWebPush, type PushSend } from "./web-push";
 
 type PushEnv = {
-  Bindings: Cloudflare.Env & LineNotificationEnv & { VAPID_KEY?: string };
+  Bindings: Cloudflare.Env &
+    LineNotificationEnv & { VAPID_KEY?: string; LINE_CHANNEL_ACCESS_TOKEN?: string; STAGING?: string };
   Variables: { currentUser: User };
 };
 
@@ -20,7 +22,17 @@ export const notificationChannelSql = `
     ELSE 'none'
   END`;
 
-export function createPushRoutes(send: PushSend = sendWebPush) {
+const testMessage = {
+  title: "通知のテスト",
+  body: "新しい思い出が届くと、このようにお知らせします。",
+  url: "/",
+  tag: "test",
+};
+
+export function createPushRoutes(
+  send: PushSend = sendWebPush,
+  sendLine: typeof sendLineNotification = sendLineNotification,
+) {
   const routes = new Hono<PushEnv>();
 
   routes.use("/push/*", async (c, next) => {
@@ -73,12 +85,7 @@ export function createPushRoutes(send: PushSend = sendWebPush) {
     try {
       await send({
         subscription,
-        message: {
-          title: "通知のテスト",
-          body: "新しい思い出が届くと、このようにお知らせします。",
-          url: "/",
-          tag: "test",
-        },
+        message: testMessage,
         keys,
         subject: pushSubject(c.env),
       });
@@ -91,6 +98,51 @@ export function createPushRoutes(send: PushSend = sendWebPush) {
       return c.json({ error: "試しの通知を送れませんでした" }, 502);
     }
     return c.body(null, 204);
+  });
+
+  // 管理者が、電話しながら家族に試しのお知らせを送る。届け先はいつものまとめ通知と同じ決め方にする。
+  routes.post("/family/members/:memberId/test-notification", async (c) => {
+    if (!canInviteFamily(c.var.currentUser)) return c.json({ error: "お知らせを送る権限がありません" }, 403);
+    const member = await c.env.DB.prepare(
+      "SELECT id, line_user_id, line_friend_enabled, notification_enabled FROM users WHERE id = ? AND is_active = 1",
+    )
+      .bind(c.req.param("memberId"))
+      .first<{ id: string; line_user_id: string | null; line_friend_enabled: number; notification_enabled: number }>();
+    if (!member) return c.json({ error: "メンバーが見つかりません" }, 404);
+    if (!member.notification_enabled) return c.json({ error: "この人はお知らせを止めています" }, 409);
+    const keys = parseVapidKey(c.env.VAPID_KEY);
+    if (keys) {
+      const subscriptions = await c.env.DB.prepare(
+        "SELECT id, endpoint, p256dh, auth FROM push_subscriptions WHERE user_id = ?",
+      )
+        .bind(member.id)
+        .all<{ id: string; endpoint: string; p256dh: string; auth: string }>();
+      let delivered = false;
+      for (const subscription of subscriptions.results) {
+        try {
+          await send({ subscription, message: testMessage, keys, subject: pushSubject(c.env) });
+          delivered = true;
+        } catch (error) {
+          if (error instanceof PushDeliveryError && error.gone) await forgetPushSubscription(c.env.DB, subscription.id);
+        }
+      }
+      if (delivered) return c.json({ sentTo: "app" });
+    }
+    const lineToken = c.env.STAGING === "true" ? undefined : c.env.LINE_CHANNEL_ACCESS_TOKEN;
+    if (lineToken && member.line_friend_enabled && member.line_user_id) {
+      try {
+        await sendLine({
+          channelAccessToken: lineToken,
+          to: member.line_user_id,
+          text: "このごろからの、試しのお知らせです。新しい思い出が届くと、LINEでこのようにお知らせします。",
+          retryKey: crypto.randomUUID(),
+        });
+        return c.json({ sentTo: "line" });
+      } catch {
+        return c.json({ error: "LINEに送れませんでした" }, 502);
+      }
+    }
+    return c.json({ error: "この人にはお知らせを届けられません" }, 409);
   });
 
   return routes;

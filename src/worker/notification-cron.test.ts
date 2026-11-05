@@ -384,7 +384,7 @@ describe("アプリ通知への切り替え", () => {
       "https://push.example.com/a-tablet",
     ]);
     expect(push.mock.calls[0][0].message).toEqual(
-      expect.objectContaining({ body: "新しい思い出が届きました。投稿1件", url: "/unread" }),
+      expect.objectContaining({ title: "新しい思い出が届きました", body: "投稿1件", url: "/unread" }),
     );
     expect(f.rows("SELECT user_id, channel, state FROM notification_deliveries ORDER BY user_id")).toEqual([
       { user_id: "A", channel: "push", state: "accepted" },

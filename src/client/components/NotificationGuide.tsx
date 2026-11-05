@@ -1,5 +1,6 @@
 import { Bell, BellOff, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { RM } from "../cartoon/cartoon";
 import { disablePush, enablePush, isAppleMobile, readPushState, sendTestPush, type PushState } from "../push";
 
 export const OPEN_NOTIFICATION_GUIDE_EVENT = "konogoro:open-notification-guide";
@@ -38,7 +39,18 @@ export function NotificationGuide({
   const [step, setStep] = useState<Step>("loading");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [closing, setClosing] = useState(false);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const apple = isAppleMobile();
+
+  useEffect(() => () => clearTimeout(closeTimer.current), []);
+
+  // 下へ沈んでから閉じる。動きを減らす設定ならすぐ閉じる。
+  const dismiss = (after: () => void = close) => {
+    if (closing) return;
+    setClosing(true);
+    closeTimer.current = setTimeout(after, RM() ? 0 : 220);
+  };
 
   useEffect(() => {
     let active = true;
@@ -91,11 +103,16 @@ export function NotificationGuide({
     run(async () => {
       await disablePush();
       announce(await readPushState());
-      close();
+      dismiss();
     });
 
   return (
-    <div className="modal-backdrop pwa-guide-backdrop install-guide-backdrop">
+    <div
+      className={`modal-backdrop pwa-guide-backdrop install-guide-backdrop notify-guide-backdrop${closing ? " closing" : ""}`}
+      onClick={(event) => {
+        if (event.target === event.currentTarget) dismiss();
+      }}
+    >
       <section
         className="pwa-guide-modal install-guide notify-guide"
         role="dialog"
@@ -103,151 +120,157 @@ export function NotificationGuide({
         aria-labelledby="notify-title"
         aria-busy={busy}
       >
-        <button className="icon-button pwa-guide-close" type="button" onClick={close} aria-label="通知の案内を閉じる">
+        <button
+          className="icon-button pwa-guide-close"
+          type="button"
+          onClick={() => dismiss()}
+          aria-label="通知の案内を閉じる"
+        >
           <X />
         </button>
-        <span className="pwa-guide-symbol" aria-hidden>
+        <span className={`pwa-guide-symbol notify-bell ${step}`} aria-hidden>
           {step === "denied" || step === "unsupported" ? <BellOff /> : <Bell />}
         </span>
 
-        {step === "loading" && <h2 id="notify-title">通知の状態を確かめています</h2>}
+        <div className="notify-step" key={step}>
+          {step === "loading" && <h2 id="notify-title">通知の状態を確かめています</h2>}
 
-        {step === "ask" && (
-          <>
-            <h2 id="notify-title">新しい思い出を、このアプリでお知らせします</h2>
-            <p>下のボタンを押すと、確認が出ます。「許可」を押してください。</p>
-            <button className="primary-button wide" type="button" onClick={() => void turnOn()} disabled={busy}>
-              通知をオンにする
-            </button>
-            <button className="text-button wide" type="button" onClick={close}>
-              あとで
-            </button>
-          </>
-        )}
+          {step === "ask" && (
+            <>
+              <h2 id="notify-title">新しい思い出を、このアプリでお知らせします</h2>
+              <p>下のボタンを押すと、確認が出ます。「許可」を押してください。</p>
+              <button className="primary-button wide" type="button" onClick={() => void turnOn()} disabled={busy}>
+                通知をオンにする
+              </button>
+              <button className="outline-button wide" type="button" onClick={() => dismiss()}>
+                あとで
+              </button>
+            </>
+          )}
 
-        {step === "testing" && (
-          <>
-            <h2 id="notify-title">試しの通知を送っています</h2>
-            <p>少しお待ちください。</p>
-          </>
-        )}
+          {step === "testing" && (
+            <>
+              <h2 id="notify-title">試しの通知を送っています</h2>
+              <p>少しお待ちください。</p>
+            </>
+          )}
 
-        {step === "check" && (
-          <>
-            <h2 id="notify-title">試しの通知が届きましたか？</h2>
-            <p>画面の上に「このごろ」のお知らせが出たら、届いています。</p>
-            <button className="primary-button wide" type="button" onClick={() => setStep("done")}>
-              届いた
-            </button>
-            <button className="text-button wide" type="button" onClick={() => setStep("missing")}>
-              届かない
-            </button>
-          </>
-        )}
+          {step === "check" && (
+            <>
+              <h2 id="notify-title">試しの通知が届きましたか？</h2>
+              <p>画面の上に「このごろ」のお知らせが出たら、届いています。</p>
+              <button className="primary-button wide" type="button" onClick={() => setStep("done")}>
+                届いた
+              </button>
+              <button className="outline-button wide" type="button" onClick={() => setStep("missing")}>
+                届かない
+              </button>
+            </>
+          )}
 
-        {step === "done" && (
-          <>
-            <h2 id="notify-title">準備ができました</h2>
-            <p>これからは、新しい思い出のお知らせがLINEではなく、このアプリに届きます。</p>
-            <button className="primary-button wide" type="button" onClick={close}>
-              閉じる
-            </button>
-          </>
-        )}
+          {step === "done" && (
+            <>
+              <h2 id="notify-title">準備ができました</h2>
+              <p>これからは、新しい思い出のお知らせがLINEではなく、このアプリに届きます。</p>
+              <button className="primary-button wide" type="button" onClick={() => dismiss()}>
+                閉じる
+              </button>
+            </>
+          )}
 
-        {step === "missing" && (
-          <>
-            <h2 id="notify-title">届かないときは</h2>
-            <p>次のところを確かめてから、もう一度送ってみてください。</p>
-            <ol>
-              {(apple
-                ? [
-                    "「設定」アプリを開き、「通知」→「このごろ」を押す",
-                    "「通知を許可」をオンにする",
-                    "月のマークの「集中モード」がオンなら、オフにする",
-                  ]
-                : [
-                    "「設定」アプリを開き、「アプリ」→「このごろ」を押す",
-                    "「通知」をオンにする",
-                    "「サイレントモード」がオンなら、オフにする",
-                  ]
-              ).map((text, index) => (
-                <li key={text}>
-                  <span>{index + 1}</span>
-                  {text}
-                </li>
-              ))}
-            </ol>
-            <button className="primary-button wide" type="button" onClick={() => void sendTest()} disabled={busy}>
-              もう一度送る
-            </button>
-            <button className="text-button wide" type="button" onClick={() => void backToLine()} disabled={busy}>
-              今までどおりLINEで受け取る
-            </button>
-          </>
-        )}
+          {step === "missing" && (
+            <>
+              <h2 id="notify-title">届かないときは</h2>
+              <p>次のところを確かめてから、もう一度送ってみてください。</p>
+              <ol>
+                {(apple
+                  ? [
+                      "「設定」アプリを開き、「通知」→「このごろ」を押す",
+                      "「通知を許可」をオンにする",
+                      "月のマークの「集中モード」がオンなら、オフにする",
+                    ]
+                  : [
+                      "「設定」アプリを開き、「アプリ」→「このごろ」を押す",
+                      "「通知」をオンにする",
+                      "「サイレントモード」がオンなら、オフにする",
+                    ]
+                ).map((text, index) => (
+                  <li key={text}>
+                    <span>{index + 1}</span>
+                    {text}
+                  </li>
+                ))}
+              </ol>
+              <button className="primary-button wide" type="button" onClick={() => void sendTest()} disabled={busy}>
+                もう一度送る
+              </button>
+              <button className="outline-button wide" type="button" onClick={() => void backToLine()} disabled={busy}>
+                今までどおりLINEで受け取る
+              </button>
+            </>
+          )}
 
-        {step === "on" && (
-          <>
-            <h2 id="notify-title">この端末で受け取っています</h2>
-            <p>新しい思い出のお知らせは、このアプリに届きます。</p>
-            <button className="primary-button wide" type="button" onClick={() => void sendTest()} disabled={busy}>
-              試しの通知を送る
-            </button>
-            <button className="text-button wide" type="button" onClick={() => void backToLine()} disabled={busy}>
-              この端末では受け取らない
-            </button>
-          </>
-        )}
+          {step === "on" && (
+            <>
+              <h2 id="notify-title">この端末で受け取っています</h2>
+              <p>新しい思い出のお知らせは、このアプリに届きます。</p>
+              <button className="primary-button wide" type="button" onClick={() => void sendTest()} disabled={busy}>
+                試しの通知を送る
+              </button>
+              <button className="outline-button wide" type="button" onClick={() => void backToLine()} disabled={busy}>
+                この端末では受け取らない
+              </button>
+            </>
+          )}
 
-        {step === "denied" && (
-          <>
-            <h2 id="notify-title">通知が止められています</h2>
-            <p>次の手順で通知を許可すると、このアプリでお知らせを受け取れます。それまではLINEでお知らせします。</p>
-            <ol>
-              {(apple
-                ? ["「設定」アプリを開く", "「通知」→「このごろ」を押す", "「通知を許可」をオンにする"]
-                : ["「設定」アプリを開く", "「アプリ」→「このごろ」を押す", "「通知」をオンにする"]
-              ).map((text, index) => (
-                <li key={text}>
-                  <span>{index + 1}</span>
-                  {text}
-                </li>
-              ))}
-            </ol>
-            <button className="text-button wide" type="button" onClick={close}>
-              閉じる
-            </button>
-          </>
-        )}
+          {step === "denied" && (
+            <>
+              <h2 id="notify-title">通知が止められています</h2>
+              <p>次の手順で通知を許可すると、このアプリでお知らせを受け取れます。それまではLINEでお知らせします。</p>
+              <ol>
+                {(apple
+                  ? ["「設定」アプリを開く", "「通知」→「このごろ」を押す", "「通知を許可」をオンにする"]
+                  : ["「設定」アプリを開く", "「アプリ」→「このごろ」を押す", "「通知」をオンにする"]
+                ).map((text, index) => (
+                  <li key={text}>
+                    <span>{index + 1}</span>
+                    {text}
+                  </li>
+                ))}
+              </ol>
+              <button className="outline-button wide" type="button" onClick={() => dismiss()}>
+                閉じる
+              </button>
+            </>
+          )}
 
-        {step === "needs-install" && (
-          <>
-            <h2 id="notify-title">まず、ホーム画面に追加します</h2>
-            <p>iPhoneでは、ホーム画面に追加したこのごろから通知を受け取れます。</p>
-            <button className="primary-button wide" type="button" onClick={openInstallGuide}>
-              追加のしかたを見る
-            </button>
-            <button className="text-button wide" type="button" onClick={close}>
-              あとで
-            </button>
-          </>
-        )}
+          {step === "needs-install" && (
+            <>
+              <h2 id="notify-title">まず、ホーム画面に追加します</h2>
+              <p>iPhoneでは、ホーム画面に追加したこのごろから通知を受け取れます。</p>
+              <button className="primary-button wide" type="button" onClick={() => dismiss(openInstallGuide)}>
+                追加のしかたを見る
+              </button>
+              <button className="outline-button wide" type="button" onClick={() => dismiss()}>
+                あとで
+              </button>
+            </>
+          )}
 
-        {step === "unsupported" && (
-          <>
-            <h2 id="notify-title">この端末では、LINEでお知らせします</h2>
-            <p>
-              {apple
-                ? "iPhoneのソフトウェアが古いため、アプリの通知を受け取れません。iOS 16.4以降にすると受け取れます。"
-                : "このブラウザでは、アプリの通知を受け取れません。"}
-            </p>
-            <button className="text-button wide" type="button" onClick={close}>
-              閉じる
-            </button>
-          </>
-        )}
-
+          {step === "unsupported" && (
+            <>
+              <h2 id="notify-title">この端末では、LINEでお知らせします</h2>
+              <p>
+                {apple
+                  ? "iPhoneのソフトウェアが古いため、アプリの通知を受け取れません。iOS 16.4以降にすると受け取れます。"
+                  : "このブラウザでは、アプリの通知を受け取れません。"}
+              </p>
+              <button className="outline-button wide" type="button" onClick={() => dismiss()}>
+                閉じる
+              </button>
+            </>
+          )}
+        </div>
         {error && (
           <p className="form-error" role="alert">
             {error}

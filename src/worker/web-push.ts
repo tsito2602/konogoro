@@ -133,7 +133,8 @@ export async function vapidAuthorization(endpoint: string, keys: VapidKeys, subj
   return `vapid t=${header}.${claims}.${base64UrlEncode(signature)}, k=${keys.publicKey}`;
 }
 
-export type PushMessage = { title: string; body: string; url: string; tag: string };
+/** badge はアイコンの右上に出す数（まだ見ていない思い出の数）。 */
+export type PushMessage = { title: string; body: string; url: string; tag: string; badge?: number };
 
 export type PushSend = (input: {
   subscription: PushSubscriptionKeys;

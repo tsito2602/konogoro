@@ -28,14 +28,21 @@ self.addEventListener("push", (event) => {
     message = {};
   }
   const title = typeof message.title === "string" ? message.title : "このごろ";
+  const tag = typeof message.tag === "string" ? message.tag : "konogoro";
   event.waitUntil(
-    self.registration.showNotification(title, {
-      body: typeof message.body === "string" ? message.body : "新しい思い出が届きました",
-      tag: typeof message.tag === "string" ? message.tag : "konogoro",
-      icon: "/android-chrome-192x192.png",
-      badge: "/android-chrome-192x192.png",
-      data: { url: typeof message.url === "string" && message.url.startsWith("/") ? message.url : "/" },
-    }),
+    // 開いている画面に「受け取った」と伝える。試しのお知らせが届いたかを、本人に聞かずに確かめられる。
+    clients
+      .matchAll({ type: "window", includeUncontrolled: true })
+      .then((windows) => windows.forEach((client) => client.postMessage({ type: "PUSH_RECEIVED", tag })))
+      .then(() =>
+        self.registration.showNotification(title, {
+          body: typeof message.body === "string" ? message.body : "新しい思い出が届きました",
+          tag,
+          icon: "/android-chrome-192x192.png",
+          badge: "/android-chrome-192x192.png",
+          data: { url: typeof message.url === "string" && message.url.startsWith("/") ? message.url : "/" },
+        }),
+      ),
   );
 });
 

@@ -2278,8 +2278,61 @@ textarea:focus {
 .notify-step > :nth-child(n + 4) {
   animation-delay: 120ms;
 }
-.notify-bell.testing svg,
-.notify-bell.check svg {
+.notify-guide .notify-step > .pwa-guide-symbol {
+  margin: 8px auto 16px;
+}
+.notify-bell.done {
+  color: #14833b;
+  background: #e7f6ec;
+}
+.notify-bell.missing {
+  color: var(--p-danger);
+  background: color-mix(in srgb, var(--p-danger) 12%, transparent);
+}
+/* 最初のお誘い：スマホの画面にお知らせが出ている絵。 */
+.notify-preview {
+  width: min(100%, 250px);
+  margin: 8px auto 18px;
+  padding: 26px 12px 18px;
+  border-radius: 26px;
+  background: linear-gradient(#a8c8e8, #f3d6a4);
+}
+.notify-preview > div {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 16px;
+  color: #111;
+  text-align: left;
+  background: rgb(246 246 248 / 94%);
+  box-shadow: 0 6px 20px -8px #0005;
+  animation: notify-drop 700ms 260ms cubic-bezier(0.34, 1.5, 0.64, 1) both;
+}
+.notify-preview img {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+}
+.notify-preview p {
+  margin: 0;
+  display: grid;
+  gap: 2px;
+}
+.notify-preview b {
+  font-size: 0.875rem;
+}
+.notify-preview small {
+  color: #555;
+  font-size: 0.8125rem;
+}
+@keyframes notify-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-24px) scale(0.96);
+  }
+}
+.notify-bell.waiting svg {
   transform-origin: 50% 8%;
   animation: notify-ring 1.2s ease-in-out infinite;
 }
@@ -2344,7 +2397,8 @@ textarea:focus {
   .notify-step,
   .notify-step > *,
   .notify-bell,
-  .notify-bell svg {
+  .notify-bell svg,
+  .notify-preview > div {
     animation: none !important;
   }
 }

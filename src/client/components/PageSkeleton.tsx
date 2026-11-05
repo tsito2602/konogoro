@@ -344,7 +344,11 @@ function skeletonContent(variant: SkeletonVariant, currentUser?: CurrentUser, pr
                 </div>
                 <div className="passport-stamps">{line("short")}</div>
               </div>
-              {settingsRows(3)}
+              <div className="notify-card skeleton-notify-card">
+                <span className="notify-card-icon skeleton-square" />
+                {line("short")}
+                {line("medium")}
+              </div>
             </>,
           )}
           {settingsSection(<div className="settings-theme" />)}

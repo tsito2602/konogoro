@@ -106,3 +106,24 @@ export async function syncPushSubscription(): Promise<void> {
   const subscription = await currentSubscription();
   if (subscription) await register(subscription, false);
 }
+
+/**
+ * 試しのお知らせを、この端末のアプリが受け取るまで待つ。受け取れば true、時間内に来なければ false。
+ * 受け取りは service worker が知らせてくる（public/service-worker.js の PUSH_RECEIVED）。
+ */
+export function waitForTestPush(timeoutMs = 12_000): Promise<boolean> {
+  if (!("serviceWorker" in navigator)) return Promise.resolve(false);
+  return new Promise((resolve) => {
+    const done = (received: boolean) => {
+      clearTimeout(timer);
+      navigator.serviceWorker.removeEventListener("message", onMessage);
+      resolve(received);
+    };
+    const onMessage = (event: MessageEvent) => {
+      const data = event.data as { type?: string; tag?: string } | null;
+      if (data?.type === "PUSH_RECEIVED" && data.tag === "test") done(true);
+    };
+    const timer = setTimeout(() => done(false), timeoutMs);
+    navigator.serviceWorker.addEventListener("message", onMessage);
+  });
+}

@@ -17,7 +17,7 @@ import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type Keyboa
 import type { CurrentUser } from "../../shared/types";
 import { installPromptStore } from "../install-prompt";
 import { appleMobileSupportsPush, isStandalone, readPushState, syncPushSubscription } from "../push";
-import { NotificationGuide, OPEN_NOTIFICATION_GUIDE_EVENT } from "./NotificationGuide";
+import { NotificationGuide, OPEN_NOTIFICATION_GUIDE_EVENT, type NotificationGuideMode } from "./NotificationGuide";
 
 export const OPEN_ONBOARDING_GUIDE_EVENT = "konogoro:open-onboarding-guide";
 export const OPEN_INSTALL_GUIDE_EVENT = "konogoro:open-install-guide";
@@ -87,6 +87,7 @@ export function PwaGuide({ user }: { user: CurrentUser }) {
   const [welcomeOpen, setWelcomeOpen] = useState(() => user.role === "viewer" && !stored(ONBOARDING_SEEN_KEY));
   const [installOpen, setInstallOpen] = useState(false);
   const [notifyOpen, setNotifyOpen] = useState(false);
+  const [notifyMode, setNotifyMode] = useState<NotificationGuideMode>("invite");
   const invited = useRef(false);
   const autoOpened = useRef(false);
   const publicKey = user.pushPublicKey ?? null;
@@ -97,7 +98,10 @@ export function PwaGuide({ user }: { user: CurrentUser }) {
   useEffect(() => {
     const showWelcome = () => setWelcomeOpen(true);
     const showInstall = () => setInstallOpen(true);
-    const showNotify = () => setNotifyOpen(true);
+    const showNotify = (event: Event) => {
+      setNotifyMode((event as CustomEvent<NotificationGuideMode>).detail ?? "invite");
+      setNotifyOpen(true);
+    };
     const markInstalled = () => {
       setInstalled(true);
       setInstallOpen(false);
@@ -131,6 +135,7 @@ export function PwaGuide({ user }: { user: CurrentUser }) {
         void readPushState().then((state) => {
           if (state !== "off") return;
           autoOpened.current = true;
+          setNotifyMode("invite");
           setNotifyOpen(true);
         });
       } else if (canReceiveAfterInstall(environment)) {
@@ -187,6 +192,7 @@ export function PwaGuide({ user }: { user: CurrentUser }) {
       {notifyOpen && publicKey && (
         <NotificationGuide
           publicKey={publicKey}
+          mode={notifyMode}
           close={closeNotify}
           openInstallGuide={() => {
             setNotifyOpen(false);

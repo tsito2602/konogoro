@@ -574,13 +574,13 @@ function installSteps(environment: PwaEnvironment): { title: string; body: strin
     return {
       title: "次から、すぐに開けます",
       body: "まずLINEからSafariで開き、ホーム画面へ追加します。",
-      steps: ["下の「ブラウザで開く」を押す", "Safari下部の共有ボタンを押す", "「ホーム画面に追加」→「追加」を押す"],
+      steps: ["下の「ブラウザで開く」を押す", "Safari下部の共有ボタン（なければ「…」）を押す", "「ホーム画面に追加」→「追加」を押す"],
     };
   if (environment === "ios-browser")
     return {
       title: "次から、すぐに開けます",
       body: "ホーム画面へ追加すると、写真を見るたびにLINEを探さずに済みます。",
-      steps: ["Safari下部の共有ボタンを押す", "「ホーム画面に追加」を選ぶ", "右上の「追加」を押す"],
+      steps: ["Safari下部の共有ボタン（なければ「…」）を押す", "「ホーム画面に追加」を選ぶ", "右上の「追加」を押す"],
     };
   if (environment === "android-line")
     return {

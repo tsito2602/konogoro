@@ -574,7 +574,11 @@ function installSteps(environment: PwaEnvironment): { title: string; body: strin
     return {
       title: "次から、すぐに開けます",
       body: "まずLINEからSafariで開き、ホーム画面へ追加します。",
-      steps: ["下の「ブラウザで開く」を押す", "Safari下部の共有ボタン（なければ「…」）を押す", "「ホーム画面に追加」→「追加」を押す"],
+      steps: [
+        "下の「ブラウザで開く」を押す",
+        "Safari下部の共有ボタン（なければ「…」）を押す",
+        "「ホーム画面に追加」→「追加」を押す",
+      ],
     };
   if (environment === "ios-browser")
     return {

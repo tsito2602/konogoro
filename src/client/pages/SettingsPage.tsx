@@ -1,5 +1,5 @@
 import { setReadingIdentity } from "../reading-context";
-import { BellOff, BookOpen, ChevronRight, Pencil, Smartphone, Users } from "lucide-react";
+import { Bell, BookOpen, ChevronRight, Pencil, Smartphone, Users } from "lucide-react";
 import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import packageInfo from "../../../package.json";
@@ -274,58 +274,55 @@ function NotificationCard({ user, onSaved }: { user: CurrentUser; onSaved: (user
   else if (channel === "line") where = "line";
   else where = "none";
 
-  const appIcon = (
-    <span className="notify-card-icon app" aria-hidden="true">
-      <img className="settings-app-icon-light" src="/icons/icon-light-192.png" alt="" />
-      <img className="settings-app-icon-dark" src="/icons/icon-dark-192.png" alt="" />
-    </span>
-  );
-  const lineIcon = (
-    <span className="notify-card-icon line" aria-hidden="true">
-      LINE
-    </span>
-  );
+  const whereText = {
+    app: appHere ? "このアプリに届きます" : "ほかのスマホのアプリに届きます",
+    line: "LINEに届きます",
+    stopped: "止まっています",
+    none: "届いていません",
+  }[where];
+  const action =
+    where === "app" && appHere
+      ? { label: "試しにお知らせを送る", note: "このスマホに1通届きます", mode: "test" as const }
+      : (where === "line" || where === "none" || (where === "app" && !appHere)) && canUseApp
+        ? {
+            label: where === "app" ? "このスマホでも受け取る" : "このアプリで受け取る",
+            note: "LINEの代わりに、このアプリへ届きます",
+            mode: "invite" as const,
+          }
+        : null;
 
   return (
     <>
-      <div className={`notify-card ${where}`} aria-live="polite">
-        {where === "app" && appIcon}
-        {where === "line" && lineIcon}
-        {(where === "stopped" || where === "none") && (
-          <span className="notify-card-icon off" aria-hidden="true">
-            <BellOff />
-          </span>
-        )}
-        <small>新しい写真のお知らせは</small>
-        <strong>
-          {where === "app" && (appHere ? "このアプリに届きます" : "ほかのスマホのアプリに届きます")}
-          {where === "line" && "LINEに届きます"}
-          {where === "stopped" && "止まっています"}
-          {where === "none" && "届いていません"}
-        </strong>
-        {where === "line" && !canUseApp && <p>この端末では、LINEでお知らせします。このままで大丈夫です。</p>}
-        {where === "none" && !canUseApp && <p>LINEで「このごろ」を友だち追加すると届きます。</p>}
-
-        {where === "app" && appHere && (
-          <button className="primary-button wide" type="button" onClick={() => openNotificationGuide("test")}>
-            試しにお知らせを送る
-          </button>
-        )}
-        {(where === "line" || where === "none" || (where === "app" && !appHere)) && canUseApp && (
-          <button className="primary-button wide" type="button" onClick={() => openNotificationGuide("invite")}>
-            {where === "app" ? "このスマホでも受け取る" : "このアプリで受け取る"}
-          </button>
-        )}
-        {where === "stopped" && (
-          <button className="primary-button wide" type="button" disabled={busy} onClick={() => void setEnabled(true)}>
-            お知らせを再開する
+      <div className="settings-group">
+        <label className="settings-row settings-switch-row">
+          <Bell className="settings-row-icon" aria-hidden />
+          <Row title="新しい写真のお知らせ" note={whereText} />
+          <input
+            className="settings-switch-input"
+            type="checkbox"
+            role="switch"
+            checked={enabled}
+            disabled={busy}
+            onChange={(event) => void setEnabled(event.target.checked)}
+          />
+          <span className="settings-switch" aria-hidden="true" />
+        </label>
+        {enabled && action && (
+          <button className="settings-row" type="button" onClick={() => openNotificationGuide(action.mode)}>
+            <Row
+              icon={<Smartphone className="settings-row-icon" aria-hidden />}
+              title={action.label}
+              note={action.note}
+              end={chevron}
+            />
           </button>
         )}
       </div>
-      {enabled && (
-        <button className="notify-card-stop" type="button" disabled={busy} onClick={() => void setEnabled(false)}>
-          お知らせを止める
-        </button>
+      {enabled && where === "line" && !canUseApp && (
+        <p className="settings-note">この端末では、LINEでお知らせします。このままで大丈夫です。</p>
+      )}
+      {enabled && where === "none" && !canUseApp && (
+        <p className="settings-note">LINEで「このごろ」を友だち追加すると届きます。</p>
       )}
     </>
   );
@@ -510,6 +507,10 @@ export function SettingsPage() {
             <section className="settings-section">
               <h2>アカウント</h2>
               <Passport user={user} onSaved={setUser} />
+            </section>
+
+            <section className="settings-section">
+              <h2>お知らせ</h2>
               <NotificationCard user={user} onSaved={setUser} />
             </section>
 

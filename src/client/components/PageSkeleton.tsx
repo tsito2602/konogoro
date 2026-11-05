@@ -335,22 +335,16 @@ function skeletonContent(variant: SkeletonVariant, currentUser?: CurrentUser, pr
       return (
         <div className="settings-page skeleton-settings-layout">
           {settingsSection(
-            <>
-              <div className="passport">
-                <span className="passport-photo skeleton-circle" />
-                <div className="passport-fields">
-                  {line("short")}
-                  {line("medium")}
-                </div>
-                <div className="passport-stamps">{line("short")}</div>
-              </div>
-              <div className="notify-card skeleton-notify-card">
-                <span className="notify-card-icon skeleton-square" />
+            <div className="passport">
+              <span className="passport-photo skeleton-circle" />
+              <div className="passport-fields">
                 {line("short")}
                 {line("medium")}
               </div>
-            </>,
+              <div className="passport-stamps">{line("short")}</div>
+            </div>,
           )}
+          {settingsSection(settingsRows(2))}
           {settingsSection(<div className="settings-theme" />)}
           {currentUser && canInviteFamily(currentUser) && settingsSection(settingsRows(4), "skeleton-family-section")}
           {settingsSection(settingsRows(3))}

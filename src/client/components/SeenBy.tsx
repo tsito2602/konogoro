@@ -11,7 +11,7 @@ const BOTTOM_SAFE = 104;
 const GAP = 8;
 const WIDTH = 264;
 
-type Place = { left: number; top: number; maxHeight: number; below: boolean; originX: number };
+type Place = { left: number; top: number; maxHeight: number; originX: number };
 
 export function SeenBy({ users }: { users: SeenUser[] }) {
   const [open, setOpen] = useState(false);
@@ -34,39 +34,37 @@ export function SeenBy({ users }: { users: SeenUser[] }) {
     closing.current = true;
     if (RM() || !el.animate) return finish();
     for (const row of el.querySelectorAll(".seen-panel-row")) row.getAnimations().forEach((a) => a.cancel());
-    const below = el.dataset.below === "true";
     void spring(
       el,
       [
         { transform: "none", opacity: 1 },
-        { transform: `translateY(${below ? -10 : 10}px) scale(.4)`, opacity: 0 },
+        { transform: `translateY(10px) scale(.4)`, opacity: 0 },
       ],
       { k: 420, d: 24 },
       { fill: "forwards" },
     ).then(finish);
   }, [finish]);
 
-  // 開く場所は目のアイコンの上。上に入らないときは下に出す。
+  // 指で隠れないよう、いつも目のアイコンの上に開く。上に全員が入らないときは、
+  // ページを下へずらしてアイコンを下げ（ドックにかからない所まで）、それでも足りなければ中でスクロールする。
   useLayoutEffect(() => {
     if (!open || !button.current) return;
-    const rect = button.current.getBoundingClientRect();
     const vw = document.documentElement.clientWidth;
     const vh = window.innerHeight;
+    const want = Math.min(92 + users.length * 48, Math.round(vh * 0.6));
+    let rect = button.current.getBoundingClientRect();
+    const short = want - (rect.top - GAP - TOP_SAFE);
+    const shift = Math.min(short, window.scrollY, vh - BOTTOM_SAFE - rect.bottom);
+    if (shift > 0) {
+      window.scrollBy({ top: -shift, behavior: "instant" });
+      rect = button.current.getBoundingClientRect();
+    }
     const width = Math.min(WIDTH, vw - EDGE * 2);
     const left = Math.min(Math.max(rect.right - width, EDGE), vw - width - EDGE);
     const above = rect.top - GAP - TOP_SAFE;
-    const under = vh - BOTTOM_SAFE - rect.bottom - GAP;
-    const want = 92 + users.length * 48;
-    // 全員が入るほうを選ぶ。どちらにも入らないときは広いほうに出して中でスクロールする。
-    const below = above < want && (under >= want || under > above);
-    const maxHeight = Math.max(below ? under : above, 140);
-    setPlace({
-      left,
-      top: below ? rect.bottom + GAP : rect.top - GAP,
-      maxHeight,
-      below,
-      originX: rect.left + rect.width / 2 - left,
-    });
+    // ページの先頭でずらせないときは、上のヘッダーに重ねてでも上に出す。
+    const maxHeight = above >= Math.min(want, 160) ? above : Math.max(rect.top - GAP - EDGE, 120);
+    setPlace({ left, top: rect.top - GAP, maxHeight, originX: rect.left + rect.width / 2 - left });
   }, [open, users.length]);
 
   // 目のアイコンからふくらんで出て、人の行が下から順に上がる。目は一度まばたきする。
@@ -76,7 +74,7 @@ export function SeenBy({ users }: { users: SeenUser[] }) {
     void spring(
       el,
       [
-        { transform: `translateY(${place.below ? -12 : 12}px) scale(.3)`, opacity: 0 },
+        { transform: `translateY(12px) scale(.3)`, opacity: 0 },
         { opacity: 1, offset: 0.25 },
         { transform: "none", opacity: 1 },
       ],
@@ -157,15 +155,14 @@ export function SeenBy({ users }: { users: SeenUser[] }) {
             role="dialog"
             aria-label={`見た人 ${users.length}人`}
             className="seen-panel"
-            data-below={place?.below ? "true" : "false"}
             style={
               place
                 ? {
                     left: place.left,
                     top: place.top,
                     maxHeight: place.maxHeight,
-                    transformOrigin: `${place.originX}px ${place.below ? "0" : "100%"}`,
-                    translate: place.below ? undefined : "0 -100%",
+                    transformOrigin: `${place.originX}px 100%`,
+                    translate: "0 -100%",
                   }
                 : { visibility: "hidden" }
             }

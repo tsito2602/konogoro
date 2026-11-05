@@ -237,7 +237,7 @@ app.get("/me", async (c) => {
   const session = getCookie(c, "family_session");
   if (session && (await refreshSession(c.env.DB, session))) setSessionCookie(c, session);
   const profile = await c.env.DB.prepare(
-    `SELECT u.avatar_url, u.line_user_id, u.line_friend_enabled, u.notification_enabled,
+    `SELECT u.avatar_url, u.line_user_id, u.line_friend_enabled, u.notification_enabled, u.onboarding_seen_at,
        ${notificationChannelSql} AS notification_channel
      FROM users u WHERE u.id = ?`,
   )
@@ -247,10 +247,12 @@ app.get("/me", async (c) => {
       line_user_id: string | null;
       line_friend_enabled: number;
       notification_enabled: number;
+      onboarding_seen_at: string | null;
       notification_channel: NotificationChannel;
     }>();
   return c.json({
     ...c.var.currentUser,
+    onboardingSeen: Boolean(profile?.onboarding_seen_at),
     avatarUrl: profile?.avatar_url ?? null,
     lineConnected: Boolean(profile?.line_user_id),
     lineFriend: Boolean(profile?.line_friend_enabled),
@@ -295,11 +297,12 @@ app.patch("/me", async (c) => {
     .run();
   const user = await c.env.DB.prepare(
     `SELECT u.id, u.display_name, u.role, u.avatar_url, u.line_user_id, u.line_friend_enabled, u.notification_enabled,
-       ${notificationChannelSql} AS notification_channel
+       u.onboarding_seen_at, ${notificationChannelSql} AS notification_channel
      FROM users u WHERE u.id = ?`,
   )
     .bind(c.var.currentUser.id)
     .first<{
+      onboarding_seen_at: string | null;
       id: string;
       display_name: string;
       role: User["role"];
@@ -319,9 +322,18 @@ app.patch("/me", async (c) => {
     lineFriend: Boolean(user.line_friend_enabled),
     notificationEnabled: Boolean(user.notification_enabled),
     notificationChannel: user.notification_channel,
+    onboardingSeen: Boolean(user.onboarding_seen_at),
     pushPublicKey: parseVapidKey(c.env.VAPID_KEY)?.publicKey ?? null,
     isStaging: isStaging(c),
   });
+});
+
+// 使い方の紹介を見たことを覚える。iPhoneではSafariとホーム画面のアプリで端末の保存が分かれるので、サーバーに持つ。
+app.post("/me/onboarding-seen", async (c) => {
+  await c.env.DB.prepare("UPDATE users SET onboarding_seen_at = COALESCE(onboarding_seen_at, ?) WHERE id = ?")
+    .bind(new Date().toISOString(), c.var.currentUser.id)
+    .run();
+  return c.body(null, 204);
 });
 
 app.get("/auth/line", async (c) => {

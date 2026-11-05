@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type KeyboardEvent } from "react";
 import type { CurrentUser } from "../../shared/types";
+import { api } from "../api";
 import { installPromptStore } from "../install-prompt";
 import { appleMobileSupportsPush, isStandalone, readPushState, syncPushSubscription } from "../push";
 import { NotificationGuide, OPEN_NOTIFICATION_GUIDE_EVENT, type NotificationGuideMode } from "./NotificationGuide";
@@ -60,6 +61,10 @@ function remember(key: string) {
   }
 }
 
+function markOnboardingSeen() {
+  void api<void>("/me/onboarding-seen", { method: "POST" }).catch(() => undefined);
+}
+
 function inviteSnoozed(): boolean {
   try {
     const at = Number(window.localStorage.getItem(PUSH_INVITE_SNOOZED_KEY));
@@ -84,7 +89,8 @@ function canReceiveAfterInstall(environment: PwaEnvironment): boolean {
 }
 
 export function PwaGuide({ user }: { user: CurrentUser }) {
-  const [welcomeOpen, setWelcomeOpen] = useState(() => user.role === "viewer" && !stored(ONBOARDING_SEEN_KEY));
+  const seenHere = stored(ONBOARDING_SEEN_KEY);
+  const [welcomeOpen, setWelcomeOpen] = useState(() => user.role === "viewer" && !user.onboardingSeen && !seenHere);
   const [installOpen, setInstallOpen] = useState(false);
   const [notifyOpen, setNotifyOpen] = useState(false);
   const [notifyMode, setNotifyMode] = useState<NotificationGuideMode>("invite");
@@ -156,8 +162,14 @@ export function PwaGuide({ user }: { user: CurrentUser }) {
     setNotifyOpen(false);
   };
 
+  // この端末で前に見ていれば、ほかの端末やホーム画面のアプリでも出さないようにサーバーへ伝える。
+  useEffect(() => {
+    if (seenHere && !user.onboardingSeen) markOnboardingSeen();
+  }, [seenHere, user.onboardingSeen]);
+
   const closeWelcome = () => {
     remember(ONBOARDING_SEEN_KEY);
+    markOnboardingSeen();
     setWelcomeOpen(false);
   };
 

@@ -1,5 +1,5 @@
 import { EventDraftPreview } from "../components/EventDraftPreview";
-import { Plus, Video } from "lucide-react";
+import { Plus, Trash2, Video } from "lucide-react";
 import { useCallback, useEffect, useState, useRef, type FormEvent } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import type { EventCoverMedia, EventDetail } from "../../shared/types";
@@ -9,6 +9,9 @@ import { PageHeader } from "../components/PageHeader";
 import { PageSkeleton } from "../components/PageSkeleton";
 import { useToast } from "../components/Toast";
 import { SceneEditorList } from "../components/SceneEditorList";
+import { PageDock } from "../components/ContextDock";
+import { mainDockItems } from "../components/AppLayout";
+import { DockGroup } from "../cartoon/cartoon-dock";
 
 type EditableScene = { key: string; id?: string; title: string };
 
@@ -59,18 +62,41 @@ export function EventEditPage() {
       .then(([event, cover]) => applyDetail(event, cover))
       .catch((reason: Error) => setError(reason.message));
   }, [eventId]);
+  // スマホでは戻る・変更を保存・削除をボトムナビに置く（投稿を編集画面と同じ並び）。
+  const dock = (save?: { disabled: boolean; label: string }, onDelete?: () => void, busy = false) => (
+    <PageDock items={mainDockItems} identity="event-edit" label="イベントの編集" fallback={`/events/${eventId}`}>
+      <DockGroup slot="m" tone="ink" stretch>
+        <button type="submit" form="event-edit-form" disabled={save?.disabled ?? true}>
+          {save?.label ?? "変更を保存"}
+        </button>
+      </DockGroup>
+      <DockGroup slot="r">
+        <button
+          type="button"
+          className="danger"
+          aria-label="イベントを削除"
+          disabled={!onDelete || busy}
+          onClick={onDelete}
+        >
+          <Trash2 />
+        </button>
+      </DockGroup>
+    </PageDock>
+  );
   if (!detail && !error)
     return (
       <>
-        <PageHeader title="イベントを編集" back />
+        <PageHeader title="イベントを編集" back className="dock-owned-header" />
         <PageSkeleton variant="event-edit" />
+        {dock()}
       </>
     );
   if (!detail)
     return (
       <>
-        <PageHeader title="イベントを編集" back />
+        <PageHeader title="イベントを編集" back className="dock-owned-header" />
         <ErrorState message={error} retry={() => void load()} />
+        {dock()}
       </>
     );
 
@@ -139,7 +165,7 @@ export function EventEditPage() {
 
   return (
     <>
-      <PageHeader title="イベントを編集" back />
+      <PageHeader title="イベントを編集" back className="dock-owned-header" />
       <main className={`form-page page-content event-edit${hasChanges ? " has-save-bar" : ""}`}>
         <EventDraftPreview
           title={title}
@@ -351,7 +377,7 @@ export function EventEditPage() {
             {error}
           </p>
         )}
-        <div className={`change-save-bar${hasChanges ? " visible" : ""}`} aria-hidden={!hasChanges}>
+        <div className={`change-save-bar dock-owned-action${hasChanges ? " visible" : ""}`} aria-hidden={!hasChanges}>
           <button
             className="primary-button wide"
             type="submit"
@@ -361,7 +387,7 @@ export function EventEditPage() {
             {saving ? "保存中…" : "変更を保存"}
           </button>
         </div>
-        <section className="management-section danger-zone">
+        <section className="management-section danger-zone dock-owned-action">
           <h2>イベントを削除</h2>
           <p>投稿やメディアは削除されず、イベントとの関連だけが解除される。</p>
           <button className="danger-button" type="button" onClick={() => void deleteEvent()} disabled={saving}>
@@ -369,6 +395,14 @@ export function EventEditPage() {
           </button>
         </section>
       </main>
+      {dock(
+        {
+          disabled: saving || !hasChanges || !title.trim() || scenes.some((scene) => !scene.title.trim()),
+          label: saving ? "保存中…" : "変更を保存",
+        },
+        () => void deleteEvent(),
+        saving,
+      )}
     </>
   );
 }

@@ -48,23 +48,6 @@
     letter-spacing: 0;
     white-space: nowrap;
   }
-  /* ドックと ＋ の後ろで画面がふわっと消える（cartoon-kit の dock.css と同じ）。 */
-  .app-shell:has(> .main-dock-host)::after {
-    content: "";
-    position: fixed;
-    z-index: 23;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    height: calc(var(--dock-height) + var(--dock-safe-bottom) + 22px + 58px + 16px);
-    background: linear-gradient(
-      to bottom,
-      color-mix(in srgb, var(--p-paper) 0%, transparent) 0%,
-      color-mix(in srgb, var(--p-paper) 55%, transparent) 45%,
-      color-mix(in srgb, var(--p-paper) 92%, transparent) 100%
-    );
-    pointer-events: none;
-  }
 }
 
 /* 更新のお知らせ（components/UpdateNotice.tsx）：kondo と同じく、ドックの 12px 上に浮かぶ黒い帯。 */
@@ -227,5 +210,158 @@ body:has(.fuse-add-overlay) .floating-add-button {
 @media (prefers-reduced-motion: reduce) {
   .floating-add-button {
     transition: none;
+  }
+}
+
+/* 投稿ページのドック（pages/PostDetailPage.tsx）。ダイアログの上に出すため投稿ページが自分で持つが、
+   画面のドックの形を引き継ぐので1つのドックが形を変えるように見える。
+   左＝戻る、中央＝コメントする（墨色の島）、右＝…。書いているあいだは中央の送信ボタンだけになる。 */
+@media (max-width: 1023px) {
+  .main-dock-host.post-dock {
+    z-index: 52;
+    bottom: var(--keyboard-inset, 0px);
+    transition: bottom 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+}
+.cdock-group.cdock-center {
+  left: 0;
+  right: 0;
+  width: max-content;
+  margin: 0 auto;
+}
+.cdock-group.cdock-center > :is(button, a) {
+  gap: 7px;
+  padding: 0 24px 0 20px;
+}
+.cdock-group.cdock-send > button {
+  min-width: 132px;
+  padding: 0 28px;
+  letter-spacing: 0.1em;
+}
+@media (prefers-reduced-motion: reduce) {
+  .main-dock-host.post-dock {
+    transition: none;
+  }
+}
+
+/* 投稿を編集画面のドック（pages/PostEditPage.tsx）。左＝戻る、中央＝変更を保存（墨色の島）、右＝削除。
+   投稿ページのドック（戻る・コメントする・編集）から形を変えて続く。PC ではフォームの下のボタンを使う。 */
+.post-edit-actions {
+  display: grid;
+  gap: 10px;
+}
+.post-edit-actions .danger-button.wide {
+  width: 100%;
+  min-height: 50px;
+  justify-content: center;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+}
+.post-edit-actions .danger-button.wide svg {
+  width: 18px;
+}
+@media (max-width: 1023px) {
+  .post-edit-actions,
+  .post-edit-screen > .page-header .header-side > .icon-button {
+    display: none;
+  }
+  .main-dock-host.edit-dock {
+    z-index: 40;
+  }
+}
+
+/* 戻ると編集をボトムナビに置く画面（components/ContextDock.tsx）は、スマホではヘッダーの両脇を出さない。 */
+@media (max-width: 1023px) {
+  .dock-owned-header .header-side > * {
+    display: none;
+  }
+}
+/* その画面の操作をボトムナビに移した画面では、スマホのページ内の同じボタンを出さない。 */
+@media (max-width: 1023px) {
+  .dock-owned-action,
+  .change-save-bar.dock-owned-action {
+    display: none !important;
+  }
+}
+
+/* スマホでは各ページの上のヘッダーを出さない（戻る・保存などはボトムナビ、見出しは読み上げにだけ残す）。
+   イベント一覧の絞り込みだけは右上に固定して出す。 */
+.event-filter-floating {
+  display: none;
+}
+@media (max-width: 1023px) {
+  /* ヘッダーの場所は、何も描かない余白として残す。iOS は画面の上端にぼかしをかけるので、
+     スクロールしていない状態の中身はその下から始める（スクロールして上端へ入った分はぼけてよい）。 */
+  :root .page-header.page-header {
+    position: relative;
+    height: calc(env(safe-area-inset-top) + 24px);
+    min-height: 0;
+    padding: 0;
+    background: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  :root .page-header::after {
+    display: none;
+  }
+  /* タイムラインは年月見出しに上の余白があり、ぼかしにかからないので詰める。 */
+  :root .page-header.page-header:has(+ .timeline-layout) {
+    height: env(safe-area-inset-top);
+  }
+  :root .page-header .page-header-inner {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    min-height: 0;
+    padding: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .event-filter-in-header {
+    display: none;
+  }
+  /* 設定とイベントの最初の見出しは、お知らせの最初の見出しと同じ高さから始める（一覧の上余白は見出しの上余白に任せる）。 */
+  :root .settings-page.page-content,
+  :root .event-list.page-content {
+    padding-top: 0;
+  }
+  /* お知らせの「最後に見た時間」は画面の端まで広げた帯の中にあるので、見出しを設定やイベントの見出しと同じ左端（20px）に、
+     並んだ人をお知らせの行と同じ左端（14px）に寄せる。 */
+  :root .activity-page .member-last-viewed > h2 {
+    margin-inline: 20px;
+  }
+  .member-last-viewed .member-last-viewed-list {
+    padding-inline: 14px;
+  }
+  /* ヘッダーは余白だけになったので、その下に貼り付けていたものは画面の上端へ付ける。 */
+  .timeline-month-heading,
+  .event-cover,
+  .media-processing-status {
+    top: 0;
+  }
+  :root .icon-button.event-filter-floating {
+    position: fixed;
+    z-index: 25;
+    /* 上端を最初の見出し（これまで など）の上端にそろえる：上の余白24px＋見出しの上20px＋行の高さと文字の差の半分4px。 */
+    top: calc(env(safe-area-inset-top) + 48px);
+    right: max(16px, env(safe-area-inset-right));
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    color: var(--p-ink);
+    background: var(--p-soft);
+    box-shadow: 0 4px 14px rgb(0 0 0 / 0.12);
+  }
+  :root .icon-button.event-filter-floating svg {
+    width: 20px;
+    height: 20px;
+  }
+  :root .icon-button.event-filter-floating.active {
+    color: var(--accent-ink);
   }
 }

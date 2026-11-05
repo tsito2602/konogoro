@@ -10,7 +10,9 @@ export function useMeasuredHeight(property: `--${string}`) {
       const measure = () => parent.style.setProperty(property, `${element.getBoundingClientRect().height}px`);
       measure();
       const observer = new ResizeObserver(measure);
-      observer.observe(element);
+      // border-box で見る。ドックの高さは下の安全領域の padding を含むので、iPhone のホーム画面アプリで
+      // 起動後に安全領域が変わっても content-box は変わらず、古い高さのままになっていた。
+      observer.observe(element, { box: "border-box" });
       return () => {
         observer.disconnect();
         if (previous) parent.style.setProperty(property, previous);

@@ -36,7 +36,9 @@ describe("buildNotificationText", () => {
         videoCount: 2,
         appOrigin: "https://family.example.com/",
       }),
-    ).toBe("新しい思い出が届きました。投稿3件（写真15枚・動画2本）\nまとめて見る：https://family.example.com/unread");
+    ).toBe(
+      "新しい思い出が届きました。投稿3件（写真15枚・動画2本）\nまとめて見る：https://family.example.com/unread?openExternalBrowser=1",
+    );
   });
 
   it("存在するmedia種別だけを表示する", () => {
@@ -47,7 +49,9 @@ describe("buildNotificationText", () => {
         videoCount: 1,
         appOrigin: "https://family.example.com",
       }),
-    ).toBe("新しい思い出が届きました。投稿1件（動画1本）\nまとめて見る：https://family.example.com/unread");
+    ).toBe(
+      "新しい思い出が届きました。投稿1件（動画1本）\nまとめて見る：https://family.example.com/unread?openExternalBrowser=1",
+    );
   });
 
   it("mediaがない場合も投稿件数と新着閲覧リンクだけを表示する", () => {
@@ -58,7 +62,7 @@ describe("buildNotificationText", () => {
         videoCount: 0,
         appOrigin: "https://family.example.com",
       }),
-    ).toBe("新しい思い出が届きました。投稿1件\nまとめて見る：https://family.example.com/unread");
+    ).toBe("新しい思い出が届きました。投稿1件\nまとめて見る：https://family.example.com/unread?openExternalBrowser=1");
   });
 });
 
@@ -135,7 +139,7 @@ describe("sendLineActionNotification", () => {
               {
                 type: "uri",
                 label: "確認する",
-                uri: "https://family.example.com/settings/family?section=requests",
+                uri: "https://family.example.com/settings/family?section=requests&openExternalBrowser=1",
               },
             ],
           },

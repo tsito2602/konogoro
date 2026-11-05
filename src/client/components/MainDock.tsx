@@ -1,7 +1,13 @@
-import { useLayoutEffect, useRef, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, type ReactNode } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { Live, RM } from "../cartoon/cartoon";
 import { CartoonDock } from "../cartoon/cartoon-dock";
+
+/** The page the tabs last stood on (the post page closes back onto it). */
+let lastTabsPath = "/";
+
+/** The page under a post page (its dock is the one the post page closes back into). */
+export const lastBasePath = () => lastTabsPath;
 
 export type MainDockItem = { to: string; label: string; icon: ReactNode; end?: boolean };
 
@@ -18,6 +24,7 @@ function edges(element: HTMLElement) {
     L: new Live(0, (value) => ((left = value), draw())),
     R: new Live(0, (value) => ((right = value), draw())),
     timer: 0 as ReturnType<typeof setTimeout> | 0,
+    indicator: element,
   };
 }
 type Edges = ReturnType<typeof edges>;
@@ -39,15 +46,34 @@ function isActive(item: MainDockItem, pathname: string) {
   return pathname === item.to || pathname.startsWith(`${item.to}/`);
 }
 
-/** スマホ・タブレットのボトムナビ：cartoon-kit の親指ドック。家族の誰でも分かるよう、アイコンの下にページ名を出す。 */
+/** スマホ・タブレットのボトムナビ：cartoon-kit の親指ドック。家族の誰でも分かるよう、アイコンの下にページ名を出す。
+    children を渡すと、タブの代わりにその画面の操作（DockGroup）を島にする。
+    投稿ページはモーダルの中に自分のドックを置くが、島は前のドックの形から変形して続く（CartoonDock の carry）。 */
 export function MainDock({
   items,
   measureRef,
+  className,
+  label = "メインナビゲーション",
+  identity = "context",
+  children,
 }: {
   items: readonly MainDockItem[];
   measureRef?: (element: HTMLElement | null) => void;
+  className?: string;
+  label?: string;
+  /** Which screen's controls these are; another screen's controls fade over while the islands morph. */
+  identity?: string;
+  children?: ReactNode;
 }) {
-  const { pathname } = useLocation();
+  const { pathname: current } = useLocation();
+  const showTabs = children == null;
+  // A page with its own controls (the post page) turns back into the tabs as it closes: light the
+  // tab of the page it returns to, so the next dock takes the same shape over without the pill
+  // appearing afterwards.
+  useEffect(() => {
+    if (!className) lastTabsPath = current;
+  }, [className, current]);
+  const pathname = showTabs && className ? lastTabsPath : current;
   const active = items.findIndex((item) => isActive(item, pathname));
   const group = useRef<HTMLDivElement>(null);
   const pill = useRef<HTMLSpanElement>(null);
@@ -58,7 +84,7 @@ export function MainDock({
     const node = group.current;
     const indicator = pill.current;
     if (!node || !indicator) return;
-    springs.current ??= edges(indicator);
+    if (springs.current?.indicator !== indicator) springs.current = edges(indicator);
     const place = (animate: boolean) => {
       const link = node.querySelectorAll<HTMLElement>("a")[active];
       if (!link) {
@@ -83,28 +109,30 @@ export function MainDock({
           });
     observer?.observe(node);
     return () => observer?.disconnect();
-  }, [active]);
+  }, [active, showTabs]);
 
   return (
-    <nav ref={measureRef} className="main-dock-host" aria-label="メインナビゲーション">
+    <nav ref={measureRef} className={`main-dock-host${className ? ` ${className}` : ""}`} aria-label={label}>
       <div className="thumb-dock">
-        <CartoonDock identity="tabs">
-          <div ref={group} className="cdock-group cdock-tabs" data-slot="tabs" data-full="">
-            <span ref={pill} className="cdock-ind" aria-hidden="true" />
-            {items.map((item, index) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.end}
-                data-on={index === active}
-                draggable={false}
-                onClick={() => window.scrollTo(0, 0)}
-              >
-                {item.icon}
-                <span className="main-dock-label">{item.label}</span>
-              </NavLink>
-            ))}
-          </div>
+        <CartoonDock identity={showTabs ? "tabs" : identity}>
+          {children ?? (
+            <div ref={group} className="cdock-group cdock-tabs" data-slot="tabs" data-full="">
+              <span ref={pill} className="cdock-ind" aria-hidden="true" />
+              {items.map((item, index) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  end={item.end}
+                  data-on={index === active}
+                  draggable={false}
+                  onClick={() => window.scrollTo(0, 0)}
+                >
+                  {item.icon}
+                  <span className="main-dock-label">{item.label}</span>
+                </NavLink>
+              ))}
+            </div>
+          )}
         </CartoonDock>
       </div>
     </nav>

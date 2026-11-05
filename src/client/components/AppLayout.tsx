@@ -1,3 +1,4 @@
+import { syncAppBadge } from "../app-badge";
 import { PostModalContext, modalTransform } from "../post-modal";
 import { useMeasuredHeight } from "../hooks/useMeasuredHeight";
 import { Bell, CalendarDays, GalleryVerticalEnd, Images, Plus, Settings } from "lucide-react";
@@ -12,10 +13,12 @@ import { PwaGuide } from "./PwaGuide";
 import { WelcomePhotos } from "./WelcomePhotos";
 import { AddMenu } from "./AddMenu";
 import { FuseAddMenu } from "./FuseAddMenu";
+import { handOffInitialBoot } from "../boot-handoff";
 import { remainingBootMotion } from "../boot-motion";
 import { BootSymbol } from "./BootSymbol";
 import { ToastProvider } from "./Toast";
 import { MainDock } from "./MainDock";
+import { contextDock, hasOwnDock, isTopLevel } from "./ContextDock";
 import { UpdateNotice } from "./UpdateNotice";
 import { useRouteEnter } from "../route-motion";
 import { usePageJelly } from "../jelly-scroll";
@@ -27,6 +30,14 @@ export const mainNavigationItems = [
   { to: "/album", label: "アルバム", description: "写真と動画を撮影時期から探す", icon: GalleryVerticalEnd },
   { to: "/settings", label: "設定", description: "表示や通知などを変更する", icon: Settings },
 ] as const;
+
+/** ドックに渡すタブ。投稿ページのドックも同じタブへ形を戻すので共有する。 */
+export const mainDockItems = mainNavigationItems.map(({ icon: Icon, ...item }) => ({
+  to: item.to,
+  label: item.label,
+  end: "end" in item && item.end,
+  icon: <Icon />,
+}));
 
 const viewerPattern = /^\/posts\/[^/]+\/media\//;
 export function outletKey(pathname: string, locationKey: string): string {
@@ -96,6 +107,9 @@ export function AppLayout() {
     postPageNavigation && showPostPage && !!backgroundContent && backgroundSnapshot.routeIdentity !== routeIdentity;
   const modal = showPostPage && retainBackground;
   const hideNavigation = viewerPattern.test(pathname);
+  // 投稿ページと投稿を編集画面は自分のドックを持つ（投稿ページはダイアログの上に出すため、編集画面はフォームの操作を置くため）。
+  // 前のドックの形を引き継ぐので、画面のドックは1つに見える。
+  const postDock = hasOwnDock(pathname);
   usePageJelly(Boolean(currentUser) && !hideNavigation);
   const viewerEntryRef = useRef<{ path: string; rect: DOMRect } | null>(null);
   useLayoutEffect(() => {
@@ -115,13 +129,8 @@ export function AppLayout() {
     return () => animation.cancel();
   }, [pathname]);
   const addPostPath = postCreatePath(pathname);
-  const hideAddButton =
-    pathname === "/settings/design" ||
-    /^\/posts\/[^/]+$/.test(pathname) ||
-    pathname === "/posts/new" ||
-    /^\/posts\/[^/]+\/edit$/.test(pathname) ||
-    pathname === "/events/new" ||
-    /^\/events\/[^/]+\/edit$/.test(pathname);
+  // ＋は一番上の階層とイベント詳細（そのイベントへ追加）だけに出す。
+  const hideAddButton = !(isTopLevel(pathname) || /^\/events\/(?!new$)[^/]+$/.test(pathname));
 
   const loadAuth = useCallback(() => {
     void api<CurrentUser>("/me")
@@ -143,8 +152,11 @@ export function AppLayout() {
   useEffect(() => {
     if (invite) return;
     loadAuth();
+    syncAppBadge();
+    // 戻ってきたときと離れるときに、アイコンの数をまだ見ていない思い出の数に合わせ直す。
     const resumeAuth = () => {
       if (document.visibilityState === "visible") loadAuth();
+      syncAppBadge();
     };
     document.addEventListener("visibilitychange", resumeAuth);
     return () => document.removeEventListener("visibilitychange", resumeAuth);
@@ -154,7 +166,10 @@ export function AppLayout() {
   useLayoutEffect(() => {
     // Keep the original SVG mounted so React/auth updates cannot restart its motion.
     const initialBoot = document.getElementById("initial-boot");
-    if (initialBoot) initialBoot.hidden = !showingBoot;
+    if (!initialBoot) return;
+    if (showingBoot) initialBoot.hidden = false;
+    // The sun drops into the dock once the app has painted below the boot screen.
+    else handOffInitialBoot(initialBoot);
   }, [showingBoot]);
 
   if (invite) return <div className="app-shell">{routedContent}</div>;
@@ -168,6 +183,7 @@ export function AppLayout() {
   if (!authenticated) return <LoginScreen returnTo={`${location.pathname}${location.search}${location.hash}`} />;
   if (!currentUser) return <BootScreen />;
   if (!canAccessPath(currentUser, pathname)) return <Navigate to="/" replace />;
+  const baseDock = contextDock(pathname, currentUser);
 
   return (
     <ToastProvider>
@@ -230,16 +246,10 @@ export function AppLayout() {
           </nav>
         )}
         {!hideNavigation && <UpdateNotice />}
-        {!hideNavigation && (
-          <MainDock
-            measureRef={navigationHeightRef}
-            items={mainNavigationItems.map(({ icon: Icon, ...item }) => ({
-              to: item.to,
-              label: item.label,
-              end: "end" in item && item.end,
-              icon: <Icon />,
-            }))}
-          />
+        {!hideNavigation && !postDock && (
+          <MainDock measureRef={navigationHeightRef} items={mainDockItems} identity={baseDock?.identity}>
+            {baseDock?.controls}
+          </MainDock>
         )}
         {!hideNavigation &&
           canCreatePost(currentUser) &&

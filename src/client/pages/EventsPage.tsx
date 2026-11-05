@@ -53,24 +53,23 @@ export function EventsPage() {
     setFilterOpen(true);
   };
   const closeFilters = () => setFilterClosing(true);
+  const filterButton = (place: string) => (
+    <button
+      className={`icon-button event-filter-button ${place}${activeFilterCount ? " active" : ""}`}
+      type="button"
+      onClick={openFilters}
+      aria-label={activeFilterCount ? `イベントを絞り込む、${activeFilterCount}件の条件を適用中` : "イベントを絞り込む"}
+    >
+      <ListFilter />
+      {activeFilterCount > 0 && <span>{activeFilterCount}</span>}
+    </button>
+  );
   return (
     <>
-      <PageHeader
-        title="イベント"
-        action={
-          <button
-            className={`icon-button event-filter-button${activeFilterCount ? " active" : ""}`}
-            type="button"
-            onClick={openFilters}
-            aria-label={
-              activeFilterCount ? `イベントを絞り込む、${activeFilterCount}件の条件を適用中` : "イベントを絞り込む"
-            }
-          >
-            <ListFilter />
-            {activeFilterCount > 0 && <span>{activeFilterCount}</span>}
-          </button>
-        }
-      />
+      {/* 絞り込みは一覧を読み込んでから出す（スケルトンの間は出さない）。 */}
+      <PageHeader title="イベント" action={events ? filterButton("event-filter-in-header") : undefined} />
+      {/* スマホではヘッダーを出さないので、絞り込みは右上に固定する。 */}
+      {events && filterButton("event-filter-floating")}
       <main className="event-list page-content">
         {!events && !error && <PageSkeleton variant="events" />}
         {error && <ErrorState message={error} retry={load} />}

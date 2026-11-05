@@ -114,12 +114,7 @@
   outline-offset: 0;
   box-shadow: none;
 }
-:root .comment-form input {
-  min-height: 44px;
-  border-radius: 999px;
-  padding: 10px 16px;
-}
-:root :is(.form-field, .settings-field, .field) > span:first-child,
+:root :is(.form-field, .field) > span:first-child,
 :root .form-label,
 :root form label > span:first-child:not(:only-child) {
   font-size: 12px;
@@ -144,7 +139,7 @@
   display: none;
 }
 
-/* ── 設定の行（Settings rows）：面のまとまり（角丸22）に 56px の行、区切りは細い線 ── */
+/* ── 設定の行（Settings rows）は settings-material.css に kondo の値で置く。ここではステージング確認の面とメンバー管理の行を揃える ── */
 :root .settings-card {
   border: 0;
   border-radius: var(--r-group);
@@ -152,95 +147,20 @@
   box-shadow: none;
   overflow: hidden;
 }
-:root .settings-card:not(.settings-profile, .theme-setting) > * + * {
-  border-top: 0;
-  box-shadow: 0 -1px 0 var(--p-line);
-}
-:root :is(.settings-menu-row, .setting-status, .member-row, .notification-toggle) {
+:root .member-row {
   min-height: 56px;
   padding: 10px 16px;
   border: 0;
   background: none;
 }
-:root .settings-menu-row strong,
-:root .member-copy strong,
-:root .notification-toggle-copy strong {
+:root .member-copy strong {
   font-size: 15px;
   font-weight: 800;
 }
-:root .settings-menu-row small,
-:root .member-copy span,
-:root .notification-toggle-copy > span {
+:root .member-copy span {
   font-size: 12px;
   font-weight: 700;
   color: var(--p-mute);
-}
-:root .settings-menu-row.bordered {
-  border: 0;
-}
-:root .settings-logout strong {
-  color: var(--p-danger);
-}
-/* ログアウトはアイコンが1つだけなので「最後のアイコン（›）」の18px指定にもかかり、余白9pxで中身が0になる。行頭のアイコンと同じ40pxに戻す。 */
-:root .settings-logout > svg:first-child {
-  width: 40px;
-  height: 40px;
-  padding: 9px;
-  color: var(--p-danger);
-  background: none;
-}
-:root .settings-profile input {
-  background-color: var(--p-paper);
-}
-
-/* ── 切り替え（SegmentSelection / 外観）：面の中で選んだものだけが紙の面になる ── */
-:root .theme-setting {
-  padding: 4px;
-  border-radius: 18px;
-  background: var(--p-soft);
-}
-:root .theme-setting > div {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 4px;
-}
-:root .theme-setting label {
-  height: 46px;
-  min-height: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  border: 0;
-  border-radius: 14px;
-  background: none;
-  box-shadow: none;
-  font-size: 13.5px;
-  font-weight: 800;
-  color: var(--p-mute);
-  cursor: pointer;
-}
-:root .theme-setting label > svg {
-  width: 17px;
-  height: 17px;
-  margin: 0;
-}
-:root .theme-setting label.selected {
-  background: var(--p-paper);
-  color: var(--p-ink);
-  box-shadow:
-    0 1px 0 var(--p-line),
-    0 4px 10px -6px #0005;
-}
-:root .theme-setting .theme-preview,
-:root .theme-setting label small {
-  display: none;
-}
-:root .theme-setting label strong {
-  font: inherit;
-  color: inherit;
 }
 
 /* ── 表紙のカード（TripCover）：角丸20、白い丸薬形のバッジ ── */
@@ -396,4 +316,94 @@
     -webkit-backdrop-filter: none;
     background: color-mix(in srgb, var(--p-paper) 88%, transparent);
   }
+}
+
+/* ── 見た人：目のアイコンからふくらむ小さな面 ── */
+:root .post-engagement .seen-by-button {
+  margin-inline: -10px;
+  padding-inline: 10px;
+  border-radius: 999px;
+  transition: background-color 0.16s ease;
+}
+:root .seen-by-button[aria-expanded="true"] {
+  color: var(--p-ink);
+  background: var(--p-soft);
+}
+:root .seen-panel {
+  position: fixed;
+  z-index: 95;
+  width: min(264px, calc(100vw - 24px));
+  padding: 16px 8px 8px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: var(--r-card);
+  color: var(--p-ink);
+  background: var(--p-paper);
+  box-shadow: var(--p-sheet-shadow);
+}
+:root .seen-panel-head {
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+:root .seen-panel-head .seen-icon {
+  width: 24px;
+  height: 19px;
+}
+:root .seen-panel-head strong {
+  font-size: 1.0625rem;
+  font-weight: 900;
+}
+:root .seen-panel-count {
+  color: var(--p-mute);
+  font-size: 0.8125rem;
+  font-weight: 700;
+}
+:root .seen-panel-note {
+  margin: 4px 10px 8px;
+  color: var(--p-mute);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+:root .seen-panel-list {
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  list-style: none;
+}
+:root .seen-panel-row {
+  min-height: 48px;
+  padding: 6px 10px;
+  display: flex;
+  align-items: center;
+  position: relative;
+  gap: 12px;
+}
+:root .seen-panel-row + .seen-panel-row::before {
+  position: absolute;
+  top: 0;
+  right: 10px;
+  left: 56px;
+  height: 1px;
+  background: var(--p-line);
+  content: "";
+}
+:root .seen-panel-row .seen-user-avatar {
+  width: 34px;
+  height: 34px;
+  flex-basis: 34px;
+  font-size: 0.8125rem;
+  font-weight: 800;
+}
+:root .seen-panel-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.9375rem;
+  font-weight: 800;
 }

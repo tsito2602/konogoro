@@ -140,3 +140,18 @@ export const profileInputSchema = z
   .refine(({ displayName, notificationEnabled }) => displayName !== undefined || notificationEnabled !== undefined, {
     message: "変更内容を指定してください",
   });
+
+const base64Url = z.string().regex(/^[A-Za-z0-9_-]+$/, "通知の鍵の形式が正しくありません");
+
+export const pushSubscriptionInputSchema = z.object({
+  endpoint: z
+    .string()
+    .url()
+    .max(2000)
+    .refine((value) => value.startsWith("https://"), "通知の宛先の形式が正しくありません"),
+  keys: z.object({ p256dh: base64Url.max(200), auth: base64Url.max(100) }),
+  /** 本人がボタンでオンにしたときだけ true。起動時の伝え直しでは通知のオンオフを変えない。 */
+  enable: z.boolean().optional(),
+});
+
+export const pushEndpointInputSchema = z.object({ endpoint: z.string().url().max(2000) });

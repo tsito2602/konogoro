@@ -121,8 +121,10 @@
 .cdock-group[data-slot="r"] > :is(button, a) {
   min-width: var(--dock-height);
 }
+/* iPhone では押したときの手応え用の label.haptic-touch がすべてのボタンの最後に入るので、
+   アイコンだけのボタン（…）を言葉付きと見なさないよう除く。 */
 .cdock-group[data-slot="r"] > :is(button, a):not([aria-label]),
-.cdock-group[data-slot="r"] > :is(button, a):has(> svg + *),
+.cdock-group[data-slot="r"] > :is(button, a):has(> svg + :not(.haptic-touch)),
 .cdock-group[data-slot="r"] > :is(button, a):has(> :not(svg, .haptic-touch)) {
   padding: 0 24px 0 20px;
 }

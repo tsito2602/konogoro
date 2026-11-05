@@ -67,6 +67,20 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: npm run deploy
 
+      - name: Ensure push key
+        if: steps.credentials.outputs.ready == 'true'
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          # 鍵は一度だけ作る。作り直すと登録済みの端末に通知が届かなくなるので、一覧を読めないときは止める。
+          secrets="$(npx wrangler secret list --format json)"
+          if jq -e 'any(.[]; .name == "VAPID_KEY")' <<<"$secrets" >/dev/null; then
+            echo "::notice::VAPID_KEY already exists."
+          else
+            node scripts/generate-vapid-key.mjs | npx wrangler secret put VAPID_KEY
+          fi
+
       - name: Verify deployment
         if: steps.credentials.outputs.ready == 'true'
         env:

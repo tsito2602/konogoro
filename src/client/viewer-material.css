@@ -71,7 +71,7 @@
 }
 .video-viewer .viewer-controls {
   display: grid;
-  grid-template-columns: 56px minmax(0, 1fr) 56px;
+  grid-template-columns: minmax(0, 1fr);
   gap: 10px;
   margin-top: 12px;
 }
@@ -358,4 +358,95 @@
 }
 .video-viewer .video-player-status button {
   pointer-events: auto;
+}
+
+/* スマホ・タブレット：操作は画面の下の親指ドック（閉じる・コメントする・保存）。サムネイルの列はその上。
+   コメントを開くと、写真と列の面が持ち上がり、下からコメント欄（面の外の暗い面）がせり上がる。 */
+@media (max-width: 1023px) {
+  .media-viewer {
+    --viewer-dock-zone: calc(var(--dock-height) + var(--dock-safe-bottom) + 8px);
+    --viewer-thumbnail-height: 76px;
+    padding-bottom: var(--viewer-dock-zone);
+    background: #000;
+  }
+  .media-viewer .viewer-viewport {
+    z-index: 2;
+    background: #000;
+  }
+  .media-viewer .thumbnail-strip {
+    padding: 12px 16px;
+    background: #000;
+  }
+  /* 持ち上げは投稿ページと同じばね（MediaViewerPage の Live が --viewer-y と --viewer-progress を毎フレーム書く）。 */
+  .media-viewer .viewer-viewport,
+  .media-viewer .thumbnail-strip {
+    transition: background-color 300ms ease;
+  }
+  /* 欄が出ている間（下りきるまで）だけ動かす。閉じている間は transform を付けない。 */
+  .media-viewer.lift-active .viewer-viewport,
+  .media-viewer.lift-active .thumbnail-strip {
+    transform: translateY(var(--viewer-y, 0px));
+  }
+  .media-viewer.comments-open .viewer-viewport,
+  .media-viewer.comments-open .thumbnail-strip {
+    cursor: s-resize;
+    touch-action: none;
+  }
+  /* 持ち上がった面は投稿ページの面と同じ色にし、下の黒い書き込み欄と分けて見せる。 */
+  .media-viewer.comments-open .viewer-viewport,
+  .media-viewer.comments-open .thumbnail-strip {
+    background-color: #262522;
+  }
+  /* 持ち上がった面の下端は持ち上がるほど丸くなり（投稿ページと同じ 30px まで）、押せば下りるとわかるつまみを付ける。
+     影は下へだけ落とし、写真の側へははみ出させない。 */
+  .media-viewer .thumbnail-strip {
+    --viewer-corner: calc(var(--viewer-progress, 0) * 30px);
+    border-radius: 0 0 var(--viewer-corner) var(--viewer-corner);
+    box-shadow: 0 30px 30px -14px rgb(0 0 0 / calc(var(--viewer-progress, 0) * 0.7));
+  }
+  .media-viewer.comments-open .thumbnail-strip {
+    background: #262522
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='40' height='5'%3E%3Crect width='40' height='5' rx='2.5' fill='%23ffffff66'/%3E%3C/svg%3E")
+      no-repeat center bottom 6px;
+  }
+  .media-viewer.comments-open .thumbnail-strip a {
+    pointer-events: none;
+  }
+  .video-viewer .viewer-header .viewer-button,
+  .video-viewer .viewer-controls {
+    visibility: hidden;
+  }
+  /* コメント欄は投稿ページと同じ書き込み欄（components/CommentSheet.tsx）。持ち上がった面の下に出る。 */
+  .media-viewer > .comment-sheet.viewer-comment-sheet {
+    z-index: 1;
+    opacity: 1;
+  }
+  /* 下ろしている間、中身は少し遅れて下がる。ボトムナビの帯は面が覆わないので、帯へ下がってきた分は切って見せない。 */
+  .media-viewer:not(.comments-open) > .comment-sheet.viewer-comment-sheet {
+    clip-path: inset(0 0 var(--viewer-dock-zone) 0);
+  }
+  /* ドックは暗い面の島（cartoon-kit の島の色をビューアーの暗い色に置き換える）。 */
+  .main-dock-host.viewer-dock {
+    display: block;
+    z-index: 8;
+    /* 投稿ページのドック（暗い表示）と同じ色。 */
+    --p-paper: #141312;
+    --p-dock: #262522;
+    --p-ink: #f5f1e9;
+    --p-line: #2d2b29;
+    --p-mute: #aaa49b;
+  }
+  .viewer-dock .viewer-dock-count {
+    min-width: 22px;
+    height: 22px;
+    display: grid;
+    place-items: center;
+    padding: 0 6px;
+    border-radius: 999px;
+    color: var(--v-ink);
+    background: #000;
+    font-family: var(--f-num);
+    font-size: 12px;
+    font-weight: 700;
+  }
 }

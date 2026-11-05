@@ -26,18 +26,29 @@ export type NotificationCounts = {
   appOrigin: string;
 };
 
-export function buildNotificationText(counts: NotificationCounts): string {
+/** 「投稿2件（写真3枚・動画1本）」の形。LINEとアプリの通知で同じ言い方にする。 */
+export function notificationSummary(counts: Omit<NotificationCounts, "appOrigin">): string {
   const media = [
     counts.photoCount > 0 ? `写真${counts.photoCount}枚` : null,
     counts.videoCount > 0 ? `動画${counts.videoCount}本` : null,
   ]
     .filter((value): value is string => value !== null)
     .join("・");
-  const summary = media ? `（${media}）` : "";
-  const appOrigin = counts.appOrigin.replace(/\/+$/, "");
-  const destination = `${appOrigin}/unread`;
+  return `投稿${counts.postCount}件${media ? `（${media}）` : ""}`;
+}
 
-  return `新しい思い出が届きました。投稿${counts.postCount}件${summary}\nまとめて見る：${destination}`;
+/** LINE から開くリンクは、LINE の中の画面ではなく端末のブラウザで開く。ログインやアプリの追加がふだんのブラウザと同じになる。 */
+export function externalBrowserUrl(url: string): string {
+  const parsed = new URL(url);
+  parsed.searchParams.set("openExternalBrowser", "1");
+  return parsed.toString();
+}
+
+export function buildNotificationText(counts: NotificationCounts): string {
+  const appOrigin = counts.appOrigin.replace(/\/+$/, "");
+  const destination = externalBrowserUrl(`${appOrigin}/unread`);
+
+  return `新しい思い出が届きました。${notificationSummary(counts)}\nまとめて見る：${destination}`;
 }
 
 type LineNotification = {
@@ -92,7 +103,9 @@ export async function sendLineActionNotification(notification: LineActionNotific
           template: {
             type: "buttons",
             text: notification.text,
-            actions: [{ type: "uri", label: notification.actionLabel, uri: notification.actionUrl }],
+            actions: [
+              { type: "uri", label: notification.actionLabel, uri: externalBrowserUrl(notification.actionUrl) },
+            ],
           },
         },
       ],

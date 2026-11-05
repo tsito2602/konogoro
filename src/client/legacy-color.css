@@ -1,0 +1,31 @@
+/* iOS 15（iPhone 6s・7 など）は color-mix() を知らない。知らない色は透明になり、見出しやドックの下地が消える。
+   下地として欠けると困るところだけ、同じ見た目の固定色を置く。 */
+@supports not (color: color-mix(in srgb, red, blue)) {
+  :root {
+    --p-scrim: rgb(255 255 255 / 50%);
+    --p-select: rgb(156 151 143 / 24%);
+  }
+  :root[data-theme="dark"] {
+    --p-scrim: rgb(20 19 18 / 50%);
+    --p-select: rgb(182 176 166 / 24%);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --p-scrim: rgb(20 19 18 / 50%);
+      --p-select: rgb(182 176 166 / 24%);
+    }
+  }
+  :root :is(.page-header, .album-picker-header, .tab-bar),
+  .timeline-layout .timeline-month-heading::before {
+    background: var(--surface);
+  }
+  .fuse-add-veil {
+    background: var(--p-scrim);
+  }
+  .media-viewer {
+    --v-island: rgb(38 37 34 / 86%);
+  }
+  .cdock-group[data-slot="toast"] > button.cdock-undo-gauge {
+    background: var(--p-mid);
+  }
+}

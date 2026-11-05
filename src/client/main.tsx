@@ -44,6 +44,7 @@ import "./entry-material.css";
 import "./dock-layout.css";
 import "./route-motion.css";
 import "./cartoon-parts.css";
+import "./legacy-color.css";
 import { initializeInteractionFeedback } from "./interaction-feedback";
 import { startUpdateChecks } from "./app-update";
 

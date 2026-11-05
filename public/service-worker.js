@@ -1,4 +1,4 @@
-/* global self, caches, URL, fetch */
+/* global self, caches, URL, fetch, clients */
 
 const MEDIA_CACHE_NAME = "konogoro-media-v2";
 const MEDIA_CACHE_LIMIT = 300;
@@ -17,6 +17,63 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("message", (event) => {
   if (event.data?.type === "CLEAR_MEDIA_CACHE") event.waitUntil(caches.delete(MEDIA_CACHE_NAME));
+});
+
+// アプリ通知。本文はサーバーで暗号化した JSON（title・body・url・tag）。
+self.addEventListener("push", (event) => {
+  let message;
+  try {
+    message = event.data?.json() ?? {};
+  } catch {
+    message = {};
+  }
+  const title = typeof message.title === "string" ? message.title : "このごろ";
+  const tag = typeof message.tag === "string" ? message.tag : "konogoro";
+  // アイコンの右上に、まだ見ていない思い出の数を出す（iOS 16.4以降とAndroidのアプリ）。
+  const badge =
+    typeof message.badge === "number" && "setAppBadge" in self.navigator
+      ? self.navigator.setAppBadge(message.badge).catch(() => undefined)
+      : Promise.resolve();
+  event.waitUntil(
+    // 開いている画面に「受け取った」と伝える。試しのお知らせが届いたかを、本人に聞かずに確かめられる。
+    badge
+      .then(() => clients.matchAll({ type: "window", includeUncontrolled: true }))
+      .then((windows) => {
+        windows.forEach((client) => client.postMessage({ type: "PUSH_RECEIVED", tag }));
+        // iPhone では postMessage が画面に届かないことがあるので、BroadcastChannel でも伝える。
+        if ("BroadcastChannel" in self) {
+          const channel = new self.BroadcastChannel("konogoro-push");
+          channel.postMessage({ type: "PUSH_RECEIVED", tag });
+          channel.close();
+        }
+      })
+      .then(() =>
+        self.registration.showNotification(title, {
+          body: typeof message.body === "string" ? message.body : "新しい思い出が届きました",
+          tag,
+          icon: "/android-chrome-192x192.png",
+          badge: "/android-chrome-192x192.png",
+          data: { url: typeof message.url === "string" && message.url.startsWith("/") ? message.url : "/" },
+        }),
+      ),
+  );
+});
+
+// 通知を押したら、開いている画面があればそこで、なければ新しく開く。
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url = new URL(event.notification.data?.url ?? "/", self.location.origin).href;
+  event.waitUntil(
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then(async (windows) => {
+      const open = windows.find((client) => new URL(client.url).origin === self.location.origin);
+      if (open) {
+        await open.focus();
+        if ("navigate" in open) await open.navigate(url).catch(() => undefined);
+        return;
+      }
+      await clients.openWindow(url);
+    }),
+  );
 });
 
 self.addEventListener("fetch", (event) => {

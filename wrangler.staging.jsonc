@@ -30,6 +30,10 @@
     "R2_ACCOUNT_ID": "__CLOUDFLARE_ACCOUNT_ID__",
     "R2_BUCKET_NAME": "family-timeline-media-staging",
   },
+  // アプリ通知のまとめ送信に使う。stagingからLINEは送らない（コード側で止める）。
+  "triggers": {
+    "crons": ["* * * * *"],
+  },
   "observability": {
     "enabled": true,
     "head_sampling_rate": 1,

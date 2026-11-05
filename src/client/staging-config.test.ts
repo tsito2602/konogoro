@@ -15,7 +15,6 @@ describe("staging deployment configuration", () => {
     expect(stagingConfig).toContain('"bucket_name": "family-timeline-media-staging"');
     expect(stagingConfig).toContain('"STAGING": "true"');
     expect(stagingConfig).not.toContain(productionDatabaseId);
-    expect(stagingConfig).not.toContain('"triggers"');
   });
 
   it("deploys only from the staging branch", () => {

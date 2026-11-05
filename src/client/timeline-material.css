@@ -159,9 +159,6 @@
 .unread-complete h2 {
   letter-spacing: -0.03em;
 }
-.timeline-layout .skeleton-unread-summary > .skeleton-field {
-  grid-column: 1 / -1;
-}
 @media (min-width: 960px) {
   .timeline-sidebar .unread-summary {
     grid-template-columns: 1fr;
@@ -174,5 +171,85 @@
   .timeline-layout .timeline-month-heading {
     padding-top: 16px;
     padding-bottom: 16px;
+  }
+}
+
+/* 新しい思い出の帯（TimelinePage の UnreadBand）。スマホ・タブレットでは上のカードは親指が届かないので、
+   ドックのすぐ上にドックと同じ横幅で出す。閲覧者には＋がないので、＋とはぶつからない。PC は横のカードのまま。 */
+.unread-band {
+  display: none;
+}
+@media (max-width: 1023px) {
+  .timeline-sidebar {
+    display: none;
+  }
+  .unread-band {
+    position: fixed;
+    z-index: 34;
+    left: max(16px, env(safe-area-inset-left));
+    right: max(16px, env(safe-area-inset-right));
+    bottom: calc(var(--bottom-nav-height, 64px) + 12px);
+    height: var(--dock-height, 56px);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 8px;
+    border-radius: calc(var(--dock-height, 56px) / 2);
+    background: var(--p-ink);
+    color: var(--p-paper);
+    font-family: var(--f-body);
+    text-decoration: none;
+    box-shadow: 0 14px 30px -12px #0007;
+  }
+  .unread-band-art {
+    flex: none;
+    width: 40px;
+    height: 40px;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    border-radius: 50%;
+    background: var(--p-paper);
+    color: var(--p-ink);
+  }
+  .unread-band-art img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .unread-band-art svg {
+    width: 18px;
+    height: 18px;
+  }
+  .unread-band-text {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    font-size: 14px;
+    font-weight: 700;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+  .unread-band-action {
+    flex: none;
+    height: 40px;
+    padding: 0 18px;
+    display: flex;
+    align-items: center;
+    border-radius: 99px;
+    background: var(--p-paper);
+    color: var(--p-ink);
+    font-size: 13.5px;
+    font-weight: 700;
+  }
+  /* 帯の分だけ、最後の投稿が隠れないように下を空ける。 */
+  .app-shell:has(.unread-band) {
+    padding-bottom: calc(
+      var(--bottom-nav-height, 64px + env(safe-area-inset-bottom)) + 12px + var(--dock-height, 56px) + 12px
+    );
+  }
+  /* 更新のお知らせはドックの上の同じ位置に出るので、そのあいだ帯はその上へ移る。 */
+  :root[data-app-update="waiting"] .unread-band {
+    margin-bottom: var(--update-notice-space, 72px);
   }
 }

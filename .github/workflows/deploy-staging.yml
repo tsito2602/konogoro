@@ -122,6 +122,19 @@ jobs:
             echo "::notice::Staging upload credentials are not configured; upload checks remain disabled."
           fi
 
+      - name: Ensure staging push key
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          # 鍵は一度だけ作る。作り直すと登録済みの端末に通知が届かなくなるので、一覧を読めないときは止める。
+          secrets="$(npx wrangler secret list --format json --config "$STAGING_DEPLOY_CONFIG")"
+          if jq -e 'any(.[]; .name == "VAPID_KEY")' <<<"$secrets" >/dev/null; then
+            echo "::notice::Staging VAPID_KEY already exists."
+          else
+            node scripts/generate-vapid-key.mjs | npx wrangler secret put VAPID_KEY --config "$STAGING_DEPLOY_CONFIG"
+          fi
+
       - name: Verify staging deployment
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

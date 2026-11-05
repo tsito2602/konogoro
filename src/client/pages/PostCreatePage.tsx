@@ -12,6 +12,9 @@ import type { EventDetail, EventScene, EventSummary, UploadTarget } from "../../
 import { api as request } from "../api";
 import { MediaProcessingStatus } from "../components/MediaProcessingStatus";
 import { PageHeader } from "../components/PageHeader";
+import { PageDock } from "../components/ContextDock";
+import { mainDockItems } from "../components/AppLayout";
+import { DockGroup } from "../cartoon/cartoon-dock";
 import { useToast } from "../components/Toast";
 import {
   acceptedMediaTypes,
@@ -459,11 +462,34 @@ export function PostCreatePage() {
   const preparing = importingPlayback || files.some((item) => item.status === "preparing");
   const hasPreparationFailure = files.some((item) => item.status === "preparation-failed");
 
+  // スマホではフォームの下のボタンと同じ操作を、ボトムナビの墨色の島に置く。
+  const failed = files.some((item) => item.status === "failed");
+  const action = busy
+    ? "busy"
+    : failed
+      ? "retry"
+      : draftPostId && files.every((item) => item.status === "uploaded")
+        ? "publish"
+        : draftPostId
+          ? "resume"
+          : "submit";
+  const actionLabel = {
+    busy: "投稿中…",
+    retry: "失敗した項目を再試行",
+    publish: "投稿を完了",
+    resume: "アップロードを再開",
+    submit: "投稿",
+  }[action];
+  const runAction = () => {
+    if (action === "retry") void retryFailed();
+    else if (action === "publish") void retryPublish();
+    else if (action === "resume") void retryUploadSetup();
+  };
   return (
     <>
-      <PageHeader title="写真・動画を追加" back />
+      <PageHeader title="写真・動画を追加" back className="dock-owned-header" />
       <main className="form-page page-content">
-        <form onSubmit={submit} className="form-stack post-create-form">
+        <form id="post-create-form" onSubmit={submit} className="form-stack post-create-form">
           <MediaProcessingStatus files={files} uploading={busy} uploadProgress={progress} />
           <section className="photo-picker post-create-media">
             <div className="selected-photos" ref={gridRef}>
@@ -656,23 +682,33 @@ export function PostCreatePage() {
               </p>
             )}
             {busy ? null : files.some((item) => item.status === "failed") ? (
-              <button className="outline-button wide" type="button" onClick={retryFailed}>
+              <button className="outline-button wide dock-owned-action" type="button" onClick={retryFailed}>
                 <RotateCcw />
                 失敗した項目を再試行
               </button>
             ) : draftPostId && files.every((item) => item.status === "uploaded") ? (
-              <button className="outline-button wide" type="button" onClick={retryPublish} disabled={busy}>
+              <button
+                className="outline-button wide dock-owned-action"
+                type="button"
+                onClick={retryPublish}
+                disabled={busy}
+              >
                 <RotateCcw />
                 投稿を完了
               </button>
             ) : draftPostId ? (
-              <button className="outline-button wide" type="button" onClick={retryUploadSetup} disabled={busy}>
+              <button
+                className="outline-button wide dock-owned-action"
+                type="button"
+                onClick={retryUploadSetup}
+                disabled={busy}
+              >
                 <RotateCcw />
                 アップロードを再開
               </button>
             ) : (
               <button
-                className="primary-button wide"
+                className="primary-button wide dock-owned-action"
                 disabled={preparing || hasPreparationFailure || files.length === 0}
               >
                 投稿
@@ -681,6 +717,23 @@ export function PostCreatePage() {
           </section>
         </form>
       </main>
+      <PageDock items={mainDockItems} identity="post-create" label="写真・動画の追加">
+        <DockGroup slot="r" tone="ink" stretch>
+          {action === "submit" ? (
+            <button
+              type="submit"
+              form="post-create-form"
+              disabled={preparing || hasPreparationFailure || files.length === 0}
+            >
+              {actionLabel}
+            </button>
+          ) : (
+            <button type="button" onClick={runAction} disabled={action === "busy"}>
+              {actionLabel}
+            </button>
+          )}
+        </DockGroup>
+      </PageDock>
     </>
   );
 }

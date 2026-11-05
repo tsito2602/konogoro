@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { addPostToNotificationBatch } from "./notification-batch";
 import { LineDeliveryError, sendLineNotification } from "./line-messaging";
 import { notificationRetryKey, processNotificationBatches, type NotificationCronEnv } from "./notification-cron";
+import { PushDeliveryError, type PushSend } from "./web-push";
 
 const connections: DatabaseSync[] = [];
 afterEach(() => {
@@ -21,10 +22,13 @@ function fixture(migrate = true) {
   const sql = new DatabaseSync(":memory:");
   connections.push(sql);
   const folder = new URL("../../migrations/", import.meta.url);
-  for (const file of readdirSync(folder).sort()) {
-    if (file.endsWith(".sql") && !file.startsWith("0015")) sql.exec(readFileSync(new URL(file, folder), "utf8"));
-  }
-  const upgrade = () => sql.exec(readFileSync(new URL("0015_notification_deliveries.sql", folder), "utf8"));
+  const files = readdirSync(folder)
+    .filter((file) => file.endsWith(".sql"))
+    .sort();
+  for (const file of files.filter((file) => file < "0015")) sql.exec(readFileSync(new URL(file, folder), "utf8"));
+  const upgrade = () => {
+    for (const file of files.filter((file) => file >= "0015")) sql.exec(readFileSync(new URL(file, folder), "utf8"));
+  };
   if (migrate) upgrade();
   class Statement {
     constructor(
@@ -92,7 +96,14 @@ function fixture(migrate = true) {
     return addPostToNotificationBatch(db, id, at);
   };
   const rows = (query: string) => sql.prepare(query).all();
-  return { sql, db, env, user, post, register, rows, upgrade };
+  const device = (userId: string, endpoint: string) =>
+    sql
+      .prepare(
+        `INSERT INTO push_subscriptions (id, user_id, endpoint, p256dh, auth, created_at, updated_at)
+         VALUES (?, ?, ?, 'key', 'auth', ?, ?)`,
+      )
+      .run(endpoint, userId, `https://push.example.com/${endpoint}`, start, start);
+  return { sql, db, env, user, post, register, rows, upgrade, device };
 }
 
 describe("notification deliveries", () => {
@@ -116,7 +127,7 @@ describe("notification deliveries", () => {
     expect(send).toHaveBeenCalledOnce();
     expect(send.mock.calls[0]).toEqual([
       expect.objectContaining({
-        text: "新しい思い出が届きました。投稿2件\nまとめて見る：https://konogoro.tsito-apps.workers.dev/unread",
+        text: "新しい思い出が届きました。投稿2件\nまとめて見る：https://konogoro.tsito-apps.workers.dev/unread?openExternalBrowser=1",
       }),
     ]);
     await processNotificationBatches(f.env, later(1440), send);
@@ -346,5 +357,89 @@ describe("notification deliveries", () => {
     await processNotificationBatches({ ...f.env, LINE_CHANNEL_ACCESS_TOKEN: undefined }, due, send);
     expect(prepare).not.toHaveBeenCalled();
     expect(send).not.toHaveBeenCalled();
+  });
+});
+
+describe("アプリ通知への切り替え", () => {
+  const vapidKey = async () => {
+    const pair = (await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, [
+      "sign",
+    ])) as CryptoKeyPair;
+    return JSON.stringify(await crypto.subtle.exportKey("jwk", pair.privateKey));
+  };
+
+  it("アプリの端末がある人はアプリだけに、ない人はLINEだけに送る", async () => {
+    const f = fixture();
+    f.user("A");
+    f.user("B");
+    f.device("A", "a-phone");
+    f.device("A", "a-tablet");
+    await f.register("p1");
+    const send = vi.fn<typeof sendLineNotification>(async () => {});
+    const push = vi.fn<PushSend>(async () => {});
+    await processNotificationBatches({ ...f.env, VAPID_KEY: await vapidKey() }, due, send, push);
+    expect(send.mock.calls.map(([n]) => n.to)).toEqual(["B"]);
+    expect(push.mock.calls.map(([n]) => n.subscription.endpoint)).toEqual([
+      "https://push.example.com/a-phone",
+      "https://push.example.com/a-tablet",
+    ]);
+    expect(push.mock.calls[0][0].message).toEqual(
+      expect.objectContaining({ title: "新しい思い出が届きました", body: "投稿1件", url: "/unread" }),
+    );
+    expect(f.rows("SELECT user_id, channel, state FROM notification_deliveries ORDER BY user_id")).toEqual([
+      { user_id: "A", channel: "push", state: "accepted" },
+      { user_id: "B", channel: "line", state: "accepted" },
+    ]);
+  });
+
+  it("アプリに届かなくなった端末は消して、その回の通知はLINEで送る", async () => {
+    const f = fixture();
+    f.user("A");
+    f.device("A", "gone");
+    await f.register("p1");
+    const env = { ...f.env, VAPID_KEY: await vapidKey() };
+    const send = vi.fn<typeof sendLineNotification>(async () => {});
+    const push = vi.fn<PushSend>().mockRejectedValue(new PushDeliveryError(410));
+    await processNotificationBatches(env, due, send, push);
+    expect(f.rows("SELECT id FROM push_subscriptions")).toEqual([]);
+    expect(send).not.toHaveBeenCalled();
+    await processNotificationBatches(env, later(1), send, push);
+    expect(push).toHaveBeenCalledOnce();
+    expect(send).toHaveBeenCalledOnce();
+    expect(f.rows("SELECT channel, state FROM notification_deliveries")).toEqual([
+      { channel: "line", state: "accepted" },
+    ]);
+  });
+
+  it("一時的な失敗はアプリで再送し、LINEには二重に送らない", async () => {
+    const f = fixture();
+    f.user("A");
+    f.device("A", "phone");
+    await f.register("p1");
+    const env = { ...f.env, VAPID_KEY: await vapidKey() };
+    const send = vi.fn<typeof sendLineNotification>(async () => {});
+    const push = vi.fn<PushSend>().mockRejectedValueOnce(new PushDeliveryError(503)).mockResolvedValue();
+    await processNotificationBatches(env, due, send, push);
+    await processNotificationBatches(env, later(1), send, push);
+    await processNotificationBatches(env, later(2), send, push);
+    expect(push).toHaveBeenCalledTimes(2);
+    expect(send).not.toHaveBeenCalled();
+    expect(f.rows("SELECT channel, state FROM notification_deliveries")).toEqual([
+      { channel: "push", state: "accepted" },
+    ]);
+  });
+
+  it("stagingではアプリ通知だけを送り、LINEには送らない", async () => {
+    const f = fixture();
+    f.user("A");
+    f.user("B");
+    f.device("A", "phone");
+    await f.register("p1");
+    const send = vi.fn<typeof sendLineNotification>(async () => {});
+    const push = vi.fn<PushSend>(async () => {});
+    await processNotificationBatches({ ...f.env, STAGING: "true", VAPID_KEY: await vapidKey() }, due, send, push);
+    expect(push).toHaveBeenCalledOnce();
+    expect(send).not.toHaveBeenCalled();
+    expect(f.rows("SELECT user_id FROM notification_deliveries")).toEqual([{ user_id: "A" }]);
   });
 });

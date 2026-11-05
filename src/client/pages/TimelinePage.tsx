@@ -1,3 +1,4 @@
+import { setAppBadge } from "../app-badge";
 import { ArrowUpRight, Bookmark } from "lucide-react";
 import { readPages, useReadingState } from "../reading-context";
 import { useEffect, useState } from "react";
@@ -6,7 +7,7 @@ import type { Post } from "../../shared/types";
 import { api } from "../api";
 import { EmptyState, ErrorState } from "../components/AsyncState";
 import { PageHeader } from "../components/PageHeader";
-import { PageSkeleton, UnreadSummarySkeleton } from "../components/PageSkeleton";
+import { PageSkeleton } from "../components/PageSkeleton";
 import { PostCard } from "../components/PostCard";
 import { useCurrentUser } from "../components/AppLayout";
 
@@ -26,6 +27,7 @@ export function TimelinePage() {
         setPosts(data.posts);
         setNextCursor(data.nextCursor);
         setUnreadCount(data.unreadCount);
+        setAppBadge(data.unreadCount);
       })
       .catch((reason: Error) => setError(reason.message));
   };
@@ -35,6 +37,7 @@ export function TimelinePage() {
         setPosts(data.posts);
         setNextCursor(data.nextCursor);
         setUnreadCount(data.unreadCount);
+        setAppBadge(data.unreadCount);
       })
       .catch((reason: Error) => setError(reason.message));
   }, [restoreCount, setPosts, setNextCursor, setUnreadCount]);
@@ -58,14 +61,15 @@ export function TimelinePage() {
     <>
       <PageHeader title="タイムライン" />
       <main className="timeline-layout page-content">
-        {currentUser.role === "viewer" && ((!posts && !error) || (posts && unreadCount > 0)) && (
+        {/* 新しい思い出の枠は、未読があるとわかってから出す。読み込み中に枠を出すと、未読がないときに全体が上へずれる。 */}
+        {currentUser.role === "viewer" && posts && unreadCount > 0 && (
           <aside className="timeline-sidebar">
-            {posts ? (
-              <UnreadSummary count={unreadCount} previewUrl={unreadPreview(posts)} />
-            ) : (
-              <UnreadSummarySkeleton />
-            )}
+            <UnreadSummary count={unreadCount} previewUrl={unreadPreview(posts)} />
           </aside>
+        )}
+        {/* スマホ・タブレットでは上のカードの代わりに、親指の届くドックのすぐ上へ帯で出す（閲覧者だけ）。 */}
+        {currentUser.role === "viewer" && posts && unreadCount > 0 && (
+          <UnreadBand count={unreadCount} previewUrl={unreadPreview(posts)} />
         )}
         <section className="feed" aria-label="タイムライン">
           {!posts && !error && <PageSkeleton variant="timeline" />}
@@ -158,6 +162,20 @@ export function UnreadSummary({ count, previewUrl }: { count: number; previewUrl
         <ArrowUpRight aria-hidden="true" />
       </Link>
     </section>
+  );
+}
+
+export function UnreadBand({ count, previewUrl }: { count: number; previewUrl?: string }) {
+  return (
+    <Link className="unread-band" to="/unread">
+      <span className="unread-band-art" aria-hidden="true">
+        {previewUrl ? <img src={previewUrl} alt="" /> : <Bookmark />}
+      </span>
+      <span className="unread-band-text">新しい思い出が{count}件あります</span>
+      <span className="unread-band-action" aria-hidden="true">
+        見る
+      </span>
+    </Link>
   );
 }
 

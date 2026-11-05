@@ -1,194 +1,432 @@
-.settings-page .settings-profile {
+/* 設定：kondo の設定（kondo src/web/styles/settings.css）の値をそのまま移したもの。
+   区切りの見出しの下に、灰色の面のまとまりを置く。色は黒と白だけで、赤はログアウトの文字だけに使う。 */
+.settings-page {
+  font-feature-settings: "palt";
+  line-height: 1.7;
+  color: var(--p-ink);
+}
+.settings-page > .settings-section {
+  margin: 0;
+}
+.settings-page > .settings-section:first-child > h2 {
+  margin-top: 0;
+}
+
+/* ── アカウント：パスポートの身分事項のページに見立てた面 ── */
+.passport {
+  position: relative;
   display: grid;
-  grid-template-columns: 56px minmax(0, 1fr);
-  align-items: center;
-  gap: 16px;
-  padding: 18px;
+  grid-template-columns: 72px 1fr;
+  gap: 14px;
+  align-items: start;
+  padding: 16px;
+  border-radius: 24px;
+  background: var(--p-soft);
+  overflow: hidden;
 }
-.settings-profile .settings-field {
-  padding: 0;
-}
-.settings-profile-avatar {
+.passport-photo {
+  width: 72px;
+  height: 72px;
+  margin-top: 6px;
   display: grid;
   place-items: center;
-  width: 56px;
-  height: 56px;
   border-radius: 50%;
   overflow: hidden;
-  background: var(--surface-muted);
-  color: var(--ash);
-  font-size: 1.5rem;
+  background: var(--p-pale);
+  color: var(--p-paper);
+  font-size: 30px;
+  font-weight: 900;
 }
-.settings-profile-avatar img {
+.passport-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.passport-fields {
+  min-width: 0;
+}
+.passport-key {
+  display: block;
+  font-family: var(--f-num);
+  font-size: 9.5px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  line-height: 1.7;
+  color: var(--p-mute);
+}
+/* 名前は書き換えられる欄に見えるよう、下線と鉛筆を付ける。 */
+.passport-name-field {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 1px 0 8px;
+  border-bottom: 1.5px solid var(--p-pale);
+  transition: border-color 0.2s;
+}
+.passport-name-field:focus-within {
+  border-bottom-color: var(--p-ink);
+}
+.settings-page .passport .passport-name {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  min-height: 0;
+  height: auto;
+  margin: 0 0 2px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  font: inherit;
+  font-size: 22px;
+  font-weight: 900;
+  color: var(--p-ink);
+}
+:root .passport-name-field .passport-name:is(:focus, :focus-visible) {
+  outline: none;
+}
+.passport-name-edit {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  margin-right: -6px;
+  color: var(--p-mute);
+  cursor: pointer;
+}
+.passport-name-edit svg {
+  width: 18px;
+  height: 18px;
+}
+.passport-name-field:focus-within .passport-name-edit {
+  visibility: hidden;
+}
+.passport-stamps {
+  grid-column: 1 / 3;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 2px;
+  padding-top: 12px;
+  border-top: 1.5px dashed var(--p-pale);
+}
+.passport-stamps small {
+  margin-right: auto;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--p-mute);
+}
+.passport-stamps [role="img"] {
+  flex: none;
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1.5px currentColor;
+  color: var(--p-mute);
+  font-size: 9px;
+  font-weight: 800;
+  transform: rotate(-10deg);
+}
+
+/* ── 面のまとまりと行 ── */
+.settings-group {
+  border-radius: 22px;
+  background: var(--p-soft);
+  overflow: hidden;
+}
+/* アカウントの面の下に続くまとまりは、見出しを置かずに 10px あける（kondo のパスキーと同じ）。 */
+.passport + .settings-group,
+.settings-group + .settings-card {
+  margin-top: 10px;
+}
+.settings-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 56px;
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: var(--p-ink);
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+}
+:is(button, a, label).settings-row {
+  cursor: pointer;
+}
+.settings-row + .settings-row {
+  box-shadow: 0 -1px 0 var(--p-line);
+}
+.settings-row-copy {
+  flex: 1;
+  min-width: 0;
+}
+.settings-row b {
+  display: block;
+  font-size: 15px;
+  font-weight: 800;
+}
+.settings-row b.danger {
+  color: var(--p-danger);
+}
+.settings-row small {
+  display: block;
+  margin-top: 1px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--p-mute);
+}
+.settings-row:disabled {
+  opacity: 0.55;
+}
+.settings-row-icon {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  stroke-width: 2;
+}
+.settings-row-end {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--p-mute);
+}
+.settings-row-end > svg {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2.4;
+}
+.settings-ok {
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--p-ink);
+  color: var(--p-paper);
+}
+.settings-ok svg {
+  width: 11px;
+  height: 11px;
+}
+.settings-note {
+  margin: 8px 6px 0;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.6;
+  color: var(--p-mute);
+}
+.settings-error {
+  color: var(--p-danger);
+}
+
+/* LINE通知：黒と白だけのスイッチ。オンで黒い面に白い丸が右へ寄る。 */
+.settings-switch-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+.settings-switch {
+  position: relative;
+  width: 50px;
+  height: 30px;
+  border-radius: 999px;
+  background: var(--p-pale);
+  transition: background-color 0.2s;
+}
+.settings-switch::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--p-paper);
+  box-shadow: 0 1px 3px #0003;
+  transition: transform var(--sp-boing-d, 0.5s) var(--sp-boing, cubic-bezier(0.34, 1.56, 0.64, 1));
+}
+.settings-switch-input:checked + .settings-switch {
+  background: var(--p-ink);
+}
+.settings-switch-input:checked + .settings-switch::after {
+  transform: translateX(20px);
+}
+.settings-switch-input:focus-visible + .settings-switch {
+  outline: 2px solid var(--p-ink);
+  outline-offset: 2px;
+}
+.settings-switch-row.unavailable {
+  cursor: default;
+}
+.settings-switch-row.unavailable .settings-switch {
+  opacity: 0.5;
+}
+
+/* メンバー：行頭は線のアイコンの代わりに顔。 */
+.settings-member-avatar {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--p-pale);
+  color: var(--p-paper);
+  font-size: 14px;
+  font-weight: 900;
+}
+.settings-member-avatar img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
-.settings-page .settings-card {
-  border: 0;
-  border-radius: 20px;
+.settings-member .settings-row-end {
+  font-size: 12px;
 }
-.settings-page .settings-section > h2 {
-  letter-spacing: 0.05em;
-  margin-bottom: 12px;
-}
-.settings-page .notification-toggle {
-  padding: 18px;
-}
-.settings-page .notification-toggle-icon {
-  border-radius: 14px;
-}
-.settings-page .notification-toggle.enabled .notification-toggle-icon {
-  transform: none;
-}
-.settings-page .notification-toggle.enabled.touched:not(.unavailable) .notification-bell-on {
-  animation: settings-bell 360ms ease-out;
-}
-@keyframes settings-bell {
-  0%,
-  100% {
-    transform: rotate(0);
-  }
-  25% {
-    transform: rotate(-12deg);
-  }
-  60% {
-    transform: rotate(8deg);
-  }
-}
-.settings-page .notification-switch {
-  border-width: 0;
-  background: var(--surface-muted);
-  width: 58px;
-}
-.settings-page .notification-switch > span {
-  top: 5px;
-  left: 5px;
-  width: 26px;
-  height: 26px;
-  box-shadow: 0 1px 3px rgb(0 0 0 / 16%);
-  transition:
-    transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
-    color 180ms ease;
-}
-.settings-page .notification-toggle.enabled .notification-switch {
-  background: var(--accent);
-}
-.settings-page .notification-toggle.unavailable {
-  opacity: 0.7;
-}
-.settings-page .setting-status > span {
-  font-size: 0.75rem;
-  padding: 4px 9px;
-  border-radius: 8px;
-  background: var(--surface-muted);
-}
-.settings-page .setting-status > .linked {
-  background: color-mix(in srgb, var(--success) 10%, var(--surface));
-}
-.settings-page .theme-setting {
-  padding: 0;
-  overflow: visible;
-  border-radius: 0;
-  background: transparent;
-}
-.settings-page .theme-setting > div {
-  gap: 10px;
-}
-.settings-page .theme-setting label {
-  border: 2px solid transparent;
-  padding: 6px 6px 12px;
-  gap: 8px;
-  background: var(--surface);
-  border-radius: 16px;
-}
-.settings-page .theme-setting label.selected {
-  background: color-mix(in srgb, var(--accent) 15%, var(--surface));
-  border-color: var(--accent-ink);
-  box-shadow: none;
-}
-.settings-page .theme-setting label > svg {
-  width: 18px;
-  height: 18px;
-}
-.settings-page .theme-setting .theme-preview {
-  --sample-paper: #ffffff;
-  --sample-surface: #f3f2ef;
-  --sample-muted: #e8e6e1;
-  --sample-photo: #cbc5bb;
+
+/* ── 外観：3つのボタン。選んだものだけが紙の面になる ── */
+.settings-theme {
   display: grid;
-  grid-template-rows: 9px 40px 4px 9px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  padding: 4px;
+  border-radius: 18px;
+  background: var(--p-soft);
+}
+.settings-theme button {
+  height: 46px;
+  min-height: 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   gap: 6px;
-  width: 100%;
-  padding: 8px;
-  border-radius: 10px;
-  background: var(--sample-paper);
-  overflow: hidden;
+  border: 0;
+  border-radius: 14px;
+  background: none;
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--p-mute);
+  cursor: pointer;
 }
-.theme-preview i {
-  display: block;
-  border-radius: 3px;
+.settings-theme button svg {
+  width: 17px;
+  height: 17px;
 }
-.theme-preview-header,
-.theme-preview-nav {
-  background: var(--sample-surface);
+.settings-theme button[aria-pressed="true"] {
+  background: var(--p-paper);
+  color: var(--p-ink);
+  box-shadow:
+    0 1px 0 var(--p-line),
+    0 4px 10px -6px #0005;
 }
-.theme-preview-photo {
-  background: var(--sample-photo);
-}
-.theme-preview-caption {
-  width: 65%;
-  background: var(--sample-muted);
-}
-.settings-page .theme-preview[data-sample="dark"] {
-  --sample-paper: #141312;
-  --sample-surface: #23221f;
-  --sample-muted: #2d2b29;
-  --sample-photo: #57534d;
-}
-@media (prefers-color-scheme: dark) {
-  .settings-page .theme-preview[data-sample="system"] {
-    --sample-paper: #141312;
-    --sample-surface: #23221f;
-    --sample-muted: #2d2b29;
-    --sample-photo: #57534d;
-  }
-}
-.settings-page .settings-menu-row {
-  padding: 18px;
-}
-.settings-page .settings-menu-row:not(:has(> :not(span, .haptic-touch))) > span {
-  grid-column: 1 / -1;
-  min-width: 0;
-}
-.settings-page .settings-menu-row > svg:first-child {
-  border-radius: 13px;
-}
+
+/* ── ステージング確認 ── */
 .settings-page .role-guide > label {
   border-radius: 14px;
 }
-.settings-page .settings-app-info {
+
+/* ── ログアウト：見出しのない最後のまとまり。kondo の空の見出しと同じ 20px あける ── */
+.settings-page > .settings-signout {
+  margin-top: 20px;
+}
+
+/* ── 一番下のアイコン：押すと跳ねる ── */
+.settings-foot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   gap: 4px;
-  padding-top: 12px;
+  margin: 30px 0 0;
+  color: var(--p-ink);
 }
-.settings-page .skeleton-theme-options > span {
-  min-height: 165px;
-  border-radius: 16px;
+.settings-foot button {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
 }
-@media (max-width: 360px) {
-  .settings-page .notification-toggle {
-    padding: 14px 10px;
-    gap: 8px;
-  }
-  .settings-page .theme-setting > div {
-    gap: 6px;
-  }
-  .settings-page .theme-setting label {
-    padding-inline: 3px;
-  }
+.settings-logo {
+  display: block;
+  width: 64px;
+  height: 64px;
 }
-@media (prefers-reduced-motion: reduce) {
-  .settings-page .notification-toggle.enabled.touched .notification-bell-on {
-    animation: none;
-  }
+.settings-logo img {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+.settings-logo .settings-app-icon-dark {
+  display: none;
+}
+.settings-foot b {
+  font-size: 15px;
+  font-weight: 800;
+}
+
+/* ── 読み込み中の形 ── */
+.skeleton-settings-layout .passport .skeleton-line {
+  margin-top: 8px;
+}
+.skeleton-settings-layout .settings-theme {
+  height: 54px;
+}
+.skeleton-settings-layout .settings-row .skeleton-copy {
+  flex: 1;
+}
+.skeleton-settings-layout .settings-row-icon {
+  border-radius: 50%;
+}
+.skeleton-settings-layout .passport-stamps {
+  min-height: 52px;
+}
+
+/* メンバー一覧のお知らせ先 */
+.notify-tag {
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  background: var(--p-soft);
+}
+.notify-tag.app {
+  color: var(--p-paper);
+  background: var(--p-ink);
+}
+.notify-tag.line {
+  color: #0a7a33;
+  background: #e3f7ea;
+}
+.notify-tag.none {
+  color: var(--p-danger);
+  background: #fdecea;
+}
+.notify-try {
+  margin-left: 6px;
+  padding: 4px 10px;
+  border: 0;
+  border-radius: 999px;
+  color: var(--p-ink);
+  background: var(--p-paper);
+  box-shadow: 0 0 0 1px var(--p-line);
+  font-size: 12px;
+  font-weight: 700;
 }

@@ -15,11 +15,17 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type KeyboardEvent } from "react";
 import type { CurrentUser } from "../../shared/types";
+import { api } from "../api";
 import { installPromptStore } from "../install-prompt";
+import { appleMobileSupportsPush, isStandalone, readPushState, syncPushSubscription } from "../push";
+import { NotificationGuide, OPEN_NOTIFICATION_GUIDE_EVENT, type NotificationGuideMode } from "./NotificationGuide";
 
 export const OPEN_ONBOARDING_GUIDE_EVENT = "konogoro:open-onboarding-guide";
 export const OPEN_INSTALL_GUIDE_EVENT = "konogoro:open-install-guide";
 const ONBOARDING_SEEN_KEY = "konogoro:onboarding-seen:v1";
+// アプリ通知へのお誘いを「あとで」にした時刻。3日たったらもう一度だけ出す。
+const PUSH_INVITE_SNOOZED_KEY = "konogoro:push-invite-snoozed-at:v1";
+const PUSH_INVITE_SNOOZE_MS = 3 * 24 * 60 * 60 * 1000;
 
 export type PwaEnvironment = "installed" | "ios-line" | "ios-browser" | "android-line" | "android-browser" | "other";
 
@@ -55,14 +61,42 @@ function remember(key: string) {
   }
 }
 
-function isStandalone(): boolean {
-  const iosStandalone = (navigator as Navigator & { standalone?: boolean }).standalone === true;
-  return iosStandalone || window.matchMedia?.("(display-mode: standalone)").matches === true;
+function markOnboardingSeen() {
+  void api<void>("/me/onboarding-seen", { method: "POST" }).catch(() => undefined);
+}
+
+function inviteSnoozed(): boolean {
+  try {
+    const at = Number(window.localStorage.getItem(PUSH_INVITE_SNOOZED_KEY));
+    return Number.isFinite(at) && Date.now() - at < PUSH_INVITE_SNOOZE_MS;
+  } catch {
+    return false;
+  }
+}
+
+function snoozeInvite() {
+  try {
+    window.localStorage.setItem(PUSH_INVITE_SNOOZED_KEY, String(Date.now()));
+  } catch {
+    // 保存できなくても、閉じた画面は今回の起動では出し直さない。
+  }
+}
+
+/** ホーム画面に追加すればアプリ通知を受け取れる環境か。 */
+function canReceiveAfterInstall(environment: PwaEnvironment): boolean {
+  if (environment === "ios-line" || environment === "ios-browser") return appleMobileSupportsPush();
+  return environment === "android-line" || environment === "android-browser";
 }
 
 export function PwaGuide({ user }: { user: CurrentUser }) {
-  const [welcomeOpen, setWelcomeOpen] = useState(() => user.role === "viewer" && !stored(ONBOARDING_SEEN_KEY));
+  const seenHere = stored(ONBOARDING_SEEN_KEY);
+  const [welcomeOpen, setWelcomeOpen] = useState(() => user.role === "viewer" && !user.onboardingSeen && !seenHere);
   const [installOpen, setInstallOpen] = useState(false);
+  const [notifyOpen, setNotifyOpen] = useState(false);
+  const [notifyMode, setNotifyMode] = useState<NotificationGuideMode>("invite");
+  const invited = useRef(false);
+  const autoOpened = useRef(false);
+  const publicKey = user.pushPublicKey ?? null;
   const installPrompt = useSyncExternalStore(installPromptStore.subscribe, installPromptStore.getSnapshot, () => null);
   const [installed, setInstalled] = useState(isStandalone);
   const environment = useMemo(() => detectPwaEnvironment(navigator.userAgent, installed), [installed]);
@@ -70,26 +104,77 @@ export function PwaGuide({ user }: { user: CurrentUser }) {
   useEffect(() => {
     const showWelcome = () => setWelcomeOpen(true);
     const showInstall = () => setInstallOpen(true);
+    const showNotify = (event: Event) => {
+      setNotifyMode((event as CustomEvent<NotificationGuideMode>).detail ?? "invite");
+      setNotifyOpen(true);
+    };
     const markInstalled = () => {
       setInstalled(true);
       setInstallOpen(false);
     };
     window.addEventListener(OPEN_ONBOARDING_GUIDE_EVENT, showWelcome);
     window.addEventListener(OPEN_INSTALL_GUIDE_EVENT, showInstall);
+    window.addEventListener(OPEN_NOTIFICATION_GUIDE_EVENT, showNotify);
     window.addEventListener("appinstalled", markInstalled);
     return () => {
+      window.removeEventListener(OPEN_NOTIFICATION_GUIDE_EVENT, showNotify);
       window.removeEventListener(OPEN_ONBOARDING_GUIDE_EVENT, showWelcome);
       window.removeEventListener(OPEN_INSTALL_GUIDE_EVENT, showInstall);
       window.removeEventListener("appinstalled", markInstalled);
     };
   }, []);
 
+  // 起動のたびに、この端末のアプリ通知をサーバーへ伝え直す。
+  useEffect(() => {
+    if (publicKey && installed) void syncPushSubscription().catch(() => undefined);
+  }, [publicKey, installed]);
+
+  // 使い方の案内を閉じたあと、アプリ通知へ一度だけ誘う。
+  // ホーム画面のアプリなら「通知をオンにする」、LINEやブラウザで開いていれば「ホーム画面に追加」。
+  useEffect(() => {
+    if (!publicKey || welcomeOpen || invited.current || inviteSnoozed()) return;
+    // 画面が出そろってから、少し間をおいて出す。
+    const timer = setTimeout(() => {
+      if (invited.current) return;
+      invited.current = true;
+      if (installed) {
+        void readPushState().then((state) => {
+          if (state !== "off") return;
+          autoOpened.current = true;
+          setNotifyMode("invite");
+          setNotifyOpen(true);
+        });
+      } else if (canReceiveAfterInstall(environment)) {
+        autoOpened.current = true;
+        setInstallOpen(true);
+      }
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [publicKey, welcomeOpen, installed, environment]);
+
+  const closeAuto = () => {
+    if (autoOpened.current) snoozeInvite();
+    autoOpened.current = false;
+  };
+
+  const closeNotify = () => {
+    closeAuto();
+    setNotifyOpen(false);
+  };
+
+  // この端末で前に見ていれば、ほかの端末やホーム画面のアプリでも出さないようにサーバーへ伝える。
+  useEffect(() => {
+    if (seenHere && !user.onboardingSeen) markOnboardingSeen();
+  }, [seenHere, user.onboardingSeen]);
+
   const closeWelcome = () => {
     remember(ONBOARDING_SEEN_KEY);
+    markOnboardingSeen();
     setWelcomeOpen(false);
   };
 
   const closeInstall = () => {
+    closeAuto();
     setInstallOpen(false);
   };
 
@@ -110,9 +195,21 @@ export function PwaGuide({ user }: { user: CurrentUser }) {
       {installOpen && (
         <InstallGuide
           environment={environment}
+          notify={Boolean(publicKey) && canReceiveAfterInstall(environment)}
           canPrompt={Boolean(installPrompt)}
           close={closeInstall}
           install={() => void requestInstall()}
+        />
+      )}
+      {notifyOpen && publicKey && (
+        <NotificationGuide
+          publicKey={publicKey}
+          mode={notifyMode}
+          close={closeNotify}
+          openInstallGuide={() => {
+            setNotifyOpen(false);
+            setInstallOpen(true);
+          }}
         />
       )}
     </>
@@ -156,9 +253,9 @@ export function onboardingGuideSlides(): GuideSlide[] {
       visual: "comments",
     },
     {
-      eyebrow: "LINE通知",
-      titleLines: ["新しい思い出を、", "LINEでお知らせ"],
-      body: "新しい投稿が届くとLINEでお知らせします。通知から、そのまま新しい思い出を見られます。通知は設定画面でいつでも切り替えられます。",
+      eyebrow: "通知",
+      titleLines: ["新しい思い出を、", "すぐにお知らせ"],
+      body: "新しい投稿が届くと、ホーム画面に追加したこのアプリでお知らせします。追加するまではLINEでお知らせします。通知は設定画面でいつでも切り替えられます。",
       visual: "line",
     },
   ];
@@ -377,10 +474,10 @@ function GuideIllustration({ kind }: { kind: GuideVisual }) {
     );
   if (kind === "line")
     return (
-      <div className="guide-visual guide-line" role="img" aria-label="新しい思い出を知らせるLINE通知のイメージ">
+      <div className="guide-visual guide-line" role="img" aria-label="新しい思い出を知らせる通知のイメージ">
         <div className="guide-line-header">
-          <MessageCircle />
-          <strong>LINE通知</strong>
+          <Bell />
+          <strong>このごろ</strong>
           <small>たった今</small>
         </div>
         <article>
@@ -399,16 +496,18 @@ function GuideIllustration({ kind }: { kind: GuideVisual }) {
 
 function InstallGuide({
   environment,
+  notify,
   canPrompt,
   close,
   install,
 }: {
   environment: PwaEnvironment;
+  notify: boolean;
   canPrompt: boolean;
   close: () => void;
   install: () => void;
 }) {
-  const content = installGuideContent(environment);
+  const content = installGuideContent(environment, notify);
   return (
     <div className="modal-backdrop pwa-guide-backdrop install-guide-backdrop">
       <section
@@ -440,6 +539,11 @@ function InstallGuide({
             ))}
           </ol>
         )}
+        {environment.endsWith("-line") && (
+          <a className="primary-button wide" href={externalBrowserUrl(window.location.href)}>
+            ブラウザで開く
+          </a>
+        )}
         {canPrompt && environment === "android-browser" && (
           <button className="primary-button wide" type="button" onClick={install}>
             ホーム画面に追加
@@ -453,7 +557,29 @@ function InstallGuide({
   );
 }
 
-export function installGuideContent(environment: PwaEnvironment): { title: string; body: string; steps: string[] } {
+/** LINEのアプリ内ブラウザでこの印を付けたURLを開くと、端末のいつものブラウザで開き直す。 */
+export function externalBrowserUrl(href: string): string {
+  const url = new URL(href);
+  url.searchParams.set("openExternalBrowser", "1");
+  return url.toString();
+}
+
+export function installGuideContent(
+  environment: PwaEnvironment,
+  notify = false,
+): { title: string; body: string; steps: string[] } {
+  const content = installSteps(environment);
+  if (!notify || content.steps.length === 0) return content;
+  return {
+    ...content,
+    title: "アプリで通知を受け取る",
+    body: `ホーム画面に追加すると、新しい思い出のお知らせがこのアプリから届きます。${
+      environment.endsWith("-line") ? "まずLINEから、いつものブラウザで開き直します。" : ""
+    }追加したら、ホーム画面の「このごろ」から開いてください。`,
+  };
+}
+
+function installSteps(environment: PwaEnvironment): { title: string; body: string; steps: string[] } {
   if (environment === "installed")
     return { title: "ホーム画面から開けます", body: "このごろはすでにアプリとして追加されています。", steps: [] };
   if (environment === "ios-line")
@@ -461,8 +587,8 @@ export function installGuideContent(environment: PwaEnvironment): { title: strin
       title: "次から、すぐに開けます",
       body: "まずLINEからSafariで開き、ホーム画面へ追加します。",
       steps: [
-        "LINEのメニューから「デフォルトのブラウザで開く」を選ぶ",
-        "Safari下部の共有ボタンを押す",
+        "下の「ブラウザで開く」を押す",
+        "Safari下部の共有ボタン（なければ「…」）を押す",
         "「ホーム画面に追加」→「追加」を押す",
       ],
     };
@@ -470,14 +596,14 @@ export function installGuideContent(environment: PwaEnvironment): { title: strin
     return {
       title: "次から、すぐに開けます",
       body: "ホーム画面へ追加すると、写真を見るたびにLINEを探さずに済みます。",
-      steps: ["Safari下部の共有ボタンを押す", "「ホーム画面に追加」を選ぶ", "右上の「追加」を押す"],
+      steps: ["Safari下部の共有ボタン（なければ「…」）を押す", "「ホーム画面に追加」を選ぶ", "右上の「追加」を押す"],
     };
   if (environment === "android-line")
     return {
       title: "次から、すぐに開けます",
       body: "まずLINEから標準ブラウザで開き、ホーム画面へ追加します。",
       steps: [
-        "LINEのメニューから「デフォルトのブラウザで開く」を選ぶ",
+        "下の「ブラウザで開く」を押す",
         "ブラウザのメニューを押す",
         "「アプリをインストール」または「ホーム画面に追加」を選ぶ",
       ],

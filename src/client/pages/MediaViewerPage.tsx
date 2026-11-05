@@ -1,10 +1,15 @@
 import "../viewer-material.css";
 import { ViewerComments } from "../components/ViewerComments";
+import { CommentSheet } from "../components/CommentSheet";
 import { clearPreparedVideo, prepareNextVideo, useVideoPreparation } from "../video-experience";
 import { VideoPlayer } from "../components/VideoPlayer";
 import { commentNavigationState } from "../comment-navigation";
 import { canReturnInApp, rememberAlbumMedia, updateReadingPost } from "../reading-context";
-import { ChevronLeft, ChevronRight, Download, MessageCircle, X } from "lucide-react";
+import { Download, MessageCircle, X } from "lucide-react";
+import { mainDockItems, useCurrentUser } from "../components/AppLayout";
+import { MainDock } from "../components/MainDock";
+import { DockGroup } from "../cartoon/cartoon-dock";
+import { Live } from "../cartoon/cartoon";
 import {
   useCallback,
   useEffect,
@@ -12,10 +17,12 @@ import {
   useMemo,
   useRef,
   useState,
+  type FormEvent,
+  type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
-import type { AlbumMedia, Media, Post } from "../../shared/types";
+import type { AlbumMedia, Comment, Media, Post } from "../../shared/types";
 import { api, formatDate } from "../api";
 import { ViewerImage, type ViewerImageTransform } from "../components/ViewerImage";
 import { ErrorState, Loading } from "../components/AsyncState";
@@ -144,6 +151,16 @@ export function MediaViewerPage() {
   const [retry, setRetry] = useState(0);
   const postCache = useRef(new Map<string, Post>());
   const [commentsOpen, setCommentsOpen] = useState(false);
+  // コメント欄は閉じるときも、写真の面が下りきるまで下に残す。
+  const [sheetMounted, setSheetMounted] = useState(false);
+  // スマホでは投稿ページと同じ書き込み欄がせり上がる。PC は横に浮くコメント一覧のまま。
+  const [compact, setCompact] = useState(false);
+  const [text, setText] = useState("");
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState("");
+  const [liftHeight, setLiftHeight] = useState(0);
+  const sheetRef = useRef<HTMLFormElement>(null);
+  const currentUser = useCurrentUser();
   const [viewerOverlayVisible, setViewerOverlayVisible] = useState(true);
   const [videoControlsContainer, setVideoControlsContainer] = useState<HTMLDivElement | null>(null);
   const [finishedMedia, setFinishedMedia] = useState<string | null>(null);
@@ -358,6 +375,135 @@ export function MediaViewerPage() {
     window.addEventListener("keydown", keydown);
     return () => window.removeEventListener("keydown", keydown);
   }, [animateToMedia, closeViewer, commentsOpen, index, post]);
+  // 持ち上げは投稿ページ（post-motion.ts）と同じばね「dock」で、上げ下ろしとも動かす。
+  const mainRef = useRef<HTMLElement>(null);
+  const liftLive = useRef<Live | null>(null);
+  const liftSize = useRef(0);
+  const openState = useRef(false);
+  const lift = () => {
+    liftLive.current ??= new Live(
+      0,
+      (y) => {
+        const main = mainRef.current;
+        if (!main) return;
+        const progress = Math.max(0, Math.min(1, -y / (liftSize.current || 1)));
+        main.style.setProperty("--viewer-y", `${y.toFixed(2)}px`);
+        main.style.setProperty("--viewer-progress", progress.toFixed(3));
+        // 中身は面より少し遅れて上がり、面の下から出てくるように見せる（投稿ページと同じ）。
+        const sheet = sheetRef.current;
+        if (!sheet) return;
+        sheet.style.setProperty("--sheet-shift", `${((1 - progress) * 18).toFixed(1)}px`);
+        // 下ろすとき、面が一度下りきったら欄は隠す。ばねの揺れで面が少し戻っても下の欄をのぞかせない。
+        if (!openState.current && y > -0.5) sheet.style.visibility = "hidden";
+      },
+      "dock",
+      0.3,
+    );
+    return liftLive.current;
+  };
+  useEffect(() => {
+    openState.current = commentsOpen;
+    if (commentsOpen) {
+      sheetRef.current?.style.removeProperty("visibility");
+      if (liftHeight > 0) void lift().to(-liftHeight, "dock");
+      return;
+    }
+    // コメント欄は面が下りきってから外す。
+    void lift()
+      .to(0, "dock")
+      .then(() => {
+        if (!openState.current) setSheetMounted(false);
+      });
+  }, [commentsOpen, liftHeight]);
+  useEffect(() => () => liftLive.current?.stop(), []);
+  useLayoutEffect(() => {
+    const sheet = sheetRef.current;
+    if (!sheet || typeof ResizeObserver === "undefined") return;
+    // 持ち上げるのは、欄のうちボトムナビの帯より上に出る分だけ。
+    const measure = () => {
+      // カスタムプロパティは calc のまま返るので、計算済みの main の下余白（= ボトムナビの帯）を使う。
+      const main = sheet.parentElement;
+      const zone = main ? parseFloat(getComputedStyle(main).paddingBottom) || 0 : 0;
+      liftSize.current = Math.max(0, sheet.offsetHeight - zone);
+      setLiftHeight(liftSize.current);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(sheet);
+    return () => observer.disconnect();
+  }, [sheetMounted, compact]);
+  const addComment = (comment: Comment) => {
+    if (!post) return;
+    const nextPost = { ...post, comments: [...post.comments, comment], commentCount: post.comments.length + 1 };
+    setLoadedPost((loaded) => (loaded?.postId === post.id ? { postId: post.id, post: nextPost } : loaded));
+    postCache.current.set(post.id, nextPost);
+    updateReadingPost(nextPost);
+  };
+  const sendComment = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const body = text.trim();
+    if (!post || sending || !body) return;
+    setSendError("");
+    setSending(true);
+    try {
+      const comment = await api<Comment>(`/posts/${post.id}/comments`, {
+        method: "POST",
+        body: JSON.stringify({ body }),
+      });
+      setText("");
+      addComment(comment);
+      // 投稿ページと同じく、送ったら欄を下ろす。
+      closeComments();
+    } catch (reason) {
+      setSendError((reason as Error).message);
+    } finally {
+      setSending(false);
+    }
+  };
+  // 持ち上がった面：押すと下ろす、つまみなどを持って下へ引くと指についてくる（投稿ページと同じ）。
+  const liftDrag = useRef<{ start: number; moved: number } | null>(null);
+  const liftHandlers = {
+    onPointerDownCapture: (event: ReactPointerEvent<HTMLElement>) => {
+      if (!commentsOpen) return;
+      event.preventDefault();
+      event.stopPropagation();
+      liftDrag.current = { start: event.clientY, moved: 0 };
+      event.currentTarget.setPointerCapture(event.pointerId);
+    },
+    onPointerMoveCapture: (event: ReactPointerEvent<HTMLElement>) => {
+      const drag = liftDrag.current;
+      if (!drag) return;
+      event.stopPropagation();
+      drag.moved = Math.min(Math.max(0, event.clientY - drag.start), liftHeight);
+      lift().set(-liftHeight + drag.moved);
+    },
+    onPointerUpCapture: (event: ReactPointerEvent<HTMLElement>) => {
+      const drag = liftDrag.current;
+      if (!drag) return;
+      event.stopPropagation();
+      liftDrag.current = null;
+      if (drag.moved < 6 || drag.moved > 70) closeComments();
+      else void lift().to(-liftHeight, "dock");
+    },
+    onPointerCancelCapture: () => {
+      liftDrag.current = null;
+      if (commentsOpen) void lift().to(-liftHeight, "dock");
+    },
+    onClickCapture: (event: ReactMouseEvent<HTMLElement>) => {
+      if (!commentsOpen) return;
+      event.preventDefault();
+      event.stopPropagation();
+    },
+  };
+  const openComments = () => {
+    setCompact(window.matchMedia("(max-width: 1023px)").matches);
+    setSheetMounted(true);
+    setCommentsOpen(true);
+  };
+  const closeComments = () => {
+    setCommentsOpen(false);
+    commentButtonRef.current?.focus({ preventScroll: true });
+  };
   const cancelSwipe = () => {
     swipeStart.current = null;
     setDragging(false);
@@ -511,8 +657,11 @@ export function MediaViewerPage() {
   };
   const overlayVisible = isViewerOverlayVisible(current?.kind, viewerOverlayVisible);
   return (
-    <main className={`media-viewer video-viewer${commentsOpen ? " comments-open" : ""}`}>
-      <div className={`viewer-viewport${overlayVisible ? " overlay-visible" : " overlay-hidden"}`}>
+    <main
+      ref={mainRef}
+      className={`media-viewer video-viewer${commentsOpen ? " comments-open" : ""}${commentsOpen || sheetMounted ? " lift-active" : ""}`}
+    >
+      <div className={`viewer-viewport${overlayVisible ? " overlay-visible" : " overlay-hidden"}`} {...liftHandlers}>
         <header
           className="viewer-header viewer-overlay"
           aria-hidden={!overlayVisible}
@@ -591,31 +740,15 @@ export function MediaViewerPage() {
           )}
           <div className="viewer-controls">
             <button
-              type="button"
-              onClick={() => animateToMedia(index - 1, "previous")}
-              disabled={index <= 0}
-              aria-label="前の写真・動画"
-            >
-              <ChevronLeft aria-hidden />
-            </button>
-            <button
               ref={commentButtonRef}
               className="viewer-comment-button"
               type="button"
               disabled={!post || !current}
               aria-expanded={commentsOpen}
-              onClick={() => setCommentsOpen((open) => !open)}
+              onClick={() => (commentsOpen ? closeComments() : openComments())}
             >
               <MessageCircle aria-hidden />
               コメント{post && post.comments.length > 0 && <b>{post.comments.length}</b>}
-            </button>
-            <button
-              type="button"
-              onClick={() => animateToMedia(index + 1, "next")}
-              disabled={index >= navigationItems.length - 1}
-              aria-label="次の写真・動画"
-            >
-              <ChevronRight aria-hidden />
             </button>
           </div>
           {current && finishedMedia === current.id && (
@@ -625,7 +758,7 @@ export function MediaViewerPage() {
           )}
         </div>
       </div>
-      <div className="thumbnail-strip" ref={thumbnailStripRef}>
+      <div className="thumbnail-strip" ref={thumbnailStripRef} {...liftHandlers}>
         {navigationItems.map((media, mediaIndex) => (
           <Link
             className={media.id === mediaId && media.postId === postId ? "selected" : ""}
@@ -650,22 +783,58 @@ export function MediaViewerPage() {
           </Link>
         ))}
       </div>
-      {commentsOpen && post && (
-        <ViewerComments
-          key={post.id}
-          post={post}
-          onClose={() => {
-            setCommentsOpen(false);
-            commentButtonRef.current?.focus();
-          }}
-          onComment={(comment) => {
-            const nextPost = { ...post, comments: [...post.comments, comment], commentCount: post.comments.length + 1 };
-            setLoadedPost((loaded) => (loaded?.postId === post.id ? { postId: post.id, post: nextPost } : loaded));
-            postCache.current.set(post.id, nextPost);
-            updateReadingPost(nextPost);
-          }}
-        />
-      )}
+      {(commentsOpen || sheetMounted) &&
+        post &&
+        (compact ? (
+          <CommentSheet
+            formId={VIEWER_COMMENT_FORM}
+            sheetRef={sheetRef}
+            open={commentsOpen}
+            user={currentUser}
+            authorName={post.authorName}
+            error={sendError}
+            text={text}
+            sending={sending}
+            onText={setText}
+            onSubmit={(event) => void sendComment(event)}
+            className="viewer-comment-sheet"
+          />
+        ) : (
+          <ViewerComments key={post.id} post={post} onClose={closeComments} onComment={addComment} />
+        ))}
+      {/* スマホ・タブレットのボトムナビ：閉じる・コメントする・保存。コメント欄を開くと、閉じると送信になる。 */}
+      <MainDock items={mainDockItems} className="viewer-dock" identity="viewer" label="写真・動画の操作">
+        {commentsOpen ? (
+          // 投稿ページと同じく、書いている間は送信ボタンだけ。持ち上がった面を押すと下りる。
+          <DockGroup slot="r" className="cdock-center cdock-send">
+            <button type="submit" form={VIEWER_COMMENT_FORM} disabled={!text.trim() || sending}>
+              {sending ? "送信中…" : "送信"}
+            </button>
+          </DockGroup>
+        ) : (
+          <>
+            <DockGroup slot="l">
+              <button type="button" onClick={closeViewer} aria-label="閉じる">
+                <X />
+              </button>
+            </DockGroup>
+            <DockGroup slot="m" tone="ink" stretch>
+              <button type="button" disabled={!post || !current} onClick={openComments}>
+                <MessageCircle aria-hidden />
+                コメントする
+                {post && post.comments.length > 0 && <b className="viewer-dock-count">{post.comments.length}</b>}
+              </button>
+            </DockGroup>
+            <DockGroup slot="r">
+              <a href={current?.downloadUrl} aria-disabled={!current} aria-label="保存">
+                <Download />
+              </a>
+            </DockGroup>
+          </>
+        )}
+      </MainDock>
     </main>
   );
 }
+
+const VIEWER_COMMENT_FORM = "viewer-comment-form";

@@ -113,7 +113,7 @@ export function ViewerComments({
             aria-label="この投稿にコメント"
             value={body}
             onChange={(event) => setBody(event.target.value)}
-            placeholder="コメントを書く"
+            placeholder="この投稿にコメント"
             maxLength={1000}
             required
             disabled={sending}

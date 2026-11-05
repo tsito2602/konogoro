@@ -11,3 +11,6 @@ APP_ORIGIN=http://localhost:5173
 # Phase 3のLINE通知を有効にする場合のみ設定する。
 LINE_CHANNEL_ACCESS_TOKEN=your-line-messaging-api-channel-access-token
 LINE_MESSAGING_CHANNEL_SECRET=your-line-messaging-api-channel-secret
+
+# アプリ（PWA）の通知を有効にする場合のみ設定する。node scripts/generate-vapid-key.mjs の出力をそのまま入れる。
+VAPID_KEY={"kty":"EC","crv":"P-256","d":"...","x":"...","y":"..."}

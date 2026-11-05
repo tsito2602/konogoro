@@ -3,7 +3,7 @@ import { Bell, BookOpen, ChevronRight, Link2, Pencil, Smartphone, Users } from "
 import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import packageInfo from "../../../package.json";
-import type { CurrentUser, FamilyMember, User } from "../../shared/types";
+import type { CurrentUser, FamilyMember, NotificationChannel, User } from "../../shared/types";
 import { api } from "../api";
 import { useAppUpdate } from "../app-update";
 import { spring } from "../cartoon/cartoon";
@@ -12,7 +12,9 @@ import { ErrorState } from "../components/AsyncState";
 import { PageHeader } from "../components/PageHeader";
 import { useCurrentUser } from "../components/AppLayout";
 import { PageSkeleton } from "../components/PageSkeleton";
+import { openNotificationGuide, PUSH_STATE_CHANGED_EVENT } from "../components/NotificationGuide";
 import { openInstallGuide, openOnboardingGuide } from "../components/PwaGuide";
+import { disablePush, readPushState, type PushState } from "../push";
 import { useToast } from "../components/Toast";
 import { getThemePreference, setThemePreference, type ThemePreference } from "../theme";
 
@@ -23,6 +25,12 @@ const roleLabels: Record<User["role"], string> = {
   owner: "管理者",
   uploader: "投稿者",
   viewer: "閲覧者",
+};
+
+const memberChannelLabels: Record<NotificationChannel, string> = {
+  app: "アプリ通知",
+  line: "LINE通知",
+  none: "通知なし",
 };
 
 const stagingRoleOptions = [
@@ -183,12 +191,53 @@ function Passport({ user, onSaved }: { user: CurrentUser; onSaved: (user: Curren
   );
 }
 
-/** LINE：通知のオンとオフは押したときに保存する。連携と受け取りの状態は右に出す。 */
-function LineRows({ user, onSaved }: { user: CurrentUser; onSaved: (user: CurrentUser) => void }) {
+const channelNotes: Record<NotificationChannel, string> = {
+  app: "新しい投稿をこのアプリでお知らせします",
+  line: "新しい投稿をLINEでお知らせします",
+  none: "新しい投稿のお知らせは届きません",
+};
+
+const pushStateLabels: Record<PushState, string> = {
+  on: "オン",
+  off: "オフ",
+  denied: "止められています",
+  "needs-install": "ホーム画面に追加が必要",
+  unsupported: "使えません",
+};
+
+/**
+ * 通知：オンとオフは押したときに保存する。届け先は、アプリの端末があればアプリ、なければLINE。
+ * この端末のアプリ通知は、押すと手順の画面を開く。
+ */
+function NotificationRows({ user, onSaved }: { user: CurrentUser; onSaved: (user: CurrentUser) => void }) {
   const showToast = useToast();
   const [enabled, setEnabled] = useState(user.notificationEnabled ?? false);
   const [busy, setBusy] = useState(false);
-  const available = user.lineFriend;
+  const [pushState, setPushState] = useState<PushState | null>(null);
+  const pushReady = Boolean(user.pushPublicKey);
+
+  const refresh = useCallback(() => {
+    void api<CurrentUser>("/me")
+      .then((result) => {
+        onSaved(result);
+        setEnabled(result.notificationEnabled ?? false);
+      })
+      .catch(() => undefined);
+  }, [onSaved]);
+
+  useEffect(() => {
+    if (!pushReady) return;
+    void readPushState().then(setPushState);
+    const changed = (event: Event) => {
+      setPushState((event as CustomEvent<PushState>).detail);
+      refresh();
+    };
+    window.addEventListener(PUSH_STATE_CHANGED_EVENT, changed);
+    return () => window.removeEventListener(PUSH_STATE_CHANGED_EVENT, changed);
+  }, [pushReady, refresh]);
+
+  const channel = enabled ? (user.notificationChannel ?? "none") : "none";
+  const available = Boolean(user.lineFriend) || user.notificationChannel === "app" || pushState === "on";
   const toggle = async (next: boolean) => {
     setEnabled(next);
     setBusy(true);
@@ -199,7 +248,7 @@ function LineRows({ user, onSaved }: { user: CurrentUser; onSaved: (user: Curren
       });
       onSaved(result);
       setEnabled(result.notificationEnabled ?? false);
-      showToast(next ? "LINE通知をオンにしました" : "LINE通知をオフにしました", { success: true });
+      showToast(next ? "通知をオンにしました" : "通知をオフにしました", { success: true });
     } catch (reason) {
       setEnabled(!next);
       showToast((reason as Error).message);
@@ -213,14 +262,8 @@ function LineRows({ user, onSaved }: { user: CurrentUser; onSaved: (user: Curren
         <label className={`settings-row settings-switch-row${available ? "" : " unavailable"}`}>
           <Row
             icon={<Bell className="settings-row-icon" aria-hidden />}
-            title="LINE通知"
-            note={
-              !available
-                ? "友だち追加後に利用できる"
-                : enabled
-                  ? "新しい投稿をLINEでお知らせします"
-                  : "新しい投稿のLINE通知は届きません"
-            }
+            title="通知"
+            note={available ? channelNotes[channel] : "アプリかLINEで受け取れるようにすると使えます"}
             end={
               <>
                 <input
@@ -236,6 +279,22 @@ function LineRows({ user, onSaved }: { user: CurrentUser; onSaved: (user: Curren
             }
           />
         </label>
+        {pushReady && (
+          <button className="settings-row" type="button" onClick={openNotificationGuide}>
+            <Row
+              icon={<Smartphone className="settings-row-icon" aria-hidden />}
+              title="この端末のアプリ通知"
+              note={pushState === "on" ? "試しの通知を送れます" : "LINEの代わりにアプリで受け取る"}
+              end={
+                <>
+                  {pushState === "on" && okMark}
+                  {pushState ? pushStateLabels[pushState] : ""}
+                  {chevron}
+                </>
+              }
+            />
+          </button>
+        )}
         <div className="settings-row">
           <Row
             icon={<Link2 className="settings-row-icon" aria-hidden />}
@@ -254,7 +313,7 @@ function LineRows({ user, onSaved }: { user: CurrentUser; onSaved: (user: Curren
         </div>
         <div className="settings-row">
           <Row
-            title="アプリからの通知"
+            title="LINEでの受け取り"
             end={
               user.lineFriend ? (
                 <>
@@ -268,7 +327,7 @@ function LineRows({ user, onSaved }: { user: CurrentUser; onSaved: (user: Curren
           />
         </div>
       </div>
-      {!user.lineFriend && (
+      {!user.lineFriend && user.notificationChannel !== "app" && (
         <p className="settings-note">LINEで「このごろ」アカウントをブロックしていないか確認してください。</p>
       )}
     </>
@@ -411,6 +470,8 @@ export function SettingsPage() {
     setBusy(true);
     setError("");
     try {
+      // ログアウトした端末には、もう通知を送らない。
+      await disablePush().catch(() => undefined);
       await api<void>("/auth/logout", { method: "POST" });
       setReadingIdentity(null);
       navigator.serviceWorker?.controller?.postMessage({ type: "CLEAR_MEDIA_CACHE" });
@@ -452,7 +513,7 @@ export function SettingsPage() {
             <section className="settings-section">
               <h2>アカウント</h2>
               <Passport user={user} onSaved={setUser} />
-              <LineRows user={user} onSaved={setUser} />
+              <NotificationRows user={user} onSaved={setUser} />
             </section>
 
             <section className="settings-section">
@@ -489,7 +550,7 @@ export function SettingsPage() {
                         <Row
                           title={member.displayName}
                           note={roleLabels[member.role]}
-                          end={`LINE通知${member.notificationEnabled ? "オン" : "オフ"}`}
+                          end={memberChannelLabels[member.notificationChannel]}
                         />
                       </div>
                     ))

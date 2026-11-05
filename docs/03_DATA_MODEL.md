@@ -201,7 +201,9 @@ created_at
 
 - `notification_dispatches`: collecting / sending / completed。collectingは最大1件。送信開始時の投稿・写真・動画件数と、初回送信前の本文を保存する。
 - `notification_dispatch_posts`: 投稿と通知の対応。post_idは一意。旧方式で登録済みの投稿も再登録しない。
-- `notification_deliveries`: 通知×メンバーの複合主キー。固定したLINE宛先、pending / accepted / failed / expired / skipped、試行回数、初回・次回試行日時、受付日時、エラー分類、送信占有tokenと期限を保持する。
+- `notification_deliveries`: 通知×メンバーの複合主キー。届け先 `channel`（line / push）、固定したLINE宛先（pushではnull）、pending / accepted / failed / expired / skipped、試行回数、初回・次回試行日時、受付日時、エラー分類、送信占有tokenと期限を保持する。
+
+- `push_subscriptions`（0016）: アプリ通知を受け取る端末。Push serviceのendpoint（一意）、暗号化用の`p256dh`・`auth`、最後に受け付けられた日時。1人が複数持てる。404・410が返った端末は削除する。
 
 collectingからsendingへの変更・件数と宛先の固定はD1トランザクションで行う。送信は宛先ごとの期限付き占有と安定したretry keyで同時実行・応答喪失に対応する。completedは処理終了を意味し、全員への配達成功とは限らない。
 

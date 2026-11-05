@@ -11,7 +11,8 @@
 | URL             | `https://konogoro-staging.tsito-apps.workers.dev` | `https://konogoro.tsito-apps.workers.dev` |
 | D1              | `family-timeline-staging`                         | `family-timeline`                         |
 | R2              | `family-timeline-media-staging`                   | `family-timeline-media`                   |
-| Cron / LINE通知 | 無効                                              | 有効                                      |
+| Cron            | 有効（アプリ通知だけ送る）                        | 有効                                      |
+| LINE通知        | 無効                                              | 有効                                      |
 
 stagingは本番D1・R2を参照しない。初回デプロイ時にGitHub Actionsがstaging用D1とR2を作成し、migrationを適用する。LINE Loginを設定しないため、migrationで作成される固定の開発ユーザーでログインする。
 

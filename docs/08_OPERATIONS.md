@@ -43,6 +43,12 @@ DB障害で受付保存に失敗した場合も、同じ本文・宛先・retry 
 
 参考: https://developers.line.biz/en/docs/messaging-api/retrying-api-request/
 
+## アプリ通知（Web Push）
+
+アプリ通知の署名鍵はWorker secret `VAPID_KEY`（P-256のJWK）に保存する。デプロイのworkflowが、secretがない場合だけ `scripts/generate-vapid-key.mjs` で作って登録する。鍵を作り直すと登録済みの端末に通知が届かなくなるため、既存の `VAPID_KEY` は消さない。端末は次にアプリを開いたときに登録し直すが、それまでの通知はLINEへ戻る。
+
+stagingのCronはアプリ通知だけを送り、LINEには送らない。送信の失敗は `push_delivery_failed`、LINEへの切り替えは `push_fell_back_to_line` としてWorkers Logsに出る。endpointや鍵はログに出さない。
+
 ## LINE Webhook
 
 Webhook URLは次を使用する。

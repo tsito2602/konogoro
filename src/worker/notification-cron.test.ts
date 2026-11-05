@@ -127,7 +127,7 @@ describe("notification deliveries", () => {
     expect(send).toHaveBeenCalledOnce();
     expect(send.mock.calls[0]).toEqual([
       expect.objectContaining({
-        text: "新しい思い出が届きました。投稿2件\nまとめて見る：https://konogoro.tsito-apps.workers.dev/unread",
+        text: "新しい思い出が届きました。投稿2件\nまとめて見る：https://konogoro.tsito-apps.workers.dev/unread?openExternalBrowser=1",
       }),
     ]);
     await processNotificationBatches(f.env, later(1440), send);

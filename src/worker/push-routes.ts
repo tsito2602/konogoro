@@ -74,8 +74,8 @@ export function createPushRoutes(send: PushSend = sendWebPush) {
       await send({
         subscription,
         message: {
-          title: "このごろ",
-          body: "通知が届きました。新しい思い出が届くと、このようにお知らせします。",
+          title: "通知のテスト",
+          body: "新しい思い出が届くと、このようにお知らせします。",
           url: "/",
           tag: "test",
         },

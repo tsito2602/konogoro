@@ -35,8 +35,9 @@ export function newPostsPushMessage(counts: {
   videoCount: number;
 }): PushMessage {
   return {
-    title: "このごろ",
-    body: `新しい思い出が届きました。${notificationSummary(counts)}`,
+    // iPhoneは見出しの下に「from （サイト名）」を自動で付ける。アプリ名を見出しに重ねず、中身を見出しにする。
+    title: "新しい思い出が届きました",
+    body: notificationSummary(counts),
     url: "/unread",
     tag: "new-posts",
   };

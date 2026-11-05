@@ -1005,7 +1005,7 @@ a.icon-button {
   column-gap: 12px;
   row-gap: 4px;
 }
-.post-engagement .seen-by summary,
+.post-engagement .seen-by-button,
 .post-engagement .seen-by-empty,
 .comment-count-link {
   min-width: 44px;
@@ -1113,22 +1113,20 @@ a.icon-button {
   position: relative;
   width: fit-content;
 }
-.seen-by summary {
+.seen-by-button {
   min-height: 32px;
   padding: 4px 9px;
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  list-style: none;
+  border: 0;
   border-radius: var(--pill);
   color: var(--ash);
   background: var(--surface-muted);
+  font: inherit;
   font-size: 0.8125rem;
   font-weight: 600;
   cursor: pointer;
-}
-.seen-by summary::-webkit-details-marker {
-  display: none;
 }
 .seen-icon {
   width: 22px;
@@ -1147,37 +1145,6 @@ a.icon-button {
   gap: 5px;
   color: var(--ash);
   font-size: 0.8125rem;
-}
-.seen-popover {
-  position: absolute;
-  z-index: 15;
-  bottom: calc(100% + 6px);
-  left: 0;
-  min-width: 180px;
-  padding: 12px 14px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  color: var(--carbon);
-  background: var(--surface);
-  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.24);
-}
-.seen-popover strong {
-  font-size: 0.875rem;
-}
-.seen-popover ul {
-  margin: 7px 0 0;
-  padding: 0;
-  list-style: none;
-}
-.seen-popover li {
-  min-height: 36px;
-  padding: 3px 0;
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  white-space: nowrap;
-  font-size: 0.8125rem;
-  font-weight: 400;
 }
 .seen-user-avatar {
   width: 30px;

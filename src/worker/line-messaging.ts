@@ -37,9 +37,16 @@ export function notificationSummary(counts: Omit<NotificationCounts, "appOrigin"
   return `投稿${counts.postCount}件${media ? `（${media}）` : ""}`;
 }
 
+/** LINE から開くリンクは、LINE の中の画面ではなく端末のブラウザで開く。ログインやアプリの追加がふだんのブラウザと同じになる。 */
+export function externalBrowserUrl(url: string): string {
+  const parsed = new URL(url);
+  parsed.searchParams.set("openExternalBrowser", "1");
+  return parsed.toString();
+}
+
 export function buildNotificationText(counts: NotificationCounts): string {
   const appOrigin = counts.appOrigin.replace(/\/+$/, "");
-  const destination = `${appOrigin}/unread`;
+  const destination = externalBrowserUrl(`${appOrigin}/unread`);
 
   return `新しい思い出が届きました。${notificationSummary(counts)}\nまとめて見る：${destination}`;
 }
@@ -96,7 +103,9 @@ export async function sendLineActionNotification(notification: LineActionNotific
           template: {
             type: "buttons",
             text: notification.text,
-            actions: [{ type: "uri", label: notification.actionLabel, uri: notification.actionUrl }],
+            actions: [
+              { type: "uri", label: notification.actionLabel, uri: externalBrowserUrl(notification.actionUrl) },
+            ],
           },
         },
       ],
